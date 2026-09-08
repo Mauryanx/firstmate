@@ -140,28 +140,6 @@ SH
   chmod +x "$fakebin/jq"
 }
 
-mirror_path_without_node() {  # <dir> <search-path>
-  local dir=$1 search=$2 bindir entry name
-  mkdir -p "$dir"
-  while :; do
-    bindir=${search%%:*}
-    if [ -d "$bindir" ]; then
-      for entry in "$bindir"/*; do
-        [ -f "$entry" ] && [ -x "$entry" ] || continue
-        name=${entry##*/}
-        [ "$name" = node ] && continue
-        [ -e "$dir/$name" ] || ln -s "$entry" "$dir/$name" 2>/dev/null
-      done
-    fi
-    case "$search" in
-      *:*) search=${search#*:} ;;
-      *) break ;;
-    esac
-  done
-  ! PATH="$dir" command -v node >/dev/null 2>&1 \
-    || fail "the node-free search path still resolved node"
-}
-
 make_fake_fleet_sync_root() {
   local dir=$1 fake_root
   fake_root="$dir/fake-root"
@@ -541,7 +519,7 @@ test_orca_backend_gates_orca_tool_only_when_selected() {
   printf '%s\n' manual > "$case_dir/home/config/backlog-backend"
   printf '%s\n' orca > "$case_dir/home/config/backend"
   fakebin=$(make_fake_toolchain "$case_dir")
-  out=$(PATH="$fakebin:$BASE_PATH" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
+  out=$(PATH="$fakebin:$(fm_test_base_path_sans "$BASE_PATH" orca)" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
     FM_FAKE_TREEHOUSE_LEASE_HELP=1 "$ROOT/bin/fm-bootstrap.sh")
   [ "$out" = "$missing_orca" ] || fail "backend=orca should require only the Orca-specific missing tool, got: $out"
 
@@ -909,7 +887,7 @@ test_routine_bootstrap_contract_runs_under_system_bash() {
 # split is a PARTITION: `skip` plus `only` together do exactly what `all` does,
 # with no step dropped and no step run twice.
 test_network_phase_partitions_the_run() {
-  local case_dir fakebin isolated_path all_out skip_out only_out combined
+  local case_dir fakebin all_out skip_out only_out combined
   case_dir="$TMP_ROOT/network-phase"
   mkdir -p "$case_dir/home/config"
   printf '%s\n' manual > "$case_dir/home/config/backlog-backend"
@@ -917,25 +895,23 @@ test_network_phase_partitions_the_run() {
   # Break the two diagnostics that stand for the two halves: a local tool floor
   # and the network GitHub-auth probe.
   rm -f "$fakebin/node"
-  isolated_path="$case_dir/path-without-node"
-  mirror_path_without_node "$isolated_path" "$fakebin:$BASE_PATH"
   cat > "$fakebin/gh" <<'SH'
 #!/usr/bin/env bash
 exit 1
 SH
   chmod +x "$fakebin/gh"
 
-  all_out=$(PATH="$isolated_path" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
+  all_out=$(PATH="$fakebin:$(fm_test_base_path_sans "$BASE_PATH" node)" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
     FM_FAKE_TREEHOUSE_LEASE_HELP=1 "$ROOT/bin/fm-bootstrap.sh")
   assert_contains "$all_out" "MISSING: node (install:" "the unsplit run lost its local diagnostic"
   assert_contains "$all_out" "NEEDS_GH_AUTH" "the unsplit run lost its network diagnostic"
 
-  skip_out=$(PATH="$isolated_path" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
+  skip_out=$(PATH="$fakebin:$(fm_test_base_path_sans "$BASE_PATH" node)" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
     FM_FAKE_TREEHOUSE_LEASE_HELP=1 FM_BOOTSTRAP_NETWORK=skip "$ROOT/bin/fm-bootstrap.sh")
   assert_contains "$skip_out" "MISSING: node (install:" "the local half lost its own diagnostic"
   assert_not_contains "$skip_out" "NEEDS_GH_AUTH" "the local half still made a network call"
 
-  only_out=$(PATH="$isolated_path" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
+  only_out=$(PATH="$fakebin:$(fm_test_base_path_sans "$BASE_PATH" node)" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
     FM_FAKE_TREEHOUSE_LEASE_HELP=1 FM_BOOTSTRAP_NETWORK=only "$ROOT/bin/fm-bootstrap.sh")
   assert_contains "$only_out" "NEEDS_GH_AUTH" "the network half lost its own diagnostic"
   assert_not_contains "$only_out" "MISSING: node" "the network half repeated the local half's work"
@@ -946,7 +922,7 @@ SH
 
   # A typo must never silently drop a safety sweep, so anything unrecognized
   # resolves to the complete run.
-  [ "$(PATH="$isolated_path" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
+  [ "$(PATH="$fakebin:$(fm_test_base_path_sans "$BASE_PATH" node)" FM_HOME="$case_dir/home" FM_ROOT_OVERRIDE="$case_dir/home" \
     FM_FAKE_TREEHOUSE_LEASE_HELP=1 FM_BOOTSTRAP_NETWORK=sikp "$ROOT/bin/fm-bootstrap.sh")" = "$all_out" ] \
     || fail "an unrecognized FM_BOOTSTRAP_NETWORK value did not fall back to the complete run"
   pass "bootstrap: FM_BOOTSTRAP_NETWORK partitions one run into local and network halves"
