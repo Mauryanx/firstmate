@@ -40,15 +40,18 @@ SUB_HOME_MARKER="${SUB_HOME_MARKER:-.fm-secondmate-home}"
 
 first_line() {
   # OpenSSH may prepend a multi-line ** banner to the command's own output.
-  # Prefer a real diagnostic anywhere in the remaining text, then its first
-  # meaningful line, so transport warnings are never presented as the cause.
+  # Skip only that leading run: once the command's own output begins, later
+  # ** lines are ordinary output. Prefer a real diagnostic anywhere in the
+  # remaining text, then its first meaningful line, so transport warnings are
+  # never presented as the cause.
   printf '%s\n' "$1" | awk '
-    /^\*\* / { next }
+    !started && /^\*\* / { next }
     {
       candidate = $0
       gsub(/[[:space:]]+/, " ", candidate)
       probe = candidate
       sub(/^[[:space:]]+/, "", probe)
+      if (probe != "") started = 1
       if (probe ~ /^(error|fatal):/) {
         print candidate
         found = 1

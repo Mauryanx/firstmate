@@ -925,6 +925,18 @@ test_failure_diagnostic_selection() {
   [ "$got" = 'ordinary failure' ] \
     || fail "ordinary output did not fall back to its first diagnostic: $got"
 
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n\n** This session may be vulnerable to store now, decrypt later attacks.\nerror: remote home could not import abc123')
+  [ "$got" = 'error: remote home could not import abc123' ] \
+    || fail "a blank line inside the leading banner run ended banner skipping early: $got"
+
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\nremote command exited 1\n** not a banner: this is output from the command itself')
+  [ "$got" = 'remote command exited 1' ] \
+    || fail "a ** line after the command output began changed the selected diagnostic: $got"
+
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n   \n** This session may be vulnerable to store now, decrypt later attacks.')
+  [ "$got" = 'command failed with no diagnostic' ] \
+    || fail "a whitespace-only line between banner lines was reported as the command failure: $got"
+
   got=$(first_line '')
   [ "$got" = 'command failed with no diagnostic' ] \
     || fail "empty output did not report the missing diagnostic: $got"
