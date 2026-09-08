@@ -598,7 +598,7 @@ secondmate_sync() {
     converged=1
     if sync_out=$("$SCRIPT_DIR/fm-on.sh" "$id" fm-remote-secondmate-control.sh sync "$id" \
       "$primary_head" < /dev/null 2>&1); then
-      case "$sync_out" in synced:*) nudge_needed=1 ;; esac
+      if printf '%s\n' "$sync_out" | grep -q '^synced:'; then nudge_needed=1; fi
     else
       sync_rc=$?
       echo "SECONDMATE_SYNC: secondmate $id: skipped: remote tracked-file sync failed on $remote_host: $(remote_sync_failure_reason "$sync_rc" "$sync_out")"
