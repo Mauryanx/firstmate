@@ -596,6 +596,11 @@ secondmate_sync() {
     fi
     nudge_needed=0
     converged=1
+    # Both remote legs below are captured with 2>&1, so OpenSSH may prepend its
+    # multi-line ** banner to the leg's own output. Every parse of these captures
+    # must stay line-anchored: a whole-string match would miss the banner-prefixed
+    # success token and silently drop the re-read nudge a converged home still owes
+    # its running agent. `first_line` applies the same rule to the failure reasons.
     if sync_out=$("$SCRIPT_DIR/fm-on.sh" "$id" fm-remote-secondmate-control.sh sync "$id" \
       "$primary_head" < /dev/null 2>&1); then
       if printf '%s\n' "$sync_out" | grep -q '^synced:'; then nudge_needed=1; fi
