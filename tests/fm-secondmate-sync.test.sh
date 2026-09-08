@@ -906,6 +906,44 @@ test_seed_marker_does_not_mask_real_dirt() {
 # then runs the SAME ff_target guards above. These cases drive the real
 # host-local leg (bin/fm-remote-secondmate-control.sh) directly.
 
+test_failure_diagnostic_selection() {
+  local got
+
+  got=$(remote_sync_failure_reason 1 $'** WARNING: connection is not using a post-quantum key exchange algorithm.\nerror: remote home could not import abc123')
+  [ "$got" = 'error: remote home could not import abc123' ] \
+    || fail "an OpenSSH banner masked the remote-sync error: $got"
+
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n** This session may be vulnerable to store now, decrypt later attacks.\nremote command exited 1\nfatal: remote inheritance fixture failed')
+  [ "$got" = 'fatal: remote inheritance fixture failed' ] \
+    || fail "a multi-line OpenSSH banner or fallback masked the fatal diagnostic: $got"
+
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n** This session may be vulnerable to store now, decrypt later attacks.')
+  [ "$got" = 'command failed with no diagnostic' ] \
+    || fail "banner-only output was reported as the command failure: $got"
+
+  got=$(first_line $'ordinary failure\nadditional context')
+  [ "$got" = 'ordinary failure' ] \
+    || fail "ordinary output did not fall back to its first diagnostic: $got"
+
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n\n** This session may be vulnerable to store now, decrypt later attacks.\nerror: remote home could not import abc123')
+  [ "$got" = 'error: remote home could not import abc123' ] \
+    || fail "a blank line inside the leading banner run ended banner skipping early: $got"
+
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\nremote command exited 1\n** not a banner: this is output from the command itself')
+  [ "$got" = 'remote command exited 1' ] \
+    || fail "a ** line after the command output began changed the selected diagnostic: $got"
+
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n   \n** This session may be vulnerable to store now, decrypt later attacks.')
+  [ "$got" = 'command failed with no diagnostic' ] \
+    || fail "a whitespace-only line between banner lines was reported as the command failure: $got"
+
+  got=$(first_line '')
+  [ "$got" = 'command failed with no diagnostic' ] \
+    || fail "empty output did not report the missing diagnostic: $got"
+
+  pass "failure reports ignore OpenSSH banners and select the real diagnostic"
+}
+
 # new_remote_world <name>: a PRIMARY firstmate repo with a bare forge origin, a
 # host "Firstmate copy" clone (the code root), and a persistent remote home clone
 # of that copy - the topology bin/fm-remote-home-provision.sh lays down. Echoes
