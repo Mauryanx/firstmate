@@ -906,6 +906,32 @@ test_seed_marker_does_not_mask_real_dirt() {
 # then runs the SAME ff_target guards above. These cases drive the real
 # host-local leg (bin/fm-remote-secondmate-control.sh) directly.
 
+test_failure_diagnostic_selection() {
+  local got
+
+  got=$(remote_sync_failure_reason 1 $'** WARNING: connection is not using a post-quantum key exchange algorithm.\nerror: remote home could not import abc123')
+  [ "$got" = 'error: remote home could not import abc123' ] \
+    || fail "an OpenSSH banner masked the remote-sync error: $got"
+
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n** This session may be vulnerable to store now, decrypt later attacks.\nremote command exited 1\nfatal: remote inheritance fixture failed')
+  [ "$got" = 'fatal: remote inheritance fixture failed' ] \
+    || fail "a multi-line OpenSSH banner or fallback masked the fatal diagnostic: $got"
+
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n** This session may be vulnerable to store now, decrypt later attacks.')
+  [ "$got" = 'command failed with no diagnostic' ] \
+    || fail "banner-only output was reported as the command failure: $got"
+
+  got=$(first_line $'ordinary failure\nadditional context')
+  [ "$got" = 'ordinary failure' ] \
+    || fail "ordinary output did not fall back to its first diagnostic: $got"
+
+  got=$(first_line '')
+  [ "$got" = 'command failed with no diagnostic' ] \
+    || fail "empty output did not report the missing diagnostic: $got"
+
+  pass "failure reports ignore OpenSSH banners and select the real diagnostic"
+}
+
 # new_remote_world <name>: a PRIMARY firstmate repo with a bare forge origin, a
 # host "Firstmate copy" clone (the code root), and a persistent remote home clone
 # of that copy - the topology bin/fm-remote-home-provision.sh lays down. Echoes
@@ -963,6 +989,19 @@ rargs=()
 while IFS= read -r -d '' a; do rargs+=("$a"); done < <(decode "$argv_b64")
 cmd=${rargs[0]}
 [ "$cmd" != fm-remote-doctor.sh ] || exit 0
+if [ "${FM_TEST_REMOTE_LEG_SSH_BANNER:-0}" = 1 ]; then
+  case "$cmd ${rargs[1]:-}" in
+    'fm-remote-secondmate-control.sh sync'|'fm-remote-inherit.sh '*)
+      printf '%s\n' \
+        '** WARNING: connection is not using a post-quantum key exchange algorithm.' \
+        '** This session may be vulnerable to store now, decrypt later attacks.' >&2
+      ;;
+  esac
+fi
+if [ "${FM_TEST_REMOTE_INHERIT_FAIL:-0}" = 1 ] && [ "$cmd" = fm-remote-inherit.sh ]; then
+  printf '%s\n' 'fatal: remote inheritance fixture failed' >&2
+  exit 1
+fi
 # An older remote Firstmate copy rejects a command shape it does not know with
 # the usage status, which is exactly what a parent-targeted sync meets there.
 if [ "${FM_TEST_REMOTE_LEG_REJECT_SYNC:-0}" = 1 ] \
@@ -1295,6 +1334,46 @@ test_bootstrap_reports_outdated_host_actionably() {
   pass "R10 a host too old for a parent-targeted sync is reported with the command that fixes it"
 }
 
+test_bootstrap_reports_real_errors_after_ssh_banners() {
+  local w c1 c2 home fakebin out
+  w=$(new_remote_world remote-banner-diagnostic)
+  cp "$ROOT"/bin/fm-remote-*.sh "$w/main/bin/"
+  git -C "$w/main" add -A
+  git -C "$w/main" commit -qm "primary tooling"
+  git -C "$w/main" push -q origin main
+  c1=$(head_of "$w/main")
+  add_remote_home "$w" sm "$w/forge.git" "$c1"
+  bump_primary "$w" instr
+  c2=$(head_of "$w/main")
+  home="$w/home"
+  mkdir -p "$home/config" "$home/projects"
+  printf -- '- sm - remote fixture (host: host-sm; root: %s; home: %s; scope: remote work; projects: alpha; added 2026-08-02)\n' \
+    "$w/coderoot" "$w/sm" > "$home/data/secondmates.md"
+  fm_write_secondmate_meta "$home/state/sm.meta" "$w/sm"
+  printf 'remote_host=host-sm\n' >> "$home/state/sm.meta"
+
+  fakebin=$(make_remote_leg_ssh_stub "$w")
+  fm_fake_exit0 "$fakebin" gh treehouse tmux node
+  out=$(PATH="$fakebin:$BASE_PATH" \
+    FM_HOME="$home" FM_ROOT_OVERRIDE="$w/main" \
+    FM_BOOTSTRAP_NETWORK=only \
+    FM_SSH_BIN="$fakebin/fake-ssh" FM_REMOTE_CODE_ROOT="$w/coderoot" \
+    FM_TEST_REPO_ROOT="$ROOT" FM_TEST_REMOTE_LEG_SSH_BANNER=1 \
+    FM_TEST_REMOTE_INHERIT_FAIL=1 FM_FAKE_TREEHOUSE_LEASE_HELP=1 FM_SEND_SETTLE=0 \
+    "$ROOT/bin/fm-bootstrap.sh" 2>&1)
+
+  assert_contains "$out" \
+    "remote tracked-file sync failed on host-sm: error: remote home could not import $c2" \
+    "remote tracked-file sync reported the OpenSSH banner instead of its error"
+  assert_contains "$out" \
+    "remote inheritance failed on host-sm: fatal: remote inheritance fixture failed" \
+    "remote inheritance reported the OpenSSH banner instead of its fatal diagnostic"
+  assert_not_contains "$out" \
+    'failed on host-sm: ** WARNING:' \
+    "an OpenSSH banner was still presented as a remote failure reason"
+  pass "bootstrap reports the real sync and inheritance errors after OpenSSH banners"
+}
+
 # --- R9: a remote launch never re-targets the host's own Firstmate copy --------
 # The launch leg runs a host-local spawn whose FM_ROOT is that host's Firstmate
 # copy. Once the parent has synced the home to ITS commit, that spawn must leave
@@ -1346,6 +1425,7 @@ test_ff_updated
 test_ff_current
 test_ff_dirty
 test_scratchpad2_does_not_dirty_home
+test_failure_diagnostic_selection
 test_ff_diverged
 test_ff_inflight_feature_branch
 test_no_fetch_in_local_path
@@ -1373,6 +1453,7 @@ test_remote_sync_skips_dirty_diverged_and_feature_branch
 test_remote_sync_without_target_follows_host_copy
 test_bootstrap_syncs_remote_home_to_primary_commit
 test_bootstrap_reports_outdated_host_actionably
+test_bootstrap_reports_real_errors_after_ssh_banners
 test_remote_launch_does_not_retarget_host_copy
 
 echo "# all fm-secondmate-sync tests passed"
