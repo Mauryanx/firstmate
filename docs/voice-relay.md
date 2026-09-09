@@ -1,5 +1,21 @@
 # The spoken interface
 
+## Conversation transport lab
+
+The next voice interface keeps Firstmate responsible for the conversation and uses voice only to carry input and deliver explicitly published replies.
+Its first build stage is an offline contract lab, exercised by `bin/fm-test-run.sh tests/fm-inbox-conversation.test.sh` with synthetic text and mocked playback.
+The lab composes the existing inbox and session-lock owners; it does not connect a browser, a paid provider, or a native running-session prompt API.
+`bin/fm-inbox.sh conversation --help` is the owner of its commands, event schema, recovery boundaries and synthetic-only publication restriction.
+It creates a new empty test home and refuses to initialize over an existing home.
+No changes to the existing record reader's disclosure scope are part of this lab.
+
+Acceptance is a durable single dispatch claim, not proof that work happened.
+An interrupted claim or missing playback receipt remains visible for reconciliation instead of automatically repeating an action or speech.
+The regression covers concurrent duplicate capture, out-of-order transcript completion, session ownership, explicit question and correction routing, and crashes on both sides of the return path.
+Native session integration, browser authentication, live reply disclosure and audible acceptance remain prerequisites for a live conversational interface.
+
+## Existing audio prototype
+
 Talk to a voice agent that sits in front of the first mate. It answers questions
 about what is happening from the first mate's own records, and when you ask for
 real work it says so out loud and queues the request rather than pretending to
