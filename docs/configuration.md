@@ -373,7 +373,7 @@ Choose the minimum additions for the authentication method actually in use:
 | --- | --- |
 | Provider login stored under the normal home directory | None for the environment contract; the same user still has access to that provider's stored login. |
 | Provider configured through environment variables | The exact credential and endpoint names required by that provider, for example `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`; a multi-provider tool needs each provider it will actually use. |
-| Custom provider store | Its configured location variables, such as `CODEX_HOME`, `GROK_HOME`, or `XDG_CONFIG_HOME`; Firstmate's existing explicit Claude and Muse store assignments still apply. |
+| Custom provider store | Its configured location variables, such as `CODEX_HOME`, `GROK_HOME`, or `XDG_CONFIG_HOME`; Firstmate's existing explicit Claude and Muse store assignments still apply, as does the `CODEX_HOME` a `codexHome` dispatch profile pins - that one rides the launch command itself, so it needs no allowlist entry. |
 | Muse environment authentication | `META_API_KEY`, already present in the target tmux session environment; Firstmate's preflight requires the stored-login path on other backends. |
 | Git over SSH with an agent | `SSH_AUTH_SOCK`; add `GIT_SSH_COMMAND` only if the chosen transport requires that override. |
 | Git over SSH with a key file | No credential variable when normal SSH configuration selects the key; file permissions and any passphrase handling still apply. |
@@ -423,6 +423,7 @@ Profile `codexHome` is optional, accepted only on `harness: "codex"`, and names 
 It is an absolute path or a `~/`-prefixed path; `~/` expands against the launching user's `$HOME` at spawn time, so one inherited file names `~/.codex-1` correctly on every machine and user in the fleet.
 An omitted `codexHome` means the worker uses the default `~/.codex` account with no launch prefix, exactly as before the field existed.
 Firstmate passes the resolved value as `--codex-home` to `fm-spawn.sh`, which refuses a home that is missing, has no non-empty `auth.json`, or contains a control byte rather than falling back to the default account.
+The profile file names an account but does not create one, so sign each additional account in once per machine under its own home first, for example `CODEX_HOME=~/.codex-1 codex login`.
 An existing home resolves to its physical directory before launch and metadata publication, so path aliases for one account share one `codex_home=` identity and one quota-watch source ID.
 [`fm-spawn.sh --help`](../bin/fm-spawn.sh) owns that validation and launch mechanics, and [`docs/agent-control.md`](agent-control.md#transactional-relaunch) owns how a relaunch carries it forward.
 Six profiles that differ only by `codexHome` are six candidates in a profile array: each home's quota is read separately and bounds only that candidate, and `quota-array-dispatch` owns the per-account read and ranking.

@@ -21,8 +21,9 @@
 # classify   Print the captured outcome class: low, exhausted, error, or unknown.
 # terminal   Every quota poll is terminal because the source fires at most once.
 # source-id  Print the canonical source id.
-# retire     Stop the aggregate watch, or the matching provider watch when
-#            --provider is supplied, and retire the registration.
+# retire     Stop the aggregate watch, the matching provider watch when
+#            --provider is supplied, or that provider's per-account watch when
+#            --codex-home names one, and retire the registration.
 #
 # The canonical source id is `quota` for the aggregate tracked provider.
 # A provider named with --provider sets the tracked provider and the source id

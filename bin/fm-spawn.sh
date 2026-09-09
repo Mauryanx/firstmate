@@ -39,10 +39,11 @@
 #   model, effort, and the Codex account home may change, which is what makes
 #   a harness switch one ordinary relaunch. With no --codex-home, a relaunch
 #   that stays on codex carries the recorded codex_home= forward unchanged and
-#   re-validates it; a relaunch onto another harness drops it. It refuses unless the recorded endpoint is positively
-#   agent-free on a backend with a recovery-grade agent-state classifier (tmux
-#   or herdr), refuses unless the endpoint's shell is sitting in the recorded
-#   worktree, and clears the previous harness's per-task wiring before arming
+#   re-validates it; a relaunch onto another harness drops it. It refuses
+#   unless the recorded endpoint is positively agent-free on a backend with a
+#   recovery-grade agent-state classifier (tmux or herdr), refuses unless the
+#   endpoint's shell is sitting in the recorded worktree, and clears the
+#   previous harness's per-task wiring before arming
 #   the new incarnation.
 #   --harness <name> is the explicit per-spawn harness/profile adapter. The old
 #   positional harness arg still works for back-compat.
@@ -66,8 +67,8 @@
 #   the launch is prefixed with CODEX_HOME=<quoted physical path>, exactly as
 #   CLAUDE_CONFIG_DIR is forwarded onto claude launches, and the physical path
 #   is recorded as codex_home= in state/<id>.meta. Without the flag no prefix is
-#   added and no codex_home= line
-#   is written, so the single-account default path is byte-identical to before.
+#   added and no codex_home= line is written, so the single-account default path
+#   is byte-identical to before.
 #   --backend <name> is the explicit runtime session-provider backend for this
 #   exact task only (docs/configuration.md "Runtime backend" owns when that flag
 #   is authorized). Without it, the script resolves FM_BACKEND, then
