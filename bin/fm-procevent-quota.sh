@@ -42,7 +42,9 @@
 # silently reporting the default account. The source id becomes
 # `quota-codex-<basename>-<8 hex of the physical path>`, one watch per account
 # even when callers use path aliases, and the result document adds a
-# `codex_home: <physical path>` line.
+# `codex_home: <physical path>` line. That digest needs shasum or sha256sum on
+# PATH; with neither installed every --codex-home command refuses loudly
+# instead of deriving a different id that would orphan an existing watch.
 # Arm also writes a private atomic binding from the validated original path
 # spelling to that source ID before registration, so retirement through a
 # removed alias still finds the canonical watch. Retirement removes the exact
