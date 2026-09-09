@@ -1,0 +1,61 @@
+# Adversarial drives of the Codex account axis on the quota watch (isolated FM_HOME)
+
+== retirement identity survives a removed account alias ==
+$ fm-procevent-quota.sh arm --provider codex --codex-home /tmp/nm-quota-lab.DQTjP8/accounts/codex-alias --threshold 20 --interval 600
+registered: quota-codex-codex-physical-06269c95 (quota)
+armed: quota-codex-codex-physical-06269c95
+provider: codex
+codex_home: /tmp/nm-quota-lab.DQTjP8/accounts/codex-physical
+threshold: 20%
+interval: 600s
+-> the source id is derived from the PHYSICAL account, not the alias spelling:
+quota-codex-codex-physical-06269c95.source
+$ rm /tmp/nm-quota-lab.DQTjP8/accounts/codex-alias    # the alias is deleted while the watch is live
+$ fm-procevent-quota.sh retire --provider codex --codex-home /tmp/nm-quota-lab.DQTjP8/accounts/codex-alias
+retired: quota-codex-codex-physical-06269c95
+exit=0
+-> registry after retire (no orphan source, no orphan binding):
+.
+..
+.owner-lease
+.quota-codex-home-codex-3-d7d60893.binding
+quota-codex-codex-3-3d96a64c.source
+
+== arm refuses a signed-out account instead of watching the ambient one ==
+$ fm-procevent-quota.sh arm --provider codex --codex-home /tmp/nm-quota-lab.DQTjP8/accounts/signed-out
+error: --codex-home refused: codex home '/tmp/nm-quota-lab.DQTjP8/accounts/signed-out' has no non-empty auth.json; sign that account in with CODEX_HOME='/tmp/nm-quota-lab.DQTjP8/accounts/signed-out' codex login before dispatching on it
+exit=1
+-> nothing was registered for it:
+0
+
+== the account axis is refused on a non-codex provider ==
+$ fm-procevent-quota.sh arm --provider claude --codex-home /tmp/nm-quota-lab.DQTjP8/accounts/codex-physical
+error: --codex-home applies only to --provider codex; this watch tracks claude
+exit=1
+
+== a host with no SHA tool refuses loudly rather than deriving a different source id ==
+$ PATH=<no shasum, no sha256sum> fm-procevent-quota.sh source-id --provider codex --codex-home ~/.codex-3
+error: --codex-home needs shasum or sha256sum on PATH to derive the account source id; neither was found
+exit=1
+$ PATH=<no shasum, no sha256sum> fm-procevent-quota.sh arm --provider codex --codex-home ~/.codex-3
+error: --codex-home needs shasum or sha256sum on PATH to derive the account source id; neither was found
+exit=1
+$ PATH=<no shasum, no sha256sum> fm-procevent-quota.sh source-id --provider codex      # no account axis: unaffected
+quota-codex
+exit=0
+
+== an account signed out mid-watch ends the watch with an error wake, not the ambient account's numbers ==
+# arm the watch while the account is signed in:
+registered: quota-codex-mid-watch-8ec1d2ec (quota)
+armed: quota-codex-mid-watch-8ec1d2ec
+provider: codex
+codex_home: <lab>/accounts/mid-watch
+threshold: 20%
+interval: 600s
+# the account signs out (auth.json removed) and the armed poll runs its next read:
+quota: quota-codex-mid-watch-8ec1d2ec
+codex_home: <lab>/accounts/mid-watch
+status: error
+detail: codex quota read refused: codex home '<lab>/accounts/mid-watch' has no non-empty auth.json; sign that account in with CODEX_HOME='<lab>/accounts/mid-watch' codex login before dispatching on it
+condition_polls: 1
+exit=0

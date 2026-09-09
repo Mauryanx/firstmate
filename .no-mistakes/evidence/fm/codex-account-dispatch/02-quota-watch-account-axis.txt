@@ -1,0 +1,60 @@
+# Live drive of the per-account quota watch (real quota-axi 0.1.36, real Codex account homes)
+# isolated FM_HOME=/tmp/nm-quota-lab.DQTjP8/home  FM_STATE_OVERRIDE=/tmp/nm-quota-lab.DQTjP8/state
+
+$ fm-procevent-quota.sh source-id --provider codex          # default: no account axis
+quota-codex
+
+$ fm-procevent-quota.sh source-id --provider codex --codex-home '~/.codex-3'
+quota-codex-codex-3-3d96a64c
+
+$ fm-procevent-quota.sh source-id --provider codex --codex-home '~/.codex-5'   # a different account -> a different watch
+quota-codex-codex-5-b4872e62
+
+$ fm-procevent-quota.sh arm --provider codex --codex-home '~/.codex-3' --threshold 15 --interval 300
+registered: quota-codex-codex-3-3d96a64c (quota)
+armed: quota-codex-codex-3-3d96a64c
+provider: codex
+codex_home: /home/firstmate/.codex-3
+threshold: 15%
+interval: 300s
+exit=0
+
+$ ls -a $FM_STATE_OVERRIDE/procevent/
+.
+..
+.owner-lease
+.quota-codex-home-codex-3-d7d60893.binding
+quota-codex-codex-3-3d96a64c.source
+
+$ cat $FM_STATE_OVERRIDE/procevent/quota-codex-codex-3-3d96a64c.source
+adapter=quota
+argc=12
+argv:
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M21YGGK8TPTFDGNCMSNSTAX0/bin/fm-procevent-quota.sh
+poll
+--interval
+300
+--threshold
+15
+--provider
+codex
+--codex-home
+/home/firstmate/.codex-3
+--timeout
+240
+
+
+# The armed poll is the real watch body. Threshold 95 makes it fire on the first read,
+# so the wake document below is the one firstmate would receive for THAT account.
+$ fm-procevent-quota.sh poll --threshold 95 --provider codex --codex-home '~/.codex-3' --timeout 60
+quota: quota-codex-codex-3-3d96a64c
+codex_home: /home/firstmate/.codex-3
+status: low
+detail: {"provider":"codex","best":{"scope":"all_models","status":"known","effectivePercentRemaining":50,"boundedBy":["five_hour","weekly"],"limitingWindowIds":["five_h ...
+condition_polls: 1
+
+$ fm-procevent-quota.sh poll --threshold 95 --provider codex --timeout 60     # ambient account, no axis
+quota: quota-codex
+status: low
+detail: {"provider":"codex","best":{"scope":"all_models","status":"known","effectivePercentRemaining":70,"boundedBy":["weekly"],"limitingWindowIds":["weekly"],"pace":{" ...
+condition_polls: 1

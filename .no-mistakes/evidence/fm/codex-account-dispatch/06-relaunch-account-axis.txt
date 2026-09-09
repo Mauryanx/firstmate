@@ -1,0 +1,35 @@
+# Live drive of bin/fm-control.sh relaunch with the Codex account axis.
+# The session provider is a lifecycle-modelling stub: /exit stops the agent and a launch-brief
+# literal starts the replacement, so 'the agent was stopped' is an observable fact below.
+
+== 1. a same-harness codex relaunch carries the recorded account forward ==
+recorded before: codex_home=/tmp/nm-drive-relaunch.SsEeCJ/carry-11294/accounts/codex-2
+$ fm-control.sh rl-a1 relaunch --note 'agent wedged'
+relaunched rl-a1 harness=codex from=codex model=default effort=default codex_home=<case>/accounts/codex-2 backend=tmux endpoint=fmses:fm-rl-a1 worktree=<case>/wt
+recorded after:  codex_home=/tmp/nm-drive-relaunch.SsEeCJ/carry-11294/accounts/codex-2
+replacement launch line: CODEX_HOME='/tmp/nm-drive-relaunch.SsEeCJ/carry-11294/accounts/codex-2'
+
+== 2. an explicit --codex-home moves the task to another account ==
+$ fm-control.sh rl-a2 relaunch --codex-home <codex-4> --note 'account exhausted'
+relaunched rl-a2 harness=codex from=codex model=default effort=default codex_home=<case>/accounts/codex-4 backend=tmux endpoint=fmses:fm-rl-a2 worktree=<case>/wt
+recorded after:  codex_home=<case>/accounts/codex-4
+
+== 3. ADVERSARIAL: the carried account was signed out - refuse BEFORE stopping the agent ==
+$ fm-control.sh rl-a3 relaunch --note 'agent wedged'
+error: relaunch of rl-a3 refused before its agent was touched: codex home '<case>/accounts/codex-1' has no non-empty auth.json; sign that account in with CODEX_HOME='<case>/accounts/codex-1' codex login before dispatching on it
+exit=1
+-> pane still running: codex   (zsh would mean the agent had been stopped)
+-> task record unchanged: yes
+-> anything sent to the pane: no
+
+== 4. ADVERSARIAL: --codex-home aimed at a non-codex target refuses before stop ==
+$ fm-control.sh rl-a4 relaunch --harness claude --codex-home <codex-1> --note 'switch'
+error: --codex-home applies only to harness codex; this relaunch targets 'claude'
+exit=1
+-> pane still running: codex
+
+== 5. a harness switch away from codex drops the account ==
+$ fm-control.sh rl-a5 relaunch --harness claude --note 'move to claude'
+relaunched rl-a5 harness=claude from=codex model=default effort=default backend=tmux endpoint=fmses:fm-rl-a5 worktree=<case>/wt
+-> codex_home= lines left in the record: 0
+-> CODEX_HOME in the replacement launch: 0

@@ -1,0 +1,35 @@
+FM_TEST_BEGIN 2026-09-09T02:23:28Z tests/fm-procevent-quota.test.sh family=standalone expected_gate_skip=none
+ok - help renders only the complete header
+ok - poll accepts its documented defaults
+ok - provider watch blocks until a model scope is exhausted
+ok - exhausted poll records the triggering scope
+ok - poll detects exhausted runway under unknown headroom
+ok - aggregate watch blocks until any scope is exhausted
+ok - aggregate watch preserves empty quota uncertainty
+ok - arm rejects a missing provider value
+ok - arm rejects noncanonical provider identities
+ok - provider retire resolves the armed source id
+ok - poll rejects a decimal threshold above 100
+ok - poll accepts a leading-zero threshold
+ok - poll fires only after quota drops below the threshold
+ok - poll rejects a missing option value
+ok - quota polling uses the shared bash timeout fallback
+ok - poll rejects malformed schema-five snapshots
+ok - poll preserves provider-level unknown quota
+ok - poll preserves unknown headroom under known semantics
+ok - codex-home watch polls the selected account under its own CODEX_HOME and source id
+ok - codex-home watch canonicalizes aliases to one account identity
+ok - codex-home retire uses and cleans the durable alias binding after alias removal
+ok - provider watch without --codex-home still reads the ambient account exactly as before
+ok - codex-home watch expands ~/ against the polling user's HOME
+ok - arm registers the account axis only when --codex-home is given
+ok - per-account retire resolves the armed source id
+ok - arm refuses an account with no auth.json before registering anything
+ok - arm refuses --codex-home on a non-codex or aggregate watch
+ok - poll on a signed-out account wakes with an error instead of reading the ambient account
+ok - codex-home refuses loudly when neither shasum nor sha256sum is on PATH
+# all fm-procevent-quota tests passed
+FM_TEST_END 2026-09-09T02:24:02Z tests/fm-procevent-quota.test.sh exit=0 duration_ms=33998 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=34220
+FM_TEST_SUMMARY_FAMILY family=standalone count=1 duration_ms=33998 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-procevent-quota.test.sh duration_ms=33998
