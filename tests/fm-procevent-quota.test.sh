@@ -390,4 +390,25 @@ printf '%s\n' "$out" | grep -q 'has no non-empty auth.json' || fail "signed-out 
 [ ! -e "$ARGV_LOG" ] || fail "a signed-out account still reached quota-axi (would have reported the ambient account): $(cat "$ARGV_LOG")"
 ok "poll on a signed-out account wakes with an error instead of reading the ambient account"
 
+NOSHA="$LAB/nosha"
+mkdir -p "$NOSHA"
+IFS=: read -ra path_dirs <<< "$PATH"
+for dir in "${path_dirs[@]}"; do
+  [ -d "$dir" ] || continue
+  for entry in "$dir"/*; do
+    name=${entry##*/}
+    case "$name" in shasum|sha256sum) continue ;; esac
+    [ -e "$NOSHA/$name" ] || ln -s "$entry" "$NOSHA/$name" 2>/dev/null || true
+  done
+done
+if out=$(PATH="$NOSHA" "$BIN/fm-procevent-quota.sh" source-id --provider codex --codex-home "$ACCT" 2>&1); then
+  fail "source-id derived an account id without any SHA tool on PATH: $out"
+fi
+printf '%s\n' "$out" | grep -q 'needs shasum or sha256sum on PATH' \
+  || fail "missing SHA tool refusal did not name the tools it needs: $out"
+if printf '%s\n' "$out" | grep -q '^quota-codex-'; then
+  fail "missing SHA tool still printed a source id: $out"
+fi
+ok "codex-home refuses loudly when neither shasum nor sha256sum is on PATH"
+
 printf '# all fm-procevent-quota tests passed\n'

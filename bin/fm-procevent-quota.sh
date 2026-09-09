@@ -122,7 +122,7 @@ codex_home_slug() {
   elif command -v sha256sum >/dev/null 2>&1; then
     hash=$(printf '%s' "$path" | sha256sum | awk '{print substr($1,1,8)}')
   else
-    hash=$(printf '%s' "$path" | cksum | awk '{printf "%08x", $1}')
+    die "--codex-home needs shasum or sha256sum on PATH to derive the account source id; neither was found"
   fi
   printf '%s%s\n' "${base:+$base-}" "$hash"
 }
@@ -217,7 +217,9 @@ resolve_codex_home() {
   [ "$PROVIDER" = codex ] || die "--codex-home applies only to --provider codex; this watch tracks ${PROVIDER:-the aggregate}"
   fm_codex_home_expand "$CODEX_HOME_ARG" || die "--codex-home refused: $FM_CODEX_HOME_ERROR"
   CODEX_HOME_RESOLVED=$FM_CODEX_HOME_PATH
-  CANONICAL_SOURCE_ID="$SOURCE_ID_BASE-codex-$(codex_home_slug "$CODEX_HOME_RESOLVED")"
+  local slug
+  slug=$(codex_home_slug "$CODEX_HOME_RESOLVED") || exit 1
+  CANONICAL_SOURCE_ID="$SOURCE_ID_BASE-codex-$slug"
   fm_procevent_source_id_valid "$CANONICAL_SOURCE_ID" || die "source id is not path-safe: $CANONICAL_SOURCE_ID"
 }
 
