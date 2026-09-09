@@ -92,7 +92,7 @@ fm_pid_identity() {
 
 fm_path_mtime() {
   if [ "$_FM_UNAME" = Darwin ]; then
-    stat -f %m "$1" 2>/dev/null
+    /usr/bin/stat -f %m "$1" 2>/dev/null
   else
     stat -c %Y "$1" 2>/dev/null
   fi
@@ -102,6 +102,25 @@ fm_path_age() {
   local path=$1 m
   m=$(fm_path_mtime "$path") || { echo 999999; return; }
   echo $(( $(date +%s) - m ))
+}
+
+# fm_poll_derived_grace [poll-seconds]
+# Default guard-grace derivation: max(300, poll + 60). A watcher touches its
+# liveness beacon once per poll cycle, so a fixed 300s grace stops correctly
+# bounding staleness once the poll cadence reaches or exceeds it; growing the
+# default with the cadence while keeping the historical 300s floor for the
+# common short-poll case fixes that without a caller-specific constant.
+# Defaults to $FM_POLL (fm-watch.sh's own poll env var) when no argument is
+# given, so a caller with no independent notion of the poll cadence still
+# derives the same default fm-watch.sh itself would use.
+# docs/turnend-guard.md "Guard grace and the poll cadence" is the single owner
+# of the rationale; every FM_GUARD_GRACE default should derive from this.
+fm_poll_derived_grace() {
+  local poll=${1:-${FM_POLL:-15}} margin=60 derived
+  case "$poll" in ''|*[!0-9]*) poll=15 ;; esac
+  derived=$((poll + margin))
+  [ "$derived" -ge 300 ] || derived=300
+  printf '%s\n' "$derived"
 }
 
 # fm_watcher_lock_unheld <state>
@@ -189,7 +208,7 @@ fm_supervision_model() {
   harness=$("$FM_WAKE_LIB_DIR/fm-harness.sh" 2>/dev/null || printf unknown)
   case "$harness" in
     claude|cursor) printf 'autoarm\n' ;;
-    pi|pi-signed) printf 'extension\n' ;;
+    pi|pi-signed|omp) printf 'extension\n' ;;
     *) printf 'persistent\n' ;;
   esac
 }
@@ -238,14 +257,39 @@ fm_pi_extension_loaded() {
 # backstop that catches a cycle the watch extension failed to restore, so a home
 # missing it has no benign hand-off to tolerate.
 fm_pi_extension_owns_supervision() {
-  local state=$1 root=$2 lock session_pid pair source marker version
-  lock="$state/.lock"
-  for pair in \
+  fm_extension_pair_owns_supervision "$1" "$2/.pi/extensions" \
     "fm-primary-pi-watch.ts:.pi-watch-extension-loaded" \
-    "fm-primary-turnend-guard.ts:.pi-turnend-extension-loaded"; do
+    "fm-primary-turnend-guard.ts:.pi-turnend-extension-loaded"
+}
+
+# fm_omp_extension_owns_supervision <state> <root>
+# The omp (Oh My Pi) primary's proof, keyed on its own two tracked extensions
+# under .omp/extensions/ and their own state markers. It is a separate proof on
+# purpose: omp must never inherit the Pi tolerance by accident, and a Pi home
+# never satisfies the omp markers. Both proofs bind to the pid in state/.lock,
+# so a session on one harness cannot vouch for a home held by the other.
+fm_omp_extension_owns_supervision() {
+  fm_extension_pair_owns_supervision "$1" "$2/.omp/extensions" \
+    "fm-primary-omp-watch.ts:.omp-watch-extension-loaded" \
+    "fm-primary-turnend-guard.ts:.omp-turnend-extension-loaded"
+}
+
+# fm_extension_owns_supervision <state> <root>
+# The extension-model proof the verdict below consults: whichever extension
+# family's markers the lock-owning session recorded. Exactly one family can
+# match because both bind to the same lock pid.
+fm_extension_owns_supervision() {
+  fm_pi_extension_owns_supervision "$1" "$2" || fm_omp_extension_owns_supervision "$1" "$2"
+}
+
+fm_extension_pair_owns_supervision() {  # <state> <extension-dir> <source:marker>...
+  local state=$1 dir=$2 lock session_pid pair source marker version
+  shift 2
+  lock="$state/.lock"
+  for pair in "$@"; do
     source=${pair%%:*}
     marker=${pair#*:}
-    version=$(fm_pi_extension_version "$root/.pi/extensions/$source") || return 1
+    version=$(fm_pi_extension_version "$dir/$source") || return 1
     fm_pi_extension_loaded "$state/$marker" "$version" "$lock" || return 1
   done
   session_pid=$(sed -n '1p' "$lock" 2>/dev/null)
@@ -295,7 +339,8 @@ fm_afk_daemon_owns_supervision() {
 # because the watcher only runs between turns; only a stale beacon is a lapse.
 # extension: a live identity-matched watcher is the ordinary healthy state, but a
 # genuinely unheld lock is also healthy while the beacon is fresh AND a live Pi
-# session provably owns continuity (fm_pi_extension_owns_supervision) - that is the
+# session provably owns continuity (fm_extension_owns_supervision: the Pi or the
+# omp extension pair, whichever the lock-owning session recorded) - that is the
 # extension's own tear-down-and-respawn hand-off, which it retries and escalates
 # itself. A lock with any recorded pid remains down if the strict health check fails.
 # Without ownership proof an unheld lock is down exactly as before, so an unloaded,
@@ -329,7 +374,7 @@ fm_watcher_supervision_verdict() {
     FM_WATCHER_VERDICT_OK=true
   elif [ "$fresh" = true ]; then
     if [ "$model" = extension ] && fm_watcher_lock_unheld "$state" \
-      && fm_pi_extension_owns_supervision "$state" "$root"; then
+      && fm_extension_owns_supervision "$state" "$root"; then
       # shellcheck disable=SC2034 # Read by callers after the function returns.
       FM_WATCHER_VERDICT_OK=true
     else
@@ -1088,6 +1133,75 @@ fm_task_set_lock_path() {  # <state-dir>
   printf '%s/.task-set.lock\n' "$state"
 }
 
+# The top-most firstmate home reachable from this one on THIS machine, used as
+# the single anchor every local home agrees on for machine-local shared state.
+#
+# A local parent binding is followed upward. A remote parent binding terminates
+# the walk at the current home, which is the correct answer rather than an
+# error: the parent lives on another machine, so its filesystem can neither hold
+# nor be observed by a lock taken here, and a remote-seeded home is itself the
+# top of the local tree that bin/fm-teardown.sh's collect_local_firstmate_states
+# enumerates (that walk already skips remote registry entries for the same
+# reason). Refusing a remote binding instead made every operation anchored here
+# fail closed inside a remote secondmate home and its local descendants.
+#
+# Everything else still fails closed: an unreadable or malformed binding, an
+# unreachable local parent, a cycle, and a chain deeper than the bound.
+fm_firstmate_root_home() {
+  local home=${1:-$FM_HOME} marker parent seen="|" depth=0
+  home=$(CDPATH='' cd -- "$home" 2>/dev/null && pwd -P) || return 1
+  while [ -e "$home/.fm-secondmate-parent" ] || [ -L "$home/.fm-secondmate-parent" ]; do
+    marker="$home/.fm-secondmate-parent"
+    if ! command -v fm_secondmate_parent_record_parse >/dev/null 2>&1; then
+      # shellcheck source=bin/fm-secondmate-parent-lib.sh
+      . "$FM_WAKE_LIB_DIR/fm-secondmate-parent-lib.sh"
+    fi
+    fm_secondmate_parent_record_parse "$marker" || return 1
+    case "$FM_SECONDMATE_PARENT_ROUTE" in
+      local) ;;
+      remote) break ;;
+      *) return 1 ;;
+    esac
+    parent=$(CDPATH='' cd -- "$FM_SECONDMATE_PARENT_HOME" 2>/dev/null && pwd -P) || return 1
+    case "$seen" in *"|$parent|"*) return 1 ;; esac
+    seen="$seen$home|"
+    home=$parent
+    depth=$((depth + 1))
+    [ "$depth" -le 64 ] || return 1
+  done
+  printf '%s\n' "$home"
+}
+
+# The one lock serializing Treehouse slot allocation and return for a project.
+#
+# It is anchored in the local root home's state directory so that every home on
+# this machine that can reach the same pool - the root, and each secondmate home
+# below it, including a remote-seeded home and its own local descendants -
+# derives the identical path. Its identity is the project's resolved origin, so
+# separate clones of one origin share a single lock; an origin-less local-only
+# project falls back to its own worktree top instead of failing to resolve.
+fm_treehouse_project_lock_path() {  # <project-dir>
+  local project=$1 root origin identity hash top
+  [ -d "$project" ] || return 1
+  root=$(fm_firstmate_root_home "$FM_HOME") || return 1
+  origin=$(git -C "$project" remote get-url origin 2>/dev/null || true)
+  if [ -n "$origin" ]; then
+    case "$origin" in
+      /*) [ ! -d "$origin" ] || origin=$(CDPATH='' cd -- "$origin" 2>/dev/null && pwd -P) || return 1 ;;
+      *://*|*:* ) ;;
+      *) [ ! -d "$project/$origin" ] || origin=$(CDPATH='' cd -- "$project/$origin" 2>/dev/null && pwd -P) || return 1 ;;
+    esac
+    identity=$origin
+  else
+    top=$(git -C "$project" rev-parse --show-toplevel 2>/dev/null) || return 1
+    top=$(CDPATH='' cd -- "$top" 2>/dev/null && pwd -P) || return 1
+    identity=$top
+  fi
+  hash=$(printf '%s' "$identity" | git hash-object --stdin 2>/dev/null) || return 1
+  [ -d "$root/state" ] || return 1
+  printf '%s/.treehouse-project-%s.lock\n' "$root/state" "$hash"
+}
+
 fm_failure_episode_reset() {
   local state=$1 mode=${2:-acquire} lock current pid acquired=0 path
   lock="$state/.turnend-claude-blocks.lock"
@@ -1554,6 +1668,23 @@ fm_wake_queued_keys_locked() {
     "$FM_WAKE_QUEUE" 2>/dev/null || true
 }
 
+fm_wake_secondmate_progress_marker_write() { # <task> <observed-at> <oldest-row-key>
+  local task=$1 observed_at=$2 oldest_row_key=$3 marker tmp
+  case "$task" in ''|*[!A-Za-z0-9._-]*) return 1 ;; esac
+  case "$observed_at" in ''|*[!0-9]*) return 1 ;; esac
+  case "$oldest_row_key" in ''|*[!0-9-]*) return 1 ;; esac
+  marker="$STATE/.secondmate-wake-progress-$task"
+  if [ -e "$marker" ] || [ -L "$marker" ]; then
+    [ -f "$marker" ] && [ ! -L "$marker" ] || return 1
+  fi
+  tmp=$(mktemp "$STATE/.secondmate-wake-progress.XXXXXX") || return 1
+  if ! printf '%s\t%s\n' "$observed_at" "$oldest_row_key" > "$tmp" || ! chmod 0600 "$tmp" \
+    || ! _fm_atomic_replace "$tmp" "$marker"; then
+    rm -f -- "$tmp"
+    return 1
+  fi
+}
+
 fm_wake_secondmate_stall_marker_write() { # <task> <row-key>
   local task=$1 row_key=$2 marker tmp
   case "$task" in ''|*[!A-Za-z0-9._-]*) return 1 ;; esac
@@ -1651,6 +1782,86 @@ fm_wake_print_deduped() {
   ' "$file"
 }
 
+# --- branch grant evidence and per-actor pending rows ------------------------
+#
+# docs/watcher-continuity.md "Per-actor acknowledgement" owns the contract these
+# helpers read; this is its single implementation, shared by the drain (which
+# repairs and consumes a grant under the queue lock), the grant publisher, and
+# the guard (which only counts, and never takes the lock).
+
+# 0 when <rows-file> is a non-empty list of distinct sequence numbers.
+fm_wake_grant_rows_valid() {  # <rows-file>
+  [ -s "$1" ] && awk 'BEGIN { ok=1 } !/^[0-9]+$/ || seen[$0]++ { ok=0 } END { exit !ok }' "$1"
+}
+
+# 0 when <owner-file> holds the supported record, names a live process whose
+# identity still matches what was recorded, and matches any expected pid and
+# generation the caller pins. An unreadable, malformed, or superseded record is
+# not a match, so uncertainty reads as "no live owner".
+fm_wake_branch_owner_matches() {  # <owner-file> [<pid>] [<generation>]
+  local file=$1 expected_pid=${2:-} expected_generation=${3:-}
+  local version pid identity generation current extra
+  [ -f "$file" ] && [ ! -L "$file" ] || return 1
+  exec 8< "$file" || return 1
+  IFS= read -r version <&8 || { exec 8<&-; return 1; }
+  IFS= read -r pid <&8 || { exec 8<&-; return 1; }
+  IFS= read -r identity <&8 || { exec 8<&-; return 1; }
+  IFS= read -r generation <&8 || { exec 8<&-; return 1; }
+  if IFS= read -r extra <&8; then exec 8<&-; return 1; fi
+  exec 8<&-
+  [ "$version" = fm-branch-eligible-owner-v1 ] || return 1
+  case "$pid" in ''|*[!0-9]*|1) return 1 ;; esac
+  case "$generation" in ''|*[!A-Za-z0-9._-]*) return 1 ;; esac
+  [ -z "$expected_pid" ] || [ "$pid" = "$expected_pid" ] || return 1
+  [ -z "$expected_generation" ] || [ "$generation" = "$expected_generation" ] || return 1
+  current=$(fm_pid_identity "$pid" 2>/dev/null) || return 1
+  [ -n "$current" ] && [ "$current" = "$identity" ]
+}
+
+# 0 when a branch grant is currently reserving rows: a valid row snapshot whose
+# recorded owner is still live. Anything else means no row is reserved.
+fm_wake_branch_grant_live() {  # <rows-file> <owner-file>
+  fm_wake_grant_rows_valid "$1" && fm_wake_branch_owner_matches "$2"
+}
+
+# How many queued rows <actor> can act on right now - exactly the rows a drain
+# by that actor would present or retire, and therefore the only rows worth
+# telling that actor to drain. Main owns every structurally valid row a live
+# branch grant does not reserve, plus every structurally invalid row. The branch
+# owns exactly the rows its live grant names. Read without the queue lock: a
+# torn read can only mis-count one poll, and the drain re-derives the set under
+# the lock before it presents or mutates anything.
+fm_wake_actor_pending_count() {  # <actor> [<rows-file> <owner-file>]
+  local actor=${1:-main} rows=${2:-$STATE/.branch-eligible-rows}
+  local owner=${3:-$STATE/.branch-eligible-owner} grant='' count=''
+  [ -f "$FM_WAKE_QUEUE" ] || { printf '0\n'; return 0; }
+  if fm_wake_branch_grant_live "$rows" "$owner"; then
+    grant=$rows
+  fi
+  if [ "$actor" = branch ]; then
+    [ -n "$grant" ] || { printf '0\n'; return 0; }
+    count=$(awk -F '\t' -v seqs="$grant" '
+      BEGIN { while ((getline line < seqs) > 0) keep[line] = 1 }
+      NF >= 5 && $2 ~ /^[0-9]+$/ && ($2 in keep) { n++ }
+      END { print n + 0 }
+    ' "$FM_WAKE_QUEUE") || count=''
+  else
+    count=$(awk -F '\t' -v seqs="$grant" '
+      BEGIN { if (seqs != "") while ((getline line < seqs) > 0) reserved[line] = 1 }
+      NF < 5 || $2 !~ /^[0-9]+$/ { n++; next }
+      !($2 in reserved) { n++ }
+      END { print n + 0 }
+    ' "$FM_WAKE_QUEUE") || count=''
+  fi
+  # A queue that exists but cannot be counted (unreadable file, unreadable
+  # state/) is not evidence of an empty queue: report a pending row so callers
+  # still raise the alarm on a queue nobody can prove is drained. A failed count
+  # is decided by awk's exit status, not by what it printed, because an awk that
+  # reaches END after failing to open the queue would otherwise report 0 rows.
+  case "$count" in ''|*[!0-9]*) count=1 ;; esac
+  printf '%s\n' "$count"
+}
+
 # --- signal announcement signatures -----------------------------------------
 #
 # The watcher's per-file signal scan (bin/fm-watch.sh scan_signals) detects a
@@ -1668,7 +1879,7 @@ fm_wake_signal_sig() {  # <file> -> reported-state signature
       status_observed_signature "$1"
       ;;
     *)
-      if [ "$_FM_UNAME" = Darwin ]; then stat -f '%z:%Fm' "$1" 2>/dev/null; else stat -c '%s:%Y' "$1" 2>/dev/null; fi
+      if [ "$_FM_UNAME" = Darwin ]; then /usr/bin/stat -f '%z:%Fm' "$1" 2>/dev/null; else stat -c '%s:%Y' "$1" 2>/dev/null; fi
       ;;
   esac
 }
