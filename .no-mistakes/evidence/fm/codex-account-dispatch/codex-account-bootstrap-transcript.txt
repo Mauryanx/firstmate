@@ -1,0 +1,42 @@
+
+================ 1. the shipped six-account example profile (docs/examples/crew-dispatch.json) ================
+    }
+  ],
+  "default": [
+    { "harness": "codex", "model": "gpt-5.5", "effort": "medium", "codexHome": "~/.codex" },
+    { "harness": "codex", "model": "gpt-5.5", "effort": "medium", "codexHome": "~/.codex-1" },
+    { "harness": "codex", "model": "gpt-5.5", "effort": "medium", "codexHome": "~/.codex-2" },
+    { "harness": "codex", "model": "gpt-5.5", "effort": "medium", "codexHome": "~/.codex-3" },
+    { "harness": "codex", "model": "gpt-5.5", "effort": "medium", "codexHome": "~/.codex-4" },
+    { "harness": "codex", "model": "gpt-5.5", "effort": "medium", "codexHome": "~/.codex-5" },
+    { "harness": "pi", "model": "anthropic/claude-sonnet-5", "effort": "medium" }
+  ]
+
+--- what bootstrap reports to the operator ---
+BOOTSTRAP_INFO: crew dispatch active config/crew-dispatch.json
+BOOTSTRAP_INFO: crew dispatch rule: The task depends on fresh news, current events, live public facts, or recent market and product changes. -> grok
+BOOTSTRAP_INFO: crew dispatch rule: The task is a trivial mechanical edit such as a rote rename, formatting sweep, targeted typo fix, or simple file gathering. -> claude/haiku/low
+BOOTSTRAP_INFO: crew dispatch rule: The task is a big or ambiguous multi-file feature, a risky refactor, or work that requires holding many moving parts in mind. -> quota-balanced[claude/claude-sonnet-5/high, codex/gpt-5.5/high]
+BOOTSTRAP_INFO: crew dispatch default: quota-balanced[codex/gpt-5.5/medium@~/.codex, codex/gpt-5.5/medium@~/.codex-1, codex/gpt-5.5/medium@~/.codex-2, codex/gpt-5.5/medium@~/.codex-3, codex/gpt-5.5/medium@~/.codex-4, codex/gpt-5.5/medium@~/.codex-5, pi/anthropic/claude-sonnet-5/medium]
+
+================ 2. ADVERSARIAL: codexHome on a non-codex profile ================
+{"rules":[{"when":"claude work","use":{"harness":"claude","codexHome":"~/.codex-1"}}]}
+--- bootstrap ---
+CREW_DISPATCH: invalid config/crew-dispatch.json - use profile codexHome applies only to harness codex
+
+================ 3. ADVERSARIAL: empty codexHome ================
+{"default":[{"harness":"codex","codexHome":""}]}
+--- bootstrap ---
+CREW_DISPATCH: invalid config/crew-dispatch.json - default profile codexHome must be a non-empty string when present
+
+================ 4. ADVERSARIAL: non-string codexHome ================
+{"rules":[{"when":"codex work","use":[{"harness":"codex","codexHome":3}]}]}
+--- bootstrap ---
+CREW_DISPATCH: invalid config/crew-dispatch.json - use profile codexHome must be a non-empty string when present
+
+================ 5. a mixed array where only one member carries the account axis ================
+{"rules":[{"when":"mixed","use":[{"harness":"codex","codexHome":"~/.codex"},{"harness":"pi","codexHome":"~/.codex"}]}]}
+--- bootstrap ---
+CREW_DISPATCH: invalid config/crew-dispatch.json - use profile codexHome applies only to harness codex
+
+================ done ================

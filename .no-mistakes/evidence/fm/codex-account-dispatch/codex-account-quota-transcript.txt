@@ -1,0 +1,105 @@
+
+================ fleet: ambient ~/.codex = 92%% remaining, .codex-1 = 88%%, .codex-3 = 4%% ================
+
+================ 1. watch on the worker's OWN account (.codex-3, nearly out) ================
+$ fm-procevent-quota.sh poll --interval 0.01 --threshold 10 --provider codex --codex-home /tmp/codex-account-quota.CybsWz/accounts/.codex-3 --timeout 5
+quota: quota-codex-codex-3-e35cb83b
+codex_home: /tmp/codex-account-quota.CybsWz/accounts/.codex-3
+status: low
+detail: {"provider":"codex","best":{"scope":"all_models","status":"known","effectivePercentRemaining":4,"runway":{"status":"through_reset"}}}
+condition_polls: 1
+--- what quota-axi was actually asked ---
+quota-axi invoked with CODEX_HOME=/tmp/codex-account-quota.CybsWz/accounts/.codex-3 argv=--provider codex --json
+
+================ 2. the SAME moment without --codex-home reads the ambient account and stays healthy ================
+$ timeout 3 fm-procevent-quota.sh poll --interval 0.5 --threshold 10 --provider codex --timeout 5
+exit=124 (124 = still polling: the ambient account never crossed the threshold)
+--- what quota-axi was actually asked ---
+quota-axi invoked with CODEX_HOME=<unset> argv=--json
+quota-axi invoked with CODEX_HOME=<unset> argv=--json
+
+================ 3. arm a per-account watch, list the registration, then retire it ================
+$ fm-procevent-quota.sh arm --interval 30 --threshold 15 --provider codex --codex-home /tmp/codex-account-quota.CybsWz/accounts/.codex-3
+registered: quota-codex-codex-3-e35cb83b (quota)
+armed: quota-codex-codex-3-e35cb83b
+provider: codex
+codex_home: /tmp/codex-account-quota.CybsWz/accounts/.codex-3
+threshold: 15%
+interval: 30s
+--- registered poll command for quota-codex-codex-3-e35cb83b ---
+adapter=quota
+argc=12
+argv:
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M21SXTME5QZ1WV58TXD2FXTM/bin/fm-procevent-quota.sh
+poll
+--interval
+30
+--threshold
+15
+--provider
+codex
+--codex-home
+/tmp/codex-account-quota.CybsWz/accounts/.codex-3
+--timeout
+24
+
+$ fm-procevent-quota.sh arm --interval 30 --threshold 15 --provider codex --codex-home /tmp/codex-account-quota.CybsWz/accounts/.codex-1
+registered: quota-codex-codex-1-d1caf47f (quota)
+armed: quota-codex-codex-1-d1caf47f
+provider: codex
+codex_home: /tmp/codex-account-quota.CybsWz/accounts/.codex-1
+threshold: 15%
+interval: 30s
+--- one watch per account now registered ---
+/tmp/codex-account-quota.CybsWz/home/state/procevent/quota-codex-codex-1-d1caf47f.source
+/tmp/codex-account-quota.CybsWz/home/state/procevent/quota-codex-codex-3-e35cb83b.source
+
+================ 4. an account reached through an alias is ONE watch, and retire still finds it after the alias is deleted ================
+$ source-id --provider codex --codex-home <alias>  -> quota-codex-codex-3-e35cb83b
+  (the physical account id is                      quota-codex-codex-3-e35cb83b)
+$ arm --interval 30 --threshold 15 --provider codex --codex-home <alias>
+registered: quota-codex-codex-3-e35cb83b (quota)
+armed: quota-codex-codex-3-e35cb83b
+provider: codex
+codex_home: /tmp/codex-account-quota.CybsWz/accounts/.codex-3
+threshold: 15%
+interval: 30s
+--- still one watch per account (no duplicate for the alias) ---
+/tmp/codex-account-quota.CybsWz/home/state/procevent/quota-codex-codex-1-d1caf47f.source
+/tmp/codex-account-quota.CybsWz/home/state/procevent/quota-codex-codex-3-e35cb83b.source
+$ retire --provider codex --codex-home <the now-deleted alias>
+retired: quota-codex-codex-3-e35cb83b
+--- registrations left ---
+/tmp/codex-account-quota.CybsWz/home/state/procevent/quota-codex-codex-1-d1caf47f.source
+
+================ 5. ADVERSARIAL: the account is signed out mid-watch ================
+$ fm-procevent-quota.sh poll --interval 0.01 --threshold 10 --provider codex --codex-home /tmp/codex-account-quota.CybsWz/accounts/.codex-signed-out --timeout 5
+quota: quota-codex-codex-signed-out-c542b7a1
+codex_home: /tmp/codex-account-quota.CybsWz/accounts/.codex-signed-out
+status: error
+detail: codex quota read refused: codex home '/tmp/codex-account-quota.CybsWz/accounts/.codex-signed-out' has no non-empty auth.json; sign that account in with CODEX_HOME='/tmp/codex-account-quota.CybsWz/accounts/.codex-signed-out' codex login before dispatching on it
+condition_polls: 1
+--- did it fall back to the ambient (healthy) account? ---
+quota-axi was never reached; no ambient reading was reported
+
+================ 6. ADVERSARIAL: --codex-home on a non-codex watch ================
+$ fm-procevent-quota.sh arm --provider claude --codex-home /tmp/codex-account-quota.CybsWz/accounts/.codex-3
+error: --codex-home applies only to --provider codex; this watch tracks claude
+exit=1
+$ fm-procevent-quota.sh arm --codex-home /tmp/codex-account-quota.CybsWz/accounts/.codex-3   (aggregate watch)
+error: --codex-home applies only to --provider codex; this watch tracks the aggregate
+exit=1
+
+================ 7. ADVERSARIAL: arm on an account that was never signed in ================
+$ fm-procevent-quota.sh arm --provider codex --codex-home /tmp/codex-account-quota.CybsWz/accounts/.codex-signed-out
+error: --codex-home refused: codex home '/tmp/codex-account-quota.CybsWz/accounts/.codex-signed-out' has no non-empty auth.json; sign that account in with CODEX_HOME='/tmp/codex-account-quota.CybsWz/accounts/.codex-signed-out' codex login before dispatching on it
+exit=1
+--- registrations after the refusal ---
+/tmp/codex-account-quota.CybsWz/home/state/procevent/quota-codex-codex-1-d1caf47f.source
+
+================ 8. ADVERSARIAL: no shasum/sha256sum on PATH (the source id must not silently drift) ================
+$ PATH=<no shasum, no sha256sum> fm-procevent-quota.sh source-id --provider codex --codex-home /tmp/codex-account-quota.CybsWz/accounts/.codex-3
+error: --codex-home needs shasum or sha256sum on PATH to derive the account source id; neither was found
+exit=1
+
+================ done ================

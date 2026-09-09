@@ -1,0 +1,62 @@
+
+================ 1. codex ship spawn ON account ~/.codex-3 (--codex-home) ================
+$ fm-spawn.sh ship-on-a1 <project> --mode no-mistakes --yolo off --model gpt-5 --codex-home /tmp/codex-account-drive.qNw7Cf/accounts/.codex-3
+warning: /tmp/codex-account-drive.qNw7Cf/acct-on/home/data/ship-on-a1/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned ship-on-a1 harness=codex kind=ship mode=no-mistakes yolo=off window=firstmate:fm-ship-on-a1 worktree=/tmp/codex-account-drive.qNw7Cf/acct-on/wt
+exit=0
+--- launch command typed into the worker pane ---
+CODEX_HOME='/tmp/codex-account-drive.qNw7Cf/accounts/.codex-3' env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI codex --model 'gpt-5' --dangerously-bypass-approvals-and-sandbox -c "notify=[\"bash\",\"-c\",\"touch '/tmp/codex-account-drive.qNw7Cf/acct-on/home/state/ship-on-a1.turn-ended'\"]" "$('/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M21SXTME5QZ1WV58TXD2FXTM/bin/fm-operational-input.sh' encode launch-brief < '/tmp/codex-account-drive.qNw7Cf/acct-on/home/data/ship-on-a1/launch-brief.md')"
+--- state/ship-on-a1.meta (account axis lines) ---
+harness=codex
+kind=ship
+model=gpt-5
+codex_home=/tmp/codex-account-drive.qNw7Cf/accounts/.codex-3
+
+================ 2. codex ship spawn with NO --codex-home (default account path unchanged) ================
+$ fm-spawn.sh ship-off-a2 <project> --mode no-mistakes --yolo off --model gpt-5
+warning: /tmp/codex-account-drive.qNw7Cf/acct-off/home/data/ship-off-a2/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned ship-off-a2 harness=codex kind=ship mode=no-mistakes yolo=off window=firstmate:fm-ship-off-a2 worktree=/tmp/codex-account-drive.qNw7Cf/acct-off/wt
+exit=0
+--- launch command typed into the worker pane ---
+env -u CURSOR_AGENT -u CURSOR_INVOKED_AS -u GEMINI_CLI codex --model 'gpt-5' --dangerously-bypass-approvals-and-sandbox -c "notify=[\"bash\",\"-c\",\"touch '/tmp/codex-account-drive.qNw7Cf/acct-off/home/state/ship-off-a2.turn-ended'\"]" "$('/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M21SXTME5QZ1WV58TXD2FXTM/bin/fm-operational-input.sh' encode launch-brief < '/tmp/codex-account-drive.qNw7Cf/acct-off/home/data/ship-off-a2/launch-brief.md')"
+--- codex_home= lines in state/ship-off-a2.meta ---
+count: 0
+
+================ 3. ADVERSARIAL: signed-out account (directory with no auth.json) ================
+$ fm-spawn.sh ship-noauth-a3 <project> ... --codex-home /tmp/codex-account-drive.qNw7Cf/accounts/.codex-signed-out
+error: --codex-home refused: codex home '/tmp/codex-account-drive.qNw7Cf/accounts/.codex-signed-out' has no non-empty auth.json; sign that account in with CODEX_HOME='/tmp/codex-account-drive.qNw7Cf/accounts/.codex-signed-out' codex login before dispatching on it
+exit=1
+--- did it silently fall back and spawn anyway? ---
+no task record published, no launch typed: launch log empty
+
+================ 4. ADVERSARIAL: --codex-home on a non-codex harness (claude) ================
+$ fm-spawn.sh ship-claude-a4 <project> ... --codex-home /tmp/codex-account-drive.qNw7Cf/accounts/.codex-3   (home pinned to claude)
+error: --codex-home applies only to harness codex; this spawn resolved harness 'claude'
+exit=1
+
+================ 5. ADVERSARIAL: metadata injection through a control byte in the path ================
+$ fm-spawn.sh ship-inject-a5 <project> ... --codex-home "<path with an embedded newline>"
+error: --codex-home refused: codex home contains an invalid control byte
+exit=1
+no task record published
+
+================ 6. ADVERSARIAL: --codex-home on a secondmate launch ================
+$ fm-spawn.sh sm-a6 <home> --secondmate --codex-home /tmp/codex-account-drive.qNw7Cf/accounts/.codex-3
+error: --codex-home applies to ship, scout, and relaunch spawns only; a --secondmate launch has no Codex account axis
+exit=1
+
+================ done ================
+
+================ 7. ADVERSARIAL: an account path holding a space, a quote, and shell metacharacters ================
+$ fm-spawn.sh ship-quote-a7 <project> ... --codex-home "/tmp/codex-account-drive.qNw7Cf/accounts/my codex' $(touch /tmp/fm-pwned); acct"
+warning: /tmp/codex-account-drive.qNw7Cf/acct-quote/home/data/ship-quote-a7/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches
+spawned ship-quote-a7 harness=codex kind=ship mode=no-mistakes yolo=off window=firstmate:fm-ship-quote-a7 worktree=/tmp/codex-account-drive.qNw7Cf/acct-quote/wt
+exit=0
+--- launch prefix as typed into the pane ---
+CODEX_HOME='/tmp/codex-account-drive.qNw7Cf/accounts/my codex'\'' $(touch /tmp/fm-pwned); acct' env -u <...rest of launch...>
+--- recorded account ---
+codex_home=/tmp/codex-account-drive.qNw7Cf/accounts/my codex' $(touch /tmp/fm-pwned); acct
+--- did the embedded command substitution execute? ---
+no; the path is shell-quoted, nothing ran
+--- the quoted prefix still evaluates back to the exact directory ---
+round-trips to the account directory exactly

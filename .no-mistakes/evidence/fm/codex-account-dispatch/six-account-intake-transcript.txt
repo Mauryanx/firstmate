@@ -1,0 +1,26 @@
+
+================ intake: one quota read per Codex account ================
+~/.codex     -> codex,55,/tmp/six-account-intake.gMS0Iq/user/.codex
+~/.codex-1   -> codex,12,/tmp/six-account-intake.gMS0Iq/user/.codex-1
+~/.codex-2   -> codex,71,/tmp/six-account-intake.gMS0Iq/user/.codex-2
+~/.codex-3   -> codex,4,/tmp/six-account-intake.gMS0Iq/user/.codex-3
+~/.codex-4   -> codex,96,/tmp/six-account-intake.gMS0Iq/user/.codex-4
+~/.codex-5   -> codex,38,/tmp/six-account-intake.gMS0Iq/user/.codex-5
+
+================ ADVERSARIAL: an account that was never signed in ================
+$ fm_quota_axi_read_codex_home ~/.codex-signed-out
+error: codex quota read refused: codex home '/tmp/six-account-intake.gMS0Iq/user/.codex-signed-out' has no non-empty auth.json; sign that account in with CODEX_HOME='/tmp/six-account-intake.gMS0Iq/user/.codex-signed-out' codex login before dispatching on it
+exit=1 (no reading returned, so it cannot be ranked as if healthy)
+
+================ ADVERSARIAL: a relative account spelling ================
+$ fm_quota_axi_read_codex_home accounts/codex-1
+error: codex quota read refused: codex home 'accounts/codex-1' must be an absolute path or start with ~/
+exit=1
+
+================ a bounded read: hung quota-axi ends at the timeout ================
+$ fm_quota_axi_read_codex_home --timeout 2 ~/.codex-4
+
+real	0m2.139s
+user	0m0.018s
+sys	0m0.023s
+exit=124 (124 = timed out, not a silent healthy reading)
