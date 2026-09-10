@@ -64,6 +64,9 @@ A subject that carries a claim is rejected rather than repeated back, and a neut
 This is why the opener belongs in the bridge and not in the platform's own timeout filler: that filler fires on a timer, has never seen his words, and so can only ever vary which unrelated thing he hears.
 
 The turn is then held open while Firstmate reads and thinks, so the answer continues that same utterance as one thought rather than arriving later as a separate announcement.
+The hold must stay below the agent's own cascade timeout: measured against the live platform, a turn still open when that expires ends the whole conversation with a cascade error and drops the captain mid-call, so a generous hold is worse than a short one.
+Holding does not delay what he hears, because the opener is synthesised and audible about two seconds in whether the turn is held or not; only the platform's own bookkeeping waits for the stream to finish.
+The agent's fallback model is disabled deliberately, so a slow or failing bridge can never let a general-purpose model answer him about the work.
 Nothing is spoken during the wait beyond content-free keepalives that hold the stream.
 If the answer arrives inside the hold it is delivered there; if it does not, the turn ends and the announcing page carries it exactly as before.
 A platform that hangs up mid-hold ends the turn without consuming anything, so the answer stays available rather than being marked spoken to a listener who had gone.

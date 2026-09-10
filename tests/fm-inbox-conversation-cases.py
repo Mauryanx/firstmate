@@ -505,7 +505,7 @@ try:
     # The opening words are about what he actually asked, drawn from his own
     # words, and they never assert a finding, a status or a result.
     said = 'Tell me what the research found about option B.'
-    first = ask(said, extra={'request_id': 'bridge-1'})
+    first = ask(said, extra={'request_id': 'bridge-1'}).strip()
     assert first in ('Looking into option B.', 'On option B now.'), first
     second = ask('And what about option A?', extra={'request_id': 'bridge-2'})
     assert 'option A' in second, second
@@ -557,10 +557,10 @@ try:
 
     # A question whose subject carries a claim gets a neutral opener instead: the
     # bridge must not repeat "the build is broken" back as though it knew.
-    neutral = ask('Tell me about why the build is broken.')
+    neutral = ask('Tell me about why the build is broken.').strip()
     assert neutral in ('first ack.', 'second ack.'), neutral
     assert 'broken' not in neutral and 'build' not in neutral
-    again = ask('Why is the deploy failing?')
+    again = ask('Why is the deploy failing?').strip()
     assert again in ('first ack.', 'second ack.') and again != neutral, (neutral, again)
 
     # A transcript carrying no captain turn at all is refused, not guessed at.

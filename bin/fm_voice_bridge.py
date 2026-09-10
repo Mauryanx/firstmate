@@ -62,7 +62,15 @@ MAX_BODY_BYTES = 400000
 # How long one spoken turn may stay open waiting for Firstmate, and how often the
 # bridge looks. Holding the turn open is what lets the answer continue the opener
 # as one utterance instead of arriving later as a separate announcement.
-HOLD_SECONDS = 20.0
+#
+# This MUST stay below the agent's own cascade timeout. Measured against the live
+# platform: a turn still open when that timeout expires ends the whole
+# conversation with an LLM cascade error, which drops the captain mid-call, so a
+# generous hold is worse than a short one. With the cascade timeout at its
+# documented maximum of 15 seconds, 10 leaves a proven margin. Holding does not
+# delay speech: the opener is synthesised and heard about two seconds in either
+# way, and only the platform's own bookkeeping waits for the stream to finish.
+HOLD_SECONDS = 10.0
 LOOK_INTERVAL = 0.5
 
 # An opener may reflect what the captain asked. It may never assert a finding, a
@@ -267,7 +275,7 @@ class Session:
 
     def utterance(self, opening, request_id):
         """Speak the opener now, then hold this turn open for Firstmate's answer."""
-        yield opening
+        yield opening + ' '
         deadline = time.time() + self.hold
         while time.time() < deadline:
             time.sleep(LOOK_INTERVAL)
@@ -283,7 +291,7 @@ class Session:
                                                       'generation': generation})
                 if result.get('deliver'):
                     try:
-                        yield ' ' + result['speech_text']
+                        yield result['speech_text']
                     except GeneratorExit:
                         # The platform hung up after the answer was claimed but
                         # before it could be heard. Record that it was not, so
