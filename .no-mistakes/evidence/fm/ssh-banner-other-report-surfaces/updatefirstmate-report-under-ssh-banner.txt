@@ -1,0 +1,44 @@
+===================================================================
+CASE: failure
+-- what the captain runs: /updatefirstmate  ->  bin/fm-update.sh
+-- transport: ssh stub emitting OpenSSH's two-line ** PQ banner first
+-- operator report:
+     firstmate: updated 6a88d3e..a6c46b0 (instructions changed: AGENTS.md, bin, .agents/skills)
+     remote secondmate sm1: skipped on remote-mac: error: remote secondmate home sync skipped: dirty working tree
+     reread-firstmate: yes
+     restart-secondmates: none
+     nudge-secondmates: none
+-- exit: 0
+
+===================================================================
+CASE: success
+-- what the captain runs: /updatefirstmate  ->  bin/fm-update.sh
+-- transport: ssh stub emitting OpenSSH's two-line ** PQ banner first
+-- operator report:
+     firstmate: updated f55af94..92ad8f7 (instructions changed: AGENTS.md, bin, .agents/skills)
+     remote secondmate sm1: updated on remote-mac (92ad8f70088e2a20c92c5737f5202a118b090dc1, instructions changed: AGENTS.md,bin,.agents/skills)
+     reread-firstmate: yes
+     restart-secondmates: none
+     nudge-secondmates: none
+-- exit: 0
+
+===================================================================
+CASE: silent
+-- what the captain runs: /updatefirstmate  ->  bin/fm-update.sh
+-- transport: ssh stub emitting OpenSSH's two-line ** PQ banner first
+-- remote leg: killed after the banner (ssh 255, no diagnostic of its own)
+-- operator report:
+     firstmate: updated 249df97..7460e06 (instructions changed: AGENTS.md, bin, .agents/skills)
+     remote secondmate sm1: skipped on remote-mac: the remote update failed without a reported reason
+     reread-firstmate: yes
+     restart-secondmates: none
+     nudge-secondmates: none
+-- exit: 0
+
+
+===================================================================
+SAME FIXTURE DRIVEN AGAINST THE BASE COMMIT b1ad702 (before this change)
+-- failure case: the real remote diagnostic is replaced by OpenSSH's banner
+     remote secondmate sm1: skipped on remote-mac: ** WARNING: connection is not using a post-quantum key exchange algorithm.
+-- banner-only case: same false cause, no named fallback
+     remote secondmate sm1: skipped on remote-mac: ** WARNING: connection is not using a post-quantum key exchange algorithm.

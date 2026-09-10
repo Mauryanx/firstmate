@@ -1,0 +1,27 @@
+===================================================================
+CASE: session start sweep: local nudge send says nothing but the banner
+-- what the captain runs: session start  ->  bin/fm-bootstrap.sh
+     NUDGE_SECONDMATES: secondmate sm-instr: send failed: the send failed without a reported reason
+
+===================================================================
+CASE: session start sweep: remote sync + inheritance legs say nothing but the banner
+     SECONDMATE_SYNC: secondmate sm: skipped: remote tracked-file sync failed on host-sm: the remote sync failed without a reported reason
+     SECONDMATE_SYNC: secondmate sm: skipped: remote inheritance failed on host-sm: the inheritance push failed without a reported reason
+
+===================================================================
+CASE: session start sweep: successful remote sync arrives under the banner
+-- remote home HEAD advanced to the primary commit: YES
+-- re-read steer actually delivered to the remote mate:
+     sm [fm-from-firstmate]⁣corr=9952e28c9db90b8c Firstmate instructions or inherited config changed on this host. Re-read AGENTS.md and the inherited config files before further work.
+-- pending nudge marker left behind: NO (intent was delivered)
+
+===================================================================
+SAME FIXTURE DRIVEN AGAINST THE BASE COMMIT b1ad702 (before this change)
+-- case 2, silent remote legs: the banner is reported as the cause
+     SECONDMATE_SYNC: secondmate sm: skipped: remote tracked-file sync failed on host-sm: ** WARNING: connection is not using a post-quantum key exchange algorithm.
+     SECONDMATE_SYNC: secondmate sm: skipped: remote inheritance failed on host-sm: ** WARNING: connection is not using a post-quantum key exchange algorithm.
+-- case 3, successful remote sync under the banner:
+     remote home HEAD advanced to the primary commit: YES
+     re-read steer delivered to the remote mate: (none - the banner hid the
+     `synced:` line, so bootstrap never recognised the success and silently
+     skipped the re-read nudge the converged remote home was owed)

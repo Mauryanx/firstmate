@@ -1,0 +1,14 @@
+===================================================================
+CASE: liveness sweep, local respawn says nothing but the OpenSSH banner
+-- what the captain runs: session start  ->  bin/fm-bootstrap.sh liveness sweep
+     SECONDMATE_LIVENESS: secondmate sm1: respawn failed after confirmed agent absence on existing endpoint: the respawn failed without a reported reason
+
+===================================================================
+CASE: liveness sweep, remote respawn says nothing but the OpenSSH banner
+     SECONDMATE_LIVENESS: secondmate rsm: respawn failed after remote endpoint dead on its configured host: the respawn failed without a reported reason
+     SECONDMATE_LIVENESS: secondmate rsm: skipped: remote reply source could not be registered
+
+===================================================================
+SAME FIXTURES DRIVEN AGAINST THE BASE COMMIT b1ad702 (before this change)
+     SECONDMATE_LIVENESS: secondmate sm1: respawn failed after confirmed agent absence on existing endpoint: ** WARNING: connection is not using a post-quantum key exchange algorithm.
+     SECONDMATE_LIVENESS: secondmate rsm: respawn failed after remote endpoint dead on its configured host: ** WARNING: connection is not using a post-quantum key exchange algorithm.

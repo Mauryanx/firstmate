@@ -1,0 +1,27 @@
+===================================================================
+CASE: remote relaunch fails, transport prepends OpenSSH's PQ banner
+-- what the captain runs: /restartsecondmates sm3  ->  bin/fm-secondmate-restart.sh
+-- per-mate result line:
+     unreached: sm3: the restart outcome is unknown: remote restart fixture failed after persistence
+     summary: 0 of 1 restarted, 0 nudged, 1 unreached
+-- exit: 3
+
+===================================================================
+CASE: remote relaunch succeeds under the same banner
+-- per-mate result line:
+     restarted: sm4 on remote-mac (pi)
+     summary: 1 of 1 restarted, 0 nudged, 0 unreached
+-- exit: 0
+
+===================================================================
+SAME FIXTURE DRIVEN AGAINST THE BASE COMMIT b1ad702 (before this change)
+-- the real remote diagnostic is replaced by OpenSSH's banner:
+     unreached: sm3: the restart outcome is unknown: ** WARNING: connection is not using a post-quantum key exchange algorithm.
+     summary: 0 of 1 restarted, 0 nudged, 1 unreached
+-- exit: 3
+===================================================================
+ADVERSARIAL: every remote leg dies after writing ONLY OpenSSH's banner
+-- (ssh exits 255 with the two ** lines on stderr and nothing of its own)
+     unreached: sm5: the request to write down its open work could not be delivered: steer to remote secondmate sm5 is unconfirmed (transport lost twice; remote completion unknown). Only the correlation-reusing resend below is idempotent and lands on the same remote inbox record:; the re-read message could not be delivered either: steer to remote secondmate sm5 is unconfirmed (transport lost twice; remote completion unknown). Only the correlation-reusing resend below is idempotent and lands on the same remote inbox record:
+     summary: 0 of 1 restarted, 0 nudged, 1 unreached
+-- exit: 3
