@@ -1454,6 +1454,28 @@ fm_check_output_cleanup() {
   FM_CHECK_OUTPUT=
 }
 
+# watcher_wait_reap <pid>: `wait` for a child until it is actually reaped, and
+# publish its status in FM_WAIT_STATUS. This watcher traps the tap (SIGUSR1,
+# watcher_tap below), and a trapped signal returns EVERY `wait` in this shell
+# early with a >128 status while the child is still running - so a tap arriving
+# during an unrelated wait would otherwise look like "the child finished" and
+# the caller would tear down a live child and read its half-written output.
+# Only a status >128 whose child is genuinely gone is that child's own death by
+# signal; anything else is re-waited until the child is reaped.
+FM_WAIT_STATUS=
+watcher_wait_reap() {  # <pid>
+  local pid=$1 rc=0
+  FM_WAIT_STATUS=
+  while :; do
+    rc=0
+    wait "$pid" 2>/dev/null || rc=$?
+    [ "$rc" -gt 128 ] || break
+    kill -0 "$pid" 2>/dev/null || break
+  done
+  FM_WAIT_STATUS=$rc
+  return 0
+}
+
 fm_active_check_stop() {
   local pid=${FM_ACTIVE_CHECK_PID:-} pgid=${FM_ACTIVE_CHECK_PGID:-} i
   [ -n "$pid" ] || [ -n "$pgid" ] || return 0
@@ -1466,7 +1488,7 @@ fm_active_check_stop() {
   done
   [ -z "$pgid" ] || kill -KILL -- "-$pgid" 2>/dev/null || true
   [ -z "$pid" ] || kill -KILL "$pid" 2>/dev/null || true
-  [ -z "$pid" ] || wait "$pid" 2>/dev/null || true
+  [ -z "$pid" ] || watcher_wait_reap "$pid"
   i=0
   while [ -n "$pgid" ] && kill -0 -- "-$pgid" 2>/dev/null && [ "$i" -lt 100 ]; do
     sleep 0.01
@@ -1500,7 +1522,7 @@ run_check_capture() {
     return 1
   fi
   [ -z "$FM_CHECK_SIGNAL_PENDING" ] || exit 1
-  wait "$FM_ACTIVE_CHECK_PID" 2>/dev/null || true
+  watcher_wait_reap "$FM_ACTIVE_CHECK_PID"
   FM_ACTIVE_CHECK_PID=
   fm_active_check_stop || return 1
   FM_CHECK_RESULT=$(cat "$FM_CHECK_OUTPUT" 2>/dev/null || true)
@@ -1632,9 +1654,12 @@ watcher_tap() {
 # stops the direct child only: a plain sleep is that child, and the Herdr event
 # wait installs its own TERM cleanup for the reader and scratch fifo it forks
 # (fm_backend_herdr_wait_transition), so nothing outlives the stopped wait.
+# "tapped" is decided by how the child DIED (killed by the handler's signal),
+# never by the tap flag alone: a tap landing in the window between a wait that
+# already completed and the classification below would otherwise discard the
+# record that wait had just produced.
 FM_WATCH_WAIT_STATUS=
 watch_wait_bg() {
-  local rc=0
   FM_WATCH_WAIT_STATUS=
   if [ "$FM_WATCH_TAPPED" -eq 1 ]; then
     FM_WATCH_WAIT_STATUS=tapped
@@ -1647,14 +1672,11 @@ watch_wait_bg() {
   if [ "$FM_WATCH_TAPPED" -eq 1 ]; then
     kill "$FM_WATCH_WAIT_CHILD" 2>/dev/null || true
   fi
-  # A trapped signal returns `wait` immediately; the second wait reaps the
-  # child the handler stopped so no zombie is left for the next cycle.
-  wait "$FM_WATCH_WAIT_CHILD" 2>/dev/null || rc=$?
-  if [ "$FM_WATCH_TAPPED" -eq 1 ]; then
-    wait "$FM_WATCH_WAIT_CHILD" 2>/dev/null || true
+  watcher_wait_reap "$FM_WATCH_WAIT_CHILD"
+  if [ "$FM_WAIT_STATUS" -gt 128 ]; then
     FM_WATCH_WAIT_STATUS=tapped
   else
-    FM_WATCH_WAIT_STATUS=$rc
+    FM_WATCH_WAIT_STATUS=$FM_WAIT_STATUS
   fi
   FM_WATCH_WAIT_CHILD=
   return 0
@@ -1663,6 +1685,15 @@ watch_wait_bg() {
 # poll_wait: the blind `sleep POLL`, made tap-interruptible.
 poll_wait() {
   watch_wait_bg sleep "$POLL"
+}
+
+# The event wait's scratch record file, held at script level so watcher_cleanup
+# can remove it when this watcher is torn down mid-wait (an arm --restart TERMs
+# a watcher that is normally parked in exactly this wait).
+FM_EVENT_WAIT_RECORD=
+fm_event_wait_record_cleanup() {
+  [ -z "$FM_EVENT_WAIT_RECORD" ] || rm -f -- "$FM_EVENT_WAIT_RECORD"
+  FM_EVENT_WAIT_RECORD=
 }
 
 # event_wait_or_sleep: the terminal wait of each supervision cycle. For a home
@@ -1686,7 +1717,7 @@ event_wait_capture() {
 }
 
 event_wait_or_sleep() {
-  local w b session first_backend="" first_session="" rec rc rec_file
+  local w b session first_backend="" first_session="" rec rc
   local windows=()
   while IFS= read -r w; do
     b=$(window_backend "$w")
@@ -1731,10 +1762,11 @@ event_wait_or_sleep() {
   # The wait runs as a background child so a tap can end it too; its record
   # comes back through a private file rather than a command substitution,
   # which a trapped signal could not interrupt.
-  rec_file=$(mktemp "$STATE/.fm-eventwait.XXXXXX") || { poll_wait; return; }
-  watch_wait_bg event_wait_capture "$rec_file" "$first_backend" "$first_session" "${windows[@]}"
-  rec=$(cat "$rec_file" 2>/dev/null || true)
-  rm -f "$rec_file"
+  fm_event_wait_record_cleanup
+  FM_EVENT_WAIT_RECORD=$(mktemp "$STATE/.fm-eventwait.XXXXXX") || { FM_EVENT_WAIT_RECORD=; poll_wait; return; }
+  watch_wait_bg event_wait_capture "$FM_EVENT_WAIT_RECORD" "$first_backend" "$first_session" "${windows[@]}"
+  rec=$(cat "$FM_EVENT_WAIT_RECORD" 2>/dev/null || true)
+  fm_event_wait_record_cleanup
   case "$FM_WATCH_WAIT_STATUS" in
     tapped) rc=1 ;;
     ''|*[!0-9]*) rc=2 ;;
@@ -1876,6 +1908,7 @@ watcher_cleanup() {
   # hook teardown) must not outlive it: its child is stopped here, and the
   # Herdr event wait's own TERM cleanup owns the reader it forked.
   [ -z "${FM_WATCH_WAIT_CHILD:-}" ] || kill "$FM_WATCH_WAIT_CHILD" 2>/dev/null || true
+  fm_event_wait_record_cleanup
   fm_active_check_stop || cleanup_status=1
   fm_check_output_cleanup
   fm_custom_check_snapshot_cleanup

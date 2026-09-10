@@ -4680,10 +4680,12 @@ test_paused_until_that_passed_is_rechecked_before_the_cadence() {
 # a durable row and rings the watcher; the cycle that surfaces the append runs
 # at once. With a 31 s poll, only a tapped watcher can exit inside three
 # seconds, and the reason it prints is the recovery resurface the append's
-# downtime marker asks for. The 31 s sleep is distinctive so its absence after
-# the exit proves the interrupted wait left no orphan behind.
+# downtime marker asks for. The terminal wait's own sleeper pid is captured
+# while the watcher still owns it (a host-wide command-line match would see
+# every unrelated sleeper on these shared always-on machines), so its death
+# after the exit proves the interrupted wait left no orphan behind.
 test_external_append_taps_the_sleeping_watcher() {
-  local dir state fakebin out drain_out pid i
+  local dir state fakebin out drain_out pid i sleeper
   dir=$(make_case tap-sleeping-watcher); state="$dir/state"; fakebin="$dir/fakebin"
   out="$dir/watch.out"; drain_out="$dir/drain.out"
   watch_bg "$state" "$fakebin" "$out" env FM_POLL=31
@@ -4695,13 +4697,32 @@ test_external_append_taps_the_sleeping_watcher() {
     i=$((i + 1))
   done
   [ -e "$state/.watch.lock/tap" ] || { reap "$pid"; fail "a live watcher must advertise the tap in its lock"; }
-  # Let the first cycle reach its terminal wait before ringing.
-  sleep 1
-  kill -0 "$pid" 2>/dev/null || fail "watcher exited on its own before the append"
+  # Wait for the first cycle to reach its terminal wait, and take that wait's
+  # sleeper from the watcher's OWN children.
+  i=0
+  sleeper=
+  while [ "$i" -lt 100 ] && [ -z "$sleeper" ]; do
+    kill -0 "$pid" 2>/dev/null || fail "watcher exited on its own before reaching its terminal wait"
+    sleeper=$(pgrep -P "$pid" -x -f 'sleep 31' 2>/dev/null | head -n 1)
+    [ -n "$sleeper" ] && break
+    sleep 0.1
+    i=$((i + 1))
+  done
+  [ -n "$sleeper" ] || { reap "$pid"; fail "the watcher never reached its 31s terminal wait"; }
   append_wake "$state" check inbox:tap-note "check: captain inbox note tap-note" || fail "external append failed"
   wait_for_exit "$pid" 30 || fail "a tapped watcher did not exit within three seconds of the append (poll is 31s)"
   grep -F 'check: rearm-resurface' "$out" >/dev/null || fail "the tapped cycle did not surface the append: $(cat "$out")"
-  ! pgrep -x -f 'sleep 31' >/dev/null 2>&1 || fail "the interrupted terminal wait left its sleep running"
+  i=0
+  while [ "$i" -lt 30 ] && kill -0 "$sleeper" 2>/dev/null; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  ! kill -0 "$sleeper" 2>/dev/null || fail "the interrupted terminal wait left its sleep running"
+  # The tap advertisement lives in the lock's owner directory, so releasing the
+  # lock has to be able to remove it: one leftover owner dir per watcher
+  # lifetime would grow this home's state dir without bound.
+  [ -z "$(ls -d "$state"/.watch.lock.owner.* 2>/dev/null || true)" ] \
+    || fail "the exited watcher left its lock owner directory behind: $(ls -d "$state"/.watch.lock.owner.* 2>/dev/null)"
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$drain_out" 2>/dev/null || fail "drain after the tapped wake failed"
   grep "$(printf '\tcheck\t')" "$drain_out" | grep -F 'inbox:tap-note' >/dev/null || fail "the externally appended row was not presented"
   pass "an external wake append taps the sleeping watcher, which surfaces it at once instead of at the poll cadence"

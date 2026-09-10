@@ -3474,22 +3474,29 @@ fm_backend_herdr_wait_transition() {  # <session> <timeout_secs> <state_dir> <pa
   [ "${#reader[@]}" -gt 0 ] || return 2
 
   local fifo_dir fifo reader_pid line ws status agent raw record hit rc=1 reader_rc=0
-  fifo_dir=$(mktemp -d "${TMPDIR:-/tmp}/fm-herdr-eventwait.XXXXXX") || return 2
+  # The watcher may end this wait early (its tap) by stopping the child this
+  # runs in. Leave nothing behind when that TERM lands: the reader is stopped
+  # and the scratch fifo removed by the trap, and the caller's own TERM
+  # disposition is restored on every ordinary return below. Both the saved
+  # disposition and the trap are established BEFORE anything is created, so no
+  # fork or mktemp below is exposed to a TERM with the default disposition; the
+  # body is single-quoted so it reads whatever the reader pid and fifo dir are
+  # at signal time rather than at install time.
+  local saved_term_trap
+  saved_term_trap=$(trap -p TERM)
+  reader_pid=
+  fifo_dir=
+  # shellcheck disable=SC2016 # Expanded at signal time on purpose: these are this call's.
+  trap '[ -z "$reader_pid" ] || kill "$reader_pid" 2>/dev/null; exec 9<&- 2>/dev/null; [ -z "$fifo_dir" ] || rm -rf "$fifo_dir" 2>/dev/null; exit 143' TERM
+  fifo_dir=$(mktemp -d "${TMPDIR:-/tmp}/fm-herdr-eventwait.XXXXXX") || { eval "${saved_term_trap:-trap - TERM}"; return 2; }
   fifo="$fifo_dir/events"
   if ! mkfifo "$fifo" 2>/dev/null; then
     rm -rf "$fifo_dir" 2>/dev/null || true
+    eval "${saved_term_trap:-trap - TERM}"
     return 2
   fi
   "${reader[@]}" "$sock" "$timeout" "${pane_ids[@]}" > "$fifo" 2>/dev/null &
   reader_pid=$!
-  # The watcher may end this wait early (its tap) by stopping the child this
-  # runs in. Leave nothing behind when that TERM lands: the reader is stopped
-  # and the scratch fifo removed here, and the caller's own TERM disposition is
-  # restored on every ordinary return below.
-  local saved_term_trap
-  saved_term_trap=$(trap -p TERM)
-  # shellcheck disable=SC2064 # Expanded now on purpose: the pids and paths are this call's.
-  trap "kill '$reader_pid' 2>/dev/null; exec 9<&- 2>/dev/null; rm -rf '$fifo_dir' 2>/dev/null; exit 143" TERM
   if ! exec 9< "$fifo"; then
     kill "$reader_pid" 2>/dev/null || true
     wait "$reader_pid" 2>/dev/null || true

@@ -182,19 +182,34 @@ pass "event_wait_or_sleep: a native edge record is handed to handle_push_transit
 trap watcher_tap USR1
 # The real sleep for the timed cases below, run the way the watcher's own
 # background wait behaves: the stopped child forwards TERM to what it forked,
-# so a tapped wait leaves no sleeper behind (asserted after each case).
+# so a tapped wait leaves no sleeper behind (asserted after each case). The
+# sleeper's own pid is published so each case asserts on THAT process - these
+# suites run on shared always-on machines, where a command-line match would see
+# every unrelated sleeper on the host.
+SLEEPER_PID_FILE="$TMP/sleeper.pid"
 # shellcheck disable=SC2329 # Runtime override called by the sourced watcher.
 sleep() {
   local s
   command sleep "$@" &
   s=$!
+  printf '%s\n' "$s" > "$SLEEPER_PID_FILE"
   # shellcheck disable=SC2064 # Expanded now on purpose: the pid is this call's.
   trap "kill '$s' 2>/dev/null; exit 143" TERM
   wait "$s"
 }
 ring_after() { ( command sleep "$1"; kill -USR1 "$2" ) & }
-no_sleeper_left() {  # <seconds> - the distinctive sleep the case started
-  ! pgrep -x -f "sleep $1" >/dev/null 2>&1
+no_sleeper_left() {  # the sleeper this case started must be gone
+  local s i=0
+  s=$(cat "$SLEEPER_PID_FILE" 2>/dev/null || true)
+  [ -n "$s" ] || return 1
+  # It is a grandchild (the stopped wait child forked it), so it is reaped by
+  # init a moment after that child exits.
+  while [ "$i" -lt 30 ]; do
+    kill -0 "$s" 2>/dev/null || return 0
+    command sleep 0.1
+    i=$((i + 1))
+  done
+  return 1
 }
 
 # A tap that already landed mid-cycle skips the wait entirely.
@@ -213,12 +228,13 @@ reset_state
 FM_WATCH_TAPPED=0
 # shellcheck disable=SC2034 # Read by the sourced watcher's poll_wait.
 POLL=53
+rm -f "$SLEEPER_PID_FILE"
 ring_after 0.3 "$$"
 started=$(date +%s)
 poll_wait
 wait  # the ringer
 [ $(( $(date +%s) - started )) -lt 3 ] || fail "a tap during the poll sleep must end it at once"
-no_sleeper_left 53 || fail "the tapped poll sleep left its sleeper running"
+no_sleeper_left || fail "the tapped poll sleep left its sleeper running"
 [ "$FM_WATCH_WAIT_STATUS" = tapped ] || fail "a tapped sleep must report tapped, got '$FM_WATCH_WAIT_STATUS'"
 [ -z "$FM_WATCH_WAIT_CHILD" ] || fail "the wait child must be cleared after a tap"
 [ "$FM_WATCH_TAPPED" = 1 ] || fail "the tap flag stays set until the next cycle top resets it"
@@ -239,6 +255,7 @@ fm_backend_wait_transition() { sleep 54; printf 'LATE-EDGE'; return 0; }
 rm -f "$TMP/handled"
 # shellcheck disable=SC2329 # Runtime override called by the isolated watcher.
 handle_push_transition() { printf '%s' "$3" > "$TMP/handled"; }
+rm -f "$SLEEPER_PID_FILE"
 ring_after 0.3 "$$"
 started=$(date +%s)
 event_wait_or_sleep
@@ -248,8 +265,29 @@ wait  # the ringer
 [ "$_event_cap_fails" = 0 ] || fail "a tapped event wait is a clean wait, not an event-path failure (fails=$_event_cap_fails)"
 [ "$_event_cap_ok" = 1 ] || fail "a tapped event wait must leave the event path enabled"
 [ -z "$(ls "$STATE_DIR"/.fm-eventwait.* 2>/dev/null || true)" ] || fail "a tapped event wait must remove its scratch record file"
-no_sleeper_left 54 || fail "the tapped event wait left its helper running"
+no_sleeper_left || fail "the tapped event wait left its helper running"
 pass "event_wait_or_sleep: a tap during the native event wait ends it cleanly with the event path intact"
+
+# A tap is only ever allowed to end the TERMINAL wait. run_check_capture blocks
+# on its own `wait` for the check's process, and a trapped signal returns that
+# wait early with the check still running - so a tap landing mid-check must not
+# be read as "the check finished", or the watcher tears down a live check and
+# surfaces its half-written output as the result. The check below prints its
+# answer only at the end, so a truncated or dropped read is visible.
+reset_state
+FM_WATCH_TAPPED=0
+CHECK_SCRIPT="$TMP/slow-check.sh"
+cat > "$CHECK_SCRIPT" <<'CHK'
+sleep 1
+printf 'merged pr 4242\n'
+CHK
+ring_after 0.3 "$$"
+run_check_capture "$CHECK_SCRIPT" || fail "run_check_capture must still succeed when a tap lands mid-check"
+wait  # the ringer
+[ "$FM_CHECK_RESULT" = "merged pr 4242" ] || fail "a tap during a check must not truncate or drop its result, got '$FM_CHECK_RESULT'"
+[ "$FM_WATCH_TAPPED" = 1 ] || fail "the tap must still be recorded for this cycle's terminal wait"
+pass "run_check_capture: a tap arriving mid-check leaves the check's result whole"
+trap - HUP INT TERM
 trap - USR1
 
 echo "# fm-supervision-events.test.sh: all assertions passed"
