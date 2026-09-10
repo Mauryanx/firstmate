@@ -7,8 +7,8 @@ const $ = id => document.getElementById(id);
 const MARKER = id => '[firstmate-reply ' + id + ']';
 let secret = location.hash.slice(1);
 history.replaceState(null, '', location.pathname);
-let session = null, cid = null, standoff = null, polling = false, speaking = false;
-const announced = new Set(), firstSeen = new Map();
+let session = null, cid = null, polling = false, speaking = false;
+const announced = new Set();
 const status = text => { $('status').textContent = text; };
 function log(text) {
   const li = document.createElement('li');
@@ -23,32 +23,11 @@ async function api(path, data = {}) {
 }
 // One place decides what is worth announcing, so a reply is announced once even
 // if a poll overlaps, the page is slow, or the agent takes a moment to accept it.
-//
-// Exactly one side may claim a given reply. The bridge's held turn claims it
-// first, because delivering inside that turn is what makes the answer continue
-// the opener as one thought instead of a stall and then a reply; this page is
-// only the fallback for what the hold did not catch. So a reply is left alone
-// until the bridge's whole hold window has passed. The pilot reports that window
-// as announce_after_ms; the page never restates it. Do not announce sooner: a
-// marker sent while the turn is still held either steals the answer or
-// interrupts it mid-sentence, and the transport then reads it as already spoken.
-//
-// Every portion waits, including one continuing an answer already begun. Nothing
-// here can know when the words of the portion before it stopped being heard: the
-// bridge only ever sees text handed to the platform, and the synthesis after
-// that is not observable from either side. The cost is up to one stand-off of
-// silence in the middle of a long answer, and it is paid deliberately, because
-// cutting an answer off and recording it as delivered cannot be undone and
-// waiting can be sat through.
-function pending(replies, now) {
-  const ready = [];
-  for (const reply of replies) {
-    if (reply.delivery.state !== 'waiting') { firstSeen.delete(reply.response_id); continue; }
-    if (announced.has(reply.response_id)) continue;
-    if (!firstSeen.has(reply.response_id)) firstSeen.set(reply.response_id, now);
-    if (now - firstSeen.get(reply.response_id) >= standoff) ready.push(reply);
-  }
-  return ready;
+// This page is the only thing that claims a published reply, so a reply goes out
+// as soon as it is seen; nothing else is waiting for it.
+function pending(replies) {
+  return replies.filter(reply => reply.delivery.state === 'waiting' &&
+                                 !announced.has(reply.response_id));
 }
 async function announce(reply) {
   announced.add(reply.response_id);
@@ -70,10 +49,9 @@ async function poll() {
     const waiting = state.requests.filter(r => r.state === 'saved').length;
     $('waiting').textContent = waiting
       ? waiting + ' message(s) with Firstmate' : 'Nothing waiting with Firstmate';
-    const ready = pending(state.replies, Date.now());
-    // A marker is an interruption while the agent has the floor. The stand-off
-    // clock keeps running; only the sending waits until it has stopped talking.
-    if (!speaking) for (const reply of ready) await announce(reply);
+    // A marker is an interruption while the agent has the floor, so the sending
+    // waits until it has stopped talking rather than cutting an answer in half.
+    if (!speaking) for (const reply of pending(state.replies)) await announce(reply);
   } catch (error) {
     status(error.message);
   } finally {
@@ -90,8 +68,6 @@ async function connect() {
   cid = paired.conversation_id;
   const agent = await api('/agent-config');
   if (!agent.agent_id) throw Error('No voice agent is configured for this pilot.');
-  standoff = agent.announce_after_ms;
-  if (!(standoff >= 0)) throw Error('The pilot did not say how long the bridge holds a turn.');
   if (!window.ElevenLabsClient) throw Error('The voice agent SDK is not installed for this pilot.');
   // The platform SDK owns the microphone, turn-taking, interruption and speech.
   const {Conversation} = window.ElevenLabsClient;

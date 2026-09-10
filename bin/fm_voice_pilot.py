@@ -82,18 +82,6 @@ def check(condition, message):
         raise PilotError(message)
 
 
-# How long the hosted-agent bridge holds one spoken turn open waiting for
-# Firstmate. It lives here rather than in the bridge because two programs must
-# mean the same number: the bridge holds its turn for exactly this long, and
-# this pilot tells the announcing page how long to stand off before it may claim
-# a reply the bridge is still entitled to.
-HOLD_SECONDS = 7.0
-# Added on top of that window before the page may claim anything. A held turn
-# can still have a transport call in flight when its window closes, so the page
-# waits past the hold rather than up to it.
-ANNOUNCE_SETTLE_SECONDS = 3.0
-
-
 class Budget:
     def __init__(self, path, ceiling):
         check(type(ceiling) is int and ceiling >= 0, 'nonnegative authorized credit limit required')
@@ -383,10 +371,7 @@ class Handler(BaseHTTPRequestHandler):
                 check(self.server.intro is not None, 'no approved introduction artifact is configured')
                 self.send(self.server.intro, kind='audio/mpeg')
             elif self.path == '/agent-config':
-                # The page never restates the bridge's hold; it is told it here,
-                # so exactly one side is ever entitled to claim a given reply.
-                self.send({'agent_id': self.server.agent_id,
-                           'announce_after_ms': round((HOLD_SECONDS + ANNOUNCE_SETTLE_SECONDS) * 1000)})
+                self.send({'agent_id': self.server.agent_id})
             elif self.path == '/agent-token':
                 # A private agent needs a short-lived session token. Minting one
                 # spends nothing; connecting the session is what uses minutes.

@@ -458,20 +458,20 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
 import random
 import time
 
-from fm_voice_bridge import (ACKNOWLEDGEMENTS, ANSWER_MARKER, CASCADE_MARGIN, DELIVER_FLOOR,
-                             Endpoint, HOLD_SECONDS, LOOK_INTERVAL, Session, Sessions,
-                             ShuffleBag, require_safe_hold)
+from fm_voice_bridge import (ANSWER_MARKER, CASCADE_MARGIN, CASCADE_SECONDS, DELIVER_FLOOR,
+                             Endpoint, Session, Sessions, turn_budget)
 
-# A turn still open when the agent's cascade timeout expires ends the captain's
-# conversation rather than the turn, so an unsafe hold must never reach a socket.
-require_safe_hold(HOLD_SECONDS, 15.0)
-require_safe_hold(15.0 - CASCADE_MARGIN, 15.0)
-for unsafe in (15.0 - CASCADE_MARGIN + 0.1, 10.0, 12.0, 20.0, -1.0):
+# Every turn must finish inside what the agent's cascade timeout leaves, because
+# a turn still open when that expires ends the captain's conversation rather than
+# the turn. A console setting too tight to file a turn in never reaches a socket.
+assert turn_budget(CASCADE_SECONDS) == CASCADE_SECONDS - CASCADE_MARGIN
+for impossible in (CASCADE_MARGIN, CASCADE_MARGIN + DELIVER_FLOOR, 1.0, 0.0, -1.0):
     try:
-        require_safe_hold(unsafe, 15.0)
-        raise AssertionError('a hold of %g was allowed against a 15s cascade timeout' % unsafe)
+        turn_budget(impossible)
+        raise AssertionError('a cascade timeout of %g was accepted' % impossible)
     except PilotError:
         pass
+
 
 # Stands in for the conversation transport so the turn's timing contract can be
 # exercised without one: what it was allowed, what it was asked for, and how long
@@ -490,19 +490,10 @@ class StubTransport:
         return {'requests': [], 'replies': list(self.replies)}
 
 
-def spoken(transport, hold, said='Just checking in.', extra=None):
-    session = Session(transport, ShuffleBag(list(ACKNOWLEDGEMENTS), random.Random(5)), hold=hold)
-    return session, session.speak([{'role': 'user', 'content': said}], extra or {})
-
-
-# The startup guard proves the hold is clear of the cascade timeout, but the turn
-# is only inside that window if everything it does is. A transport call with its
-# own longer allowance would keep the turn open past the cascade and end the
-# captain's conversation rather than the turn, with the guard having passed. The
-# budget is the hold alone: CASCADE_MARGIN is headroom the guard reserves, not an
-# allowance the turn may spend.
+# A transport call left on its own longer allowance would keep the turn open past
+# the cascade timeout and end the captain's conversation rather than the turn.
 slow = StubTransport(delay=30.0)
-budgeted = Session(slow, ShuffleBag(list(ACKNOWLEDGEMENTS), random.Random(5)), hold=0.5)
+budgeted = Session(slow, 0.5)
 began = time.time()
 try:
     ''.join(budgeted.speak([{'role': 'user', 'content': 'Just checking in.'}], {}))
@@ -516,41 +507,29 @@ assert spent < 2.0, spent
 assert slow.allowed and all(0 < allowance <= 0.5 for allowance in slow.allowed), slow.allowed
 assert budgeted.handled_turns == 0, budgeted.handled_turns
 
-# A claim is the one call that cannot be half-done, so it is never begun on less
-# budget than it needs: below the floor the reply is left waiting for the page.
+# A claim is the one call that cannot be half-done - the transport fsyncs it
+# before its answer gets back - so it is never begun on less budget than it
+# needs. Below the floor the reply is left waiting rather than falsely claimed.
 waiting = [{'request_id': 'tail-request', 'response_id': 'tail-answer',
             'delivery': {'state': 'waiting'}}]
 tail = StubTransport(replies=waiting)
-_, at_tail = spoken(tail, DELIVER_FLOOR / 2, extra={'request_id': 'tail-request'})
-''.join(at_tail)
+assert ''.join(Session(tail, DELIVER_FLOOR / 2).speak(
+    [{'role': 'user', 'content': ANSWER_MARKER + 'tail-answer]'}], {})) == ''
 assert 'deliver' not in tail.commands, tail.commands
 roomy = StubTransport(replies=waiting)
-_, in_time = spoken(roomy, DELIVER_FLOOR + LOOK_INTERVAL + 1.0, extra={'request_id': 'tail-request'})
-''.join(in_time)
+''.join(Session(roomy, DELIVER_FLOOR + 1.0).speak(
+    [{'role': 'user', 'content': ANSWER_MARKER + 'tail-answer]'}], {}))
 assert 'deliver' in roomy.commands, roomy.commands
 
-# The neutral line is spoken before the filing has succeeded and is all the
-# captain hears when it fails, so no member of the set may name where his words
-# went or say they got there.
-plain = Session(StubTransport(), ShuffleBag(list(ACKNOWLEDGEMENTS), random.Random(4)), hold=0.5)
-neutral = set()
-for turn in range(len(ACKNOWLEDGEMENTS)):
-    portions = plain.speak([{'role': 'user', 'content': 'Just checking in.'}] * (turn + 1), {})
-    neutral.add(next(portions).strip())
-    portions.close()
-assert neutral == set(ACKNOWLEDGEMENTS), neutral
-for line in neutral:
-    assert not any(claim in line.lower() for claim in
-                   ('firstmate', 'fleet', 'sent', 'filed', 'passed', 'queued', 'started', 'done')), line
+# A substantive turn files his words and says nothing of its own: the platform
+# speaks its own line, in the context of what he said, while Firstmate reads it.
+quiet = StubTransport()
+assert ''.join(Session(quiet, 5.0).speak(
+    [{'role': 'user', 'content': 'Tell me about the deploy.'}], {})) == ''
+assert 'capture' in quiet.commands, quiet.commands
 
 secret = 'x' * 32
-bag_order = random.Random(7)
-# The hold is the whole turn's budget now, filing his words included, so this
-# fixture keeps a realistic multiple of what a transport call costs rather than
-# the bare wait it used to stand for.
-bridge_session = Sessions(Bridge(pilot, connection), ShuffleBag(['first ack.', 'second ack.'], bag_order),
-                          topics=ShuffleBag(['Looking into {topic}.', 'On {topic} now.'], random.Random(11)),
-                          hold=2.0)
+bridge_session = Sessions(Bridge(pilot, connection), turn_budget(CASCADE_SECONDS))
 try:
     Endpoint(0, bridge_session, 'too short')
     raise AssertionError('a weak shared secret must refuse to listen')
@@ -613,14 +592,11 @@ try:
     ask('', 400)
     assert len(owning('audit', cid='live')['requests']) == before
 
-    # A substantive turn files the captain's own words and acknowledges, varied.
-    # The opening words are about what he actually asked, drawn from his own
-    # words, and they never assert a finding, a status or a result.
+    # A substantive turn files the captain's own words and says nothing of its
+    # own: the platform speaks its own line while Firstmate reads them.
     said = 'Tell me what the research found about option B.'
-    first = ask(said, extra={'request_id': 'bridge-1'}).strip()
-    assert first in ('Looking into option B.', 'On option B now.'), first
-    second = ask('And what about option A?', extra={'request_id': 'bridge-2'})
-    assert 'option A' in second, second
+    assert ask(said, extra={'request_id': 'bridge-1'}) == ''
+    assert ask('And what about option A?', extra={'request_id': 'bridge-2'}) == ''
     filed = owning('audit', cid='live')['requests']
     assert len(filed) == before + 2
     assert [r['request_id'] for r in filed[-2:]] == ['bridge-1', 'bridge-2']
@@ -651,89 +627,22 @@ try:
     ask('', 400, grow=False, messages=unknown)
     ask('', 400, grow=False, messages=unknown)
 
-    # The bridge never invents: every word it has spoken is either a fixed
-    # acknowledgement or text Firstmate actually published.
+    # The bridge never invents: every word it has spoken is text Firstmate
+    # actually published, apart from the fixed framing of a late answer.
     assert answer in heard and heard.replace(answer, '').strip() != answer
 
-    # The platform re-invokes the endpoint for its own filler generation and on
-    # retries, resending a transcript that has not grown. Nothing may be filed
+    # The platform re-invokes the endpoint for its own generated pause line and
+    # on retries, resending a transcript that has not grown. Nothing may be filed
     # again, or one spoken instruction becomes two dispatched requests.
     settled = len(owning('audit', cid='live')['requests'])
     for _ in range(3):
-        assert ask('And what about option A?', grow=False) == ''
+        ask('And what about option A?', grow=False)
     assert len(owning('audit', cid='live')['requests']) == settled
 
-    # A genuine repeat of the same words is a new turn, because the transcript grew.
-    assert ask('And what about option A?') != ''
+    # A genuine repeat of the same words is a new turn, because the transcript
+    # grew, and it is filed again even though nothing is said either time.
+    ask('And what about option A?')
     assert len(owning('audit', cid='live')['requests']) == settled + 1
-
-    # A question whose subject carries a claim gets a neutral opener instead: the
-    # bridge must not repeat "the build is broken" back as though it knew.
-    neutral = ask('Tell me about why the build is broken.').strip()
-    assert neutral in ('first ack.', 'second ack.'), neutral
-    assert 'broken' not in neutral and 'build' not in neutral
-    again = ask('Why is the deploy failing?').strip()
-    assert again in ('first ack.', 'second ack.') and again != neutral, (neutral, again)
-
-    # A list of verbs to avoid is always one participle behind, so a subject is
-    # spoken only when it can be shown to assert nothing. None of these tells the
-    # captain what happened before anything has been looked at.
-    # The words that actually break a list of verbs are the irregular past forms
-    # no ending gives away: found, lost, sent, built, took, made, kept, done,
-    # gone. None of these may be repeated back as though the bridge knew.
-    for claiming, claim in (('Tell me about the deploy that crashed last night.', 'crashed'),
-                            ('Tell me about the release that shipped without review.', 'shipped'),
-                            ('Tell me about the merge queue being blocked.', 'blocked'),
-                            ('Tell me about the outage they found overnight.', 'found'),
-                            ('Tell me about the deploy we lost last night.', 'lost'),
-                            ('Tell me about the numbers he sent.', 'sent'),
-                            ('Tell me about the dashboard they built.', 'built'),
-                            ('Tell me about the hours it took.', 'took'),
-                            ('Tell me about the changes she made.', 'made'),
-                            ('Tell me about the receipts we kept.', 'kept'),
-                            ('Check on the deploy gone bad.', 'gone'),
-                            ('Check the work done overnight.', 'done')):
-        refused = ask(claiming).strip()
-        assert refused in ('first ack.', 'second ack.'), (claiming, refused)
-        assert claim not in refused, (claiming, refused)
-    # A plain subject is still spoken back, or the gate has quietly turned the
-    # opener off rather than made it safe.
-    assert 'the overnight simulation' in ask('Check on the overnight simulation.')
-    assert 'the deploy' in ask('Tell me about the deploy.')
-    assert 'the voice bridge' in ask('Look into the voice bridge.')
-
-    # An imperative may sit behind a polite or vocative prefix, which is how he
-    # actually asks, and the opener is then about what he asked rather than the
-    # same filler again.
-    for question, subject in (('Firstmate, check on the release notes.', 'the release notes'),
-                              ('Can you look into the flaky test?', 'the flaky test')):
-        assert subject in ask(question), (question, subject)
-
-    # Where the subject is looked for decides WHICH subject is spoken, so every
-    # rule that settles it is exercised here. A marker at the front of the
-    # sentence owns it, or a trailing "with the new config" would be read back
-    # as what he asked about. A subject reachable only through a plain
-    # preposition is not recognised at all, because that preposition introduces
-    # when or how as readily as what. And an imperative behind a negation is an
-    # instruction NOT to do the thing, so its object is never announced.
-    for aside in ('What happened on Friday?',
-                  'Can we ship on Monday?',
-                  'What did we find on the deploy?',
-                  'Give me an update on the migration.',
-                  'Did anything break on the weekend?',
-                  'Are we still blocked on the review?',
-                  'It broke on the second try.',
-                  'Look into the deploy with the new config.',
-                  'Firstmate, check the deploy logs with the new config.',
-                  'Look into what happened with the funnel.',
-                  "Don't bother with the logs.",
-                  "Whatever you do, don't check the prod database.",
-                  'Never look into the prod database.'):
-        assert ask(aside).strip() in ('first ack.', 'second ack.'), aside
-    # A subject longer than a determiner and two words still gets the neutral
-    # line: how far the subject is looked for never widens what may be said.
-    assert ask('Tell me about the anomaly insertion research.').strip() in (
-        'first ack.', 'second ack.')
 
     # One spelling of the reasoning endpoint, the one the operator configures.
     ask('', 400, grow=False, path='/chat/completions',
@@ -757,10 +666,10 @@ try:
     opening = [{'role': 'system', 'content': 'ignored'},
                {'role': 'user', 'content': 'Tell me what the research found about option B.'}]
     before_new = len(owning('audit', cid='live')['requests'])
-    assert ask('', messages=opening, extra={'session_id': 'session-two'}) != ''
+    ask('', messages=opening, extra={'session_id': 'session-two'})
     assert len(owning('audit', cid='live')['requests']) == before_new + 1
     # ...and that new conversation keeps its own re-invocation guard.
-    assert ask('', messages=opening, extra={'session_id': 'session-two'}) == ''
+    ask('', messages=opening, extra={'session_id': 'session-two'})
     assert len(owning('audit', cid='live')['requests']) == before_new + 1
 
     # A refusal answers before the body is read, so the connection must close
@@ -779,118 +688,19 @@ finally:
     endpoint.server_close()
     endpoint_thread.join()
 
-# The turn is held open, so an answer published while the captain waits continues
-# the SAME utterance rather than arriving later as a separate announcement.
-holding = Sessions(Bridge(pilot, connection), ShuffleBag(['neutral one.', 'neutral two.'], random.Random(3)),
-                   topics=ShuffleBag(['Looking into {topic}.', 'On {topic} now.'], random.Random(5)),
-                   hold=25.0)
-held = Endpoint(0, holding, secret)
-held_origin = 'http://127.0.0.1:' + str(held.server_port)
-held_thread = threading.Thread(target=held.serve_forever, daemon=True)
-held_thread.start()
-spoken_turn = {}
-
-
-def hold_ask(said, request_id):
-    body = {'model': 'x', 'stream': True, 'elevenlabs_extra_body': {'session_id': 'held', 'request_id': request_id},
-            'messages': [{'role': 'user', 'content': said}]}
-    request = urllib.request.Request(held_origin + '/v1/chat/completions', json.dumps(body).encode(),
-                                     {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + secret})
-    payload = urllib.request.urlopen(request, timeout=30).read().decode()
-    said_parts = [json.loads(line[6:])['choices'][0]['delta'].get('content', '')
-                  for line in payload.splitlines() if line.startswith('data: ') and line != 'data: [DONE]']
-    spoken_turn['text'] = ''.join(said_parts)
-
-
-try:
-    answer = 'Option B took twelve and a half seconds, and nothing was changed.'
-    # Drain the backlog first: accepting it inside the hold window would spend
-    # the window on bookkeeping rather than on what the turn is waiting for.
-    while any(r['state'] == 'saved' for r in owning('audit', cid='live')['requests']):
-        owning('accept', cid='live')
-    turn = threading.Thread(target=hold_ask, args=('Tell me what we found about option B.', 'held-1'))
-    turn.start()
-    # Firstmate answers while the captain is still on that turn.
-    for _ in range(40):
-        time.sleep(0.25)
-        if any(r['request_id'] == 'held-1' for r in owning('audit', cid='live')['requests']):
-            break
-    owning('accept', cid='live')
-    while True:
-        accepted = owning('audit', cid='live')['requests']
-        if next(r['state'] for r in accepted if r['request_id'] == 'held-1') == 'accepted':
-            break
-        owning('accept', cid='live')
-    run('publish', dict(live_reply, request_id='held-1', response_id='held-answer', speech_text=answer))
-    turn.join(timeout=30)
-    assert not turn.is_alive(), 'the held turn never finished'
-    heard_turn = spoken_turn['text']
-    # One continuous thought: the opener about his words, then the answer verbatim.
-    assert heard_turn.startswith(('Looking into option B.', 'On option B now.')), heard_turn
-    assert heard_turn.endswith(answer), heard_turn
-    # The answer is spoken once; it is no longer waiting for the announcing page.
-    delivered = next(r for r in owning('audit', cid='live')['replies'] if r['response_id'] == 'held-answer')
-    assert delivered['delivery']['state'] != 'waiting', delivered
-
-    # If the platform hangs up while the turn is held, the turn must end without
-    # consuming anything: the answer stays available for the announcing page
-    # rather than being marked spoken to a listener who had already gone.
-    body = {'model': 'x', 'stream': True,
-            'elevenlabs_extra_body': {'session_id': 'held', 'request_id': 'held-2'},
-            'messages': [{'role': 'user', 'content': 'x'}, {'role': 'user', 'content': 'And about option C?'}]}
-    cut = urllib.request.Request(held_origin + '/v1/chat/completions', json.dumps(body).encode(),
-                                 {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + secret})
-    while any(r['state'] == 'saved' for r in owning('audit', cid='live')['requests']):
-        owning('accept', cid='live')
-    stream = urllib.request.urlopen(cut, timeout=30)
-    stream.read(1)          # Take the opener, then hang up while the turn is held.
-    stream.close()
-    while True:
-        rows = owning('audit', cid='live')['requests']
-        if next((r['state'] for r in rows if r['request_id'] == 'held-2'), None) == 'accepted':
-            break
-        owning('accept', cid='live')
-    run('publish', dict(live_reply, request_id='held-2', response_id='held-unheard',
-                        speech_text='An answer nobody was left to hear.'))
-    time.sleep(3)
-    record = next(r for r in owning('audit', cid='live')['replies'] if r['response_id'] == 'held-unheard')
-    assert record['delivery']['state'] == 'waiting', record
-finally:
-    held.shutdown()
-    held.server_close()
-    held_thread.join()
-
-print('bridge: unauthenticated refusal before any effect, verbatim publication, varied acknowledgement')
-print('bridge: opener drawn from the captain words, answer continuing the same held turn')
+print('bridge: unauthenticated refusal before any effect, verbatim single publication')
+print('bridge: a substantive turn is filed and answered with silence, not with filler')
 
 # The page that tells the agent an answer is ready, against the real transport
 # with the vendor SDK stubbed. No account, agent minute or acoustic claim.
 if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
-    # An answer may be published as ordered portions. A continuation waits out the
-    # stand-off exactly like anything else: nothing on either side can know when
-    # the portion before it stopped being heard, so following it early would cut
-    # it off while the transport went on recording it as delivered. Two streams,
-    # one whose first portion is merely claimed and one whose first portion has a
-    # playback receipt, because neither is a licence to speak over what is left.
+    # An answer may be published as ordered portions, and every portion is
+    # announced: this page is the only thing that claims one, so a portion left
+    # unannounced is an answer the captain never hears.
     run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer',
                         sequence=1, final=False, speech_text='The first portion of one answer.'))
     run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer-rest',
                         sequence=2, final=True, speech_text='The rest of that same answer.'))
-    run('deliver', dict(connection, response_id='agent-answer', generation='held-turn-generation'))
-    while any(r['state'] == 'saved' for r in owning('audit', cid='live')['requests']):
-        owning('accept', cid='live')
-    spoken_tail = run('poll', dict(connection))['requests'][-1]['turn_id']
-    run('capture', dict(connection, turn_id='spoken-turn', request_id='spoken-portions',
-                        committed_transcript='Tell me about the long answer.', revision=1,
-                        previous_turn_id=spoken_tail, created_at='2026-09-10T00:00:00Z'))
-    assert owning('accept', cid='live')['input']['request_id'] == 'spoken-portions'
-    run('publish', dict(live_reply, request_id='spoken-portions', response_id='spoken-first',
-                        sequence=1, final=False, speech_text='The first portion, spoken in full.'))
-    run('publish', dict(live_reply, request_id='spoken-portions', response_id='spoken-rest',
-                        sequence=2, final=True, speech_text='The rest of the spoken answer.'))
-    run('deliver', dict(connection, response_id='spoken-first', generation='spoken-generation'))
-    run('playback', dict(connection, response_id='spoken-first', generation='spoken-generation',
-                         state='completed', position_ms=1200))
     worklet = temp / 'libsamplerate.worklet.js'
     worklet.write_text('// stand-in for the operator-supplied resampler worklet\n')
     agent_server = Pilot(0, Bridge(pilot, connection), provider, b'agent-lane-ack',
@@ -898,17 +708,14 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     agent_thread = threading.Thread(target=agent_server.serve_forever, daemon=True)
     agent_thread.start()
     try:
-        published = owning('audit', cid='live')['replies']
-        waiting = [r for r in published if r['delivery']['state'] == 'waiting']
-        begun = {r['request_id'] for r in published if r['delivery']['state'] != 'waiting'}
-        # Both continuations are in that set, and neither may go out early.
-        assert {'agent-answer-rest', 'spoken-rest'} <= {r['response_id'] for r in waiting
-                                                        if r['request_id'] in begun}, waiting
+        waiting = [r for r in owning('audit', cid='live')['replies']
+                   if r['delivery']['state'] == 'waiting']
+        assert {'agent-answer', 'agent-answer-rest'} <= {r['response_id'] for r in waiting}, waiting
         subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
                         agent_server.origin + '/agent#' + agent_server.pair_secret,
                         AGENT_TOKEN, str(len(waiting))],
                        check=True, timeout=120)
-        for still in ('agent-answer-rest', 'spoken-rest'):
+        for still in ('agent-answer', 'agent-answer-rest'):
             delivery = next(r for r in owning('audit', cid='live')['replies']
                             if r['response_id'] == still)
             # The page only announces; the bridge is what actually delivers speech.
