@@ -61,10 +61,11 @@ On a substantive turn it files the captain's committed transcript through the ex
 The opener is about what he actually asked: the bridge draws a subject from his own words and speaks a line about looking into it.
 It may reflect the question and may never assert a finding, a status or a result, because nothing has been answered when it is spoken.
 A subject that carries a claim is rejected rather than repeated back, and a neutral line is used instead, which is also what happens when no subject can be drawn safely.
-The subject is looked for anywhere in what he said, so an ordinary question and an imperative behind a polite or vocative prefix both find it.
-Where it is looked for decides which subject is spoken, so two rules settle that: whichever marker comes first in the sentence owns it, and a bare `on` or `with` is followed only into a phrase a determiner opens.
-Without the first, a trailing "with the new config" takes the sentence away from the "look into the deploy" it was hung on; without the second, "what happened on Friday" makes a date the subject, and a date is one short plain word every later rule is happy to speak.
-Both refuse rather than guess, so an aside he did not ask about becomes the neutral opener instead of a confident line about the wrong thing.
+The subject is looked for anywhere in what he said, so an imperative behind a polite or vocative prefix still finds it, and whichever marker comes first in the sentence owns the subject - otherwise a trailing "with the new config" takes the sentence away from the "look into the deploy" it was hung on.
+A subject reachable only through a plain `on` or `with` is not recognised at all.
+Those prepositions introduce when or how as readily as what, and the phrase they introduce is often a perfectly ordinary noun the later rules are happy to speak, so "did anything break on the weekend" would have offered to look into the weekend.
+Two attempts to narrow that failed, and the coverage it bought - "on the deploy", "on the migration" - was not worth what it cost, so those phrasings get the neutral opener now.
+A marker behind a negation is refused for the same reason: "don't check the prod database" names its subject exactly the way an instruction to check it would, and announcing it would say the opposite of what he said.
 A subject running longer than a determiner and two words falls back to the neutral opener, so a question about the anomaly insertion research gets a neutral line rather than its own subject read back.
 That is deliberate: past that length a phrase has room for a subject and a verb, which is room to say something happened, and nothing here can tell the difference.
 It is a cost of this block being a stand-in, and it goes away with the standing listener, which lets Firstmate's own first sentence be spoken instead of a line assembled from his words.
@@ -73,6 +74,8 @@ This is why the opener belongs in the bridge and not in the platform's own timeo
 The turn is then held open while Firstmate reads and thinks, so the answer continues that same utterance as one thought rather than arriving later as a separate announcement.
 The hold must stay below the agent's own cascade timeout: measured against the live platform, a turn still open when that expires ends the whole conversation with a cascade error and drops the captain mid-call, so a generous hold is worse than a short one.
 That coupling is enforced at startup rather than left to be remembered, because the two settings live in different places and only ever meet in a failure the captain feels.
+The whole turn lives inside that same budget, not just the waiting: filing his words and every look for an answer are allowed only what is left of it, rather than the transport's own longer allowance, or a single slow call would carry the turn past the cascade with the startup check having passed.
+A turn that runs out says the neutral line and ends, because a neutral opener claims nothing and a dropped conversation cannot be recovered.
 The margin required is deliberately wide: an agent on another of the vendor's products was killed fourteen seconds in, on a turn that had already finalised around eleven, so the real ceiling sits lower than the timeout suggests and ending before it is not by itself safe.
 Being wrong about that margin costs a conversation dropped while he waits for an answer, which is why the hold is set well short of what our own turns have survived rather than at the edge of it.
 The required margin is provisional: it derives from that other product, this path's own ceiling has never been measured, and `bin/fm_voice_bridge.py` records what it rests on and when to revisit it.

@@ -459,7 +459,8 @@ import random
 import time
 
 from fm_voice_bridge import (ANSWER_MARKER, CASCADE_MARGIN, Endpoint, HOLD_SECONDS,
-                             Sessions, ShuffleBag, require_safe_hold)
+                             Session, Sessions, ShuffleBag, require_safe_hold)
+from fm_voice_pilot import TransportTimeout
 
 # A turn still open when the agent's cascade timeout expires ends the captain's
 # conversation rather than the turn, so an unsafe hold must never reach a socket.
@@ -471,6 +472,34 @@ for unsafe in (15.0 - CASCADE_MARGIN + 0.1, 10.0, 12.0, 20.0, -1.0):
         raise AssertionError('a hold of %g was allowed against a 15s cascade timeout' % unsafe)
     except PilotError:
         pass
+
+# The startup guard proves the hold is clear of the cascade timeout, but the
+# turn is only inside that window if everything it does is. A transport call
+# with its own longer allowance would keep the turn open past the cascade and
+# end the captain's conversation rather than the turn, with the guard passed.
+class SlowTransport:
+    def __init__(self, delay):
+        self.delay, self.allowed = delay, []
+
+    def call(self, command, payload=None, timeout=35):
+        self.allowed.append(timeout)
+        time.sleep(min(self.delay, max(timeout, 0)))
+        if self.delay >= timeout:
+            raise TransportTimeout('the conversation transport did not answer in time')
+        return {'requests': [], 'replies': []}
+
+
+slow = SlowTransport(30.0)
+budget = 0.5 + CASCADE_MARGIN
+budgeted = Session(slow, ShuffleBag(['first ack.', 'second ack.'], random.Random(2)), hold=0.5)
+began = time.time()
+heard = ''.join(budgeted.speak([{'role': 'user', 'content': 'Tell me about the deploy.'}], {}))
+spent = time.time() - began
+# The turn ends inside its own budget, saying the neutral line, which claims
+# nothing. Every call it made was allowed only what was left of that budget.
+assert heard.strip() in ('first ack.', 'second ack.'), heard
+assert spent < budget + 1.5, spent
+assert slow.allowed and all(0 < allowance <= budget for allowance in slow.allowed), slow.allowed
 
 secret = 'x' * 32
 bag_order = random.Random(7)
@@ -628,31 +657,42 @@ try:
     assert 'the deploy' in ask('Tell me about the deploy.')
     assert 'the voice bridge' in ask('Look into the voice bridge.')
 
-    # A question puts its subject wherever it likes, and an imperative can sit
-    # behind a polite or vocative prefix. All of these are how he actually asks,
-    # and the opener is about what he asked rather than the same filler again.
-    for question, subject in (('What did we find on the deploy?', 'the deploy'),
-                              ('Give me an update on the migration.', 'the migration'),
-                              ('Firstmate, check on the release notes.', 'the release notes'),
+    # An imperative may sit behind a polite or vocative prefix, which is how he
+    # actually asks, and the opener is then about what he asked rather than the
+    # same filler again.
+    for question, subject in (('Firstmate, check on the release notes.', 'the release notes'),
                               ('Can you look into the flaky test?', 'the flaky test')):
         assert subject in ask(question), (question, subject)
 
-    # Where the subject is looked for decides WHICH subject is spoken, so both
-    # rules that settle it are exercised here. A marker at the front of the
+    # Where the subject is looked for decides WHICH subject is spoken, so every
+    # rule that settles it is exercised here. A marker at the front of the
     # sentence owns it, or a trailing "with the new config" would be read back
-    # as what he asked about. And a bare on or with is followed only into
-    # something a determiner opens, or "on Friday" would make a date the
-    # subject - one short plain word every later rule is happy to speak.
+    # as what he asked about. A subject reachable only through a plain
+    # preposition is not recognised at all, because that preposition introduces
+    # when or how as readily as what. And an imperative behind a negation is an
+    # instruction NOT to do the thing, so its object is never announced.
     for aside in ('What happened on Friday?',
                   'Can we ship on Monday?',
+                  'What did we find on the deploy?',
+                  'Give me an update on the migration.',
+                  'Did anything break on the weekend?',
+                  'Are we still blocked on the review?',
+                  'It broke on the second try.',
                   'Look into the deploy with the new config.',
                   'Firstmate, check the deploy logs with the new config.',
-                  'Look into what happened with the funnel.'):
+                  'Look into what happened with the funnel.',
+                  "Don't bother with the logs.",
+                  "Whatever you do, don't check the prod database.",
+                  'Never look into the prod database.'):
         assert ask(aside).strip() in ('first ack.', 'second ack.'), aside
     # A subject longer than a determiner and two words still gets the neutral
     # line: how far the subject is looked for never widens what may be said.
     assert ask('Tell me about the anomaly insertion research.').strip() in (
         'first ack.', 'second ack.')
+
+    # One spelling of the reasoning endpoint, the one the operator configures.
+    ask('', 400, grow=False, path='/chat/completions',
+        messages=[{'role': 'user', 'content': 'Reached by an undocumented path.'}])
 
     # A transcript carrying no captain turn at all is refused, not guessed at.
     ask('', 400, messages=[{'role': 'system', 'content': 'only a system prompt'}])

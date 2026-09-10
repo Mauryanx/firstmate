@@ -77,6 +77,15 @@ class PilotError(Exception):
     pass
 
 
+class TransportTimeout(PilotError):
+    """A transport call that did not answer inside the time it was given.
+
+    A PilotError, so every caller that already ends cleanly on a refused
+    transport call ends cleanly on a slow one too; named apart because a caller
+    running against a deadline must know it has run out rather than retry.
+    """
+
+
 def check(condition, message):
     if not condition:
         raise PilotError(message)
@@ -249,16 +258,20 @@ class Bridge:
     def __init__(self, home, binding):
         self.home, self.binding = str(home), binding
 
-    def call(self, command, payload=None):
+    def call(self, command, payload=None, timeout=35):
         check(command in ('capture', 'poll', 'deliver', 'playback'), 'transport operation refused')
+        check(timeout > 0, 'no time is left for the conversation transport')
         payload = payload or {}
         check(not ({'credential', 'conversation_id', 'authenticated_principal'} & payload.keys()), 'identity comes from pairing')
         env = {k: v for k, v in os.environ.items() if not k.startswith('FM_') and k != 'STATE' and
                k not in ('ELEVENLABS_API_KEY', 'ELEVEN_LABS_API_KEY', 'XI_API_KEY', 'ELEVEN_API_KEY')}
         env['FM_HOME'] = self.home
-        result = subprocess.run([str(Path(__file__).with_name('fm-inbox.sh')), 'conversation', command],
-                                input=canonical(dict(payload, **self.binding)), text=True,
-                                capture_output=True, env=env, timeout=35)
+        try:
+            result = subprocess.run([str(Path(__file__).with_name('fm-inbox.sh')), 'conversation', command],
+                                    input=canonical(dict(payload, **self.binding)), text=True,
+                                    capture_output=True, env=env, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise TransportTimeout('the conversation transport did not answer in time') from None
         check(result.returncode == 0, 'conversation refused the request; owner can inspect the durable journal')
         return json.loads(result.stdout)
 
@@ -409,7 +422,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send({'text': text})
             else:
                 self.send({'error': 'not found'}, 404)
-        except (PilotError, ValueError, KeyError, TypeError, OSError, subprocess.TimeoutExpired) as exc:
+        except (PilotError, ValueError, KeyError, TypeError, OSError) as exc:
             try:
                 # Only locally authored PilotError strings may be returned.
                 self.send({'error': str(exc) if isinstance(exc, PilotError) else 'request failed; no automatic provider retry'}, 400)

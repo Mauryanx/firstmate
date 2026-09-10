@@ -39,7 +39,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from fm_inbox_conversation import canonical
-from fm_voice_pilot import HOLD_SECONDS, Bridge, PilotError, check
+from fm_voice_pilot import HOLD_SECONDS, Bridge, PilotError, TransportTimeout, check
 
 # The browser sends this as an ordinary user message once Firstmate has published
 # a reply, because the platform offers a server no way to make the agent speak.
@@ -118,12 +118,16 @@ TOPIC_OPENERS = (
 # making it refuse by default rather than leaving it to be replaced eventually.
 
 # Phrases that introduce what the captain is asking about, anywhere in what he
-# said. The bare prepositions are kept apart: they introduce when or how about
-# as often as they introduce what, so they are followed under one more rule.
-ADJUNCT_LEADS = (' on ', ' with ')
-TOPIC_LEADS = (' about ', ' regarding ', ' with regard to ', ' on the subject of ') + ADJUNCT_LEADS
+# said. Each one names the subject explicitly. A bare on or with is not among
+# them: those introduce when or how as readily as what, so a subject reachable
+# only through a plain preposition is not recognised at all.
+TOPIC_LEADS = (' about ', ' regarding ', ' with regard to ', ' on the subject of ')
 TOPIC_IMPERATIVES = ('tell me about', 'find out about', 'look into', 'look up', 'look at',
                      'pull up', 'check on', 'check', 'review')
+# An imperative behind a negation is an instruction NOT to do the thing, so an
+# opener about its object would announce the opposite of what he said.
+NEGATORS = frozenset("""no not never none nothing don't dont doesn't doesnt didn't didnt
+    won't wont cannot can't cant avoid""".split())
 # Words that open a clause, which is where an assertion lives. "the deploy THAT
 # crashed" is a claim about the deploy; "the deploy" is a subject.
 CLAUSE_WORDS = frozenset("""that which who whom whose what when where why how if whether
@@ -180,33 +184,32 @@ def topic_of(said):
     Conservative by design: it returns a noun phrase drawn from his own words,
     and nothing at all when that phrase cannot be shown to carry no claim. The
     subject may sit anywhere in a question, so it is looked for anywhere; which
-    marker owns it, and whether a bare preposition may be followed at all, are
-    decided here rather than by which loop happens to run first.
+    marker owns it is decided here rather than by which loop happens to run first.
     """
-    lowered = said.lower()
+    lowered = said.lower().replace('\u2019', "'")
     found = []
     for lead in TOPIC_LEADS:
         at = lowered.find(lead)
         if at != -1:
-            found.append((at, -len(lead), at + len(lead), lead in ADJUNCT_LEADS))
+            found.append((at, -len(lead), at + len(lead)))
     for verb in TOPIC_IMPERATIVES:
         at = lowered.find(verb + ' ')
         if at != -1 and (at == 0 or not lowered[at - 1].isalnum()):
-            found.append((at, -len(verb), at + len(verb) + 1, False))
+            found.append((at, -len(verb), at + len(verb) + 1))
     if not found:
         return None
     # Whichever marker comes first owns the subject, and the longest of those
-    # starting together. A trailing "with the new config" must not take the
+    # starting together. A trailing "about the new config" must not take the
     # sentence away from the "look into the deploy" it was hung on.
-    _, _, start, adjunct = min(found)
+    _, _, start = min(found)
+    # "Don't check the prod database" names a subject the same way "check the
+    # prod database" does, and announcing it would say the opposite of what he
+    # said, so a negation anywhere ahead of the marker refuses the whole thing.
+    if any(word.strip('?.!,;:"()') in NEGATORS for word in lowered[:start].split()):
+        return None
     candidate = said[start:].strip().strip('?.!,;:').strip()
     words = candidate.split()
     if not words:
-        return None
-    # A bare on or with introduces a date as readily as a subject, and a date is
-    # one short plain word that every later rule is happy to speak. Follow those
-    # two only into something a determiner opens.
-    if adjunct and words[0].strip('?.!,;:"()').lower() not in TOPIC_DETERMINERS:
         return None
     if not plain_noun_phrase(words):
         return None
@@ -326,6 +329,13 @@ class Session:
         """Yield exactly what the agent should say for this turn."""
         spoken = user_turns(messages)
         said = last_user_turn(messages)
+        # One budget covers the whole turn: filing his words, the opener, and
+        # the wait for an answer. require_safe_hold has proven the hold is
+        # CASCADE_MARGIN clear of the cascade timeout, so the two together are
+        # the most the turn may ever run for, and nothing inside may run on its
+        # own longer allowance - a transport call that outlasts this ends the
+        # captain's conversation rather than the turn, which nothing recovers.
+        deadline = time.time() + self.hold + CASCADE_MARGIN
         # The platform re-invokes this endpoint for its own filler generation and
         # on retries, resending a transcript that has not grown. Every turn is
         # handled exactly once, or one spoken instruction is dispatched twice.
@@ -333,15 +343,19 @@ class Session:
             if len(spoken) <= self.handled_turns:
                 return []
         if said.startswith(ANSWER_MARKER) and said.endswith(']'):
-            portions = self.deliver(said[len(ANSWER_MARKER):-1].strip())
+            portions = self.deliver(said[len(ANSWER_MARKER):-1].strip(), deadline)
         else:
-            portions = self.record(said, extra)
+            portions = self.record(said, extra, deadline)
         # Advanced only after the turn is handled, so a refused call may be retried.
         with self.lock:
             self.handled_turns = max(self.handled_turns, len(spoken))
         return portions
 
-    def tail(self):
+    def within(self, deadline, command, payload=None):
+        """One transport call, allowed only what is left of the turn."""
+        return self.bridge.call(command, payload, timeout=deadline - time.time())
+
+    def tail(self, deadline):
         """The turn this conversation currently ends on.
 
         Read from the transport rather than remembered, so a bridge that starts
@@ -350,7 +364,7 @@ class Session:
         with self.lock:
             if self.previous_turn is not None:
                 return self.previous_turn
-        requests = self.bridge.call('poll')['requests']
+        requests = self.within(deadline, 'poll')['requests']
         return requests[-1]['turn_id'] if requests else None
 
     def opener(self, said):
@@ -361,7 +375,7 @@ class Session:
             return self.bag.draw()
         return self.topics.draw().format(topic=topic)
 
-    def record(self, said, extra):
+    def record(self, said, extra, deadline):
         """File the captain's own words, then speak while Firstmate reads them.
 
         The turn is held open afterwards so Firstmate's answer continues this
@@ -370,23 +384,33 @@ class Session:
         """
         request_id = str(extra.get('request_id') or uuid.uuid4())
         turn_id = str(uuid.uuid4())
-        previous = self.tail()
-        self.bridge.call('capture', {'turn_id': turn_id, 'request_id': request_id,
-                                     'committed_transcript': said, 'revision': 1,
-                                     'previous_turn_id': previous,
-                                     'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())})
+        try:
+            previous = self.tail(deadline)
+            self.within(deadline, 'capture',
+                        {'turn_id': turn_id, 'request_id': request_id,
+                         'committed_transcript': said, 'revision': 1,
+                         'previous_turn_id': previous,
+                         'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())})
+        except TransportTimeout:
+            # The budget is spent. Say the neutral line, which claims nothing,
+            # and end the turn now: staying open past the cascade timeout ends
+            # the conversation instead, and that is not recoverable.
+            return [self.bag.draw()]
         with self.lock:
             self.previous_turn = turn_id
-        return self.utterance(self.opener(said), request_id)
+        return self.utterance(self.opener(said), request_id, deadline)
 
-    def utterance(self, opening, request_id):
+    def utterance(self, opening, request_id, turn_deadline):
         """Speak the opener now, then hold this turn open for Firstmate's answer."""
         yield opening + ' '
-        deadline = time.time() + self.hold
+        # The wait is the hold; the turn as a whole is the budget. Whichever
+        # runs out first ends the turn, so filing his words slowly shortens the
+        # wait rather than pushing the turn past the cascade timeout.
+        deadline = min(turn_deadline, time.time() + self.hold)
         while True:
             time.sleep(LOOK_INTERVAL)
             try:
-                state = self.bridge.call('poll')
+                state = self.within(deadline, 'poll')
             except PilotError:
                 return  # The answer is still durable; the page will announce it.
             # This turn's claim ends with its hold window. Past the deadline the
@@ -397,23 +421,26 @@ class Session:
             reply = next((r for r in state['replies'] if r['request_id'] == request_id and
                           r['delivery']['state'] == 'waiting'), None)
             if reply is not None:
-                generation = str(uuid.uuid4())
-                result = self.bridge.call('deliver', {'response_id': reply['response_id'],
-                                                      'generation': generation})
+                try:
+                    result = self.within(deadline, 'deliver',
+                                         {'response_id': reply['response_id'],
+                                          'generation': str(uuid.uuid4())})
+                except PilotError:
+                    return  # Unclaimed and still durable; the page will announce it.
                 if result.get('deliver'):
                     yield result['speech_text']
                 return
             # Speaks nothing; keeps the stream alive while Firstmate thinks.
             yield ''
 
-    def deliver(self, response_id):
+    def deliver(self, response_id, deadline):
         """Speak Firstmate's published words verbatim, framed if the captain moved on."""
         check(response_id and len(response_id) <= 200, 'a published reply identity is required')
-        state = self.bridge.call('poll')
+        state = self.within(deadline, 'poll')
         reply = next((r for r in state['replies'] if r['response_id'] == response_id), None)
         check(reply is not None, 'no such published reply in this conversation')
-        result = self.bridge.call('deliver', {'response_id': response_id,
-                                              'generation': str(uuid.uuid4())})
+        result = self.within(deadline, 'deliver', {'response_id': response_id,
+                                                   'generation': str(uuid.uuid4())})
         if not result.get('deliver'):
             # Already spoken once; never say the same answer twice.
             return []
@@ -473,7 +500,7 @@ class Handler(BaseHTTPRequestHandler):
             self.refuse(401, 'unauthorized')
             return
         try:
-            check(self.path in ('/v1/chat/completions', '/chat/completions'), 'unsupported endpoint')
+            check(self.path == '/v1/chat/completions', 'unsupported endpoint')
             size = int(self.headers.get('Content-Length', '0'))
             check(0 < size <= MAX_BODY_BYTES, 'invalid request size')
             body = json.loads(self.rfile.read(size))
