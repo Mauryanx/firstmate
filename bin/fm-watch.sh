@@ -1775,6 +1775,14 @@ event_wait_or_sleep() {
   watch_wait_bg event_wait_capture "$FM_EVENT_WAIT_RECORD" "$first_backend" "$first_session" "${windows[@]}"
   rec=$(cat "$FM_EVENT_WAIT_RECORD" 2>/dev/null || true)
   fm_event_wait_record_cleanup
+  # Two known residual windows land here, both benign by design. A child TERMed
+  # between writing its record and exiting reports `tapped`, so the record just
+  # read into `rec` is discarded; and an interrupted `wait` cannot always tell a
+  # concurrently-finishing child from a tap, so a wait that completed can be
+  # labelled `tapped` too. Either way the edge was never committed (only
+  # handle_push_transition commits), so the next connect's level reconcile
+  # re-reports the still-blocked pane and the tap makes that cycle immediate:
+  # the cost is one late edge, never a lost row.
   case "$FM_WATCH_WAIT_STATUS" in
     tapped) rc=1 ;;
     *) rc=$FM_WATCH_WAIT_STATUS ;;

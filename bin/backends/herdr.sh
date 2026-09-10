@@ -3479,17 +3479,21 @@ fm_backend_herdr_wait_transition() {  # <session> <timeout_secs> <state_dir> <pa
   # and the scratch fifo removed by the trap. The trap is installed BEFORE
   # anything is created or forked, so nothing below is exposed to a TERM with
   # the default disposition; the body is single-quoted so it reads whatever the
-  # reader pid and fifo dir are at signal time rather than at install time. It
-  # is deliberately never restored: this call owns the process it runs in (the
-  # watcher's background wait child), and exiting 143 is exactly how that child
-  # reports "killed by the tap" to watch_wait_bg. A saved disposition could not
+  # reader pid and fifo dir are at signal time rather than at install time -
+  # and every expansion tolerates being unset, because the trap outlives this
+  # function: once it returns, these locals are out of scope, and the watcher
+  # runs `set -u`, so a bare "$reader_pid" would abort the handler on an unbound
+  # variable and exit 1 instead of reaching the 143 below. It is deliberately
+  # never restored: this call owns the process it runs in (the watcher's
+  # background wait child), and exiting 143 is exactly how that child reports
+  # "killed by the tap" to watch_wait_bg. A saved disposition could not
   # help here anyway - `trap -p` in a subshell reports the PARENT shell's traps,
   # so restoring it would install the watcher's own handler into this child and
   # make a tap look like an ordinary non-signal exit.
   reader_pid=
   fifo_dir=
   # shellcheck disable=SC2016 # Expanded at signal time on purpose: these are this call's.
-  trap '[ -z "$reader_pid" ] || kill "$reader_pid" 2>/dev/null; exec 9<&- 2>/dev/null; [ -z "$fifo_dir" ] || rm -rf "$fifo_dir" 2>/dev/null; exit 143' TERM
+  trap '[ -z "${reader_pid:-}" ] || kill "$reader_pid" 2>/dev/null; exec 9<&- 2>/dev/null; [ -z "${fifo_dir:-}" ] || rm -rf "$fifo_dir" 2>/dev/null; exit 143' TERM
   fifo_dir=$(mktemp -d "${TMPDIR:-/tmp}/fm-herdr-eventwait.XXXXXX") || return 2
   fifo="$fifo_dir/events"
   if ! mkfifo "$fifo" 2>/dev/null; then
