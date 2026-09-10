@@ -401,6 +401,11 @@ ff_target() {
   instr=$(changed_instr "$dir" "$base")
   before=$(git -C "$dir" rev-parse --short HEAD)
   if ! out=$(git -C "$dir" merge --ff-only "$base" 2>&1); then
+    # Deliberately untested: unlike the remote surfaces, this leg is local git,
+    # and every refusal it can reach here already prints its own diagnostic.
+    # Manufacturing a --ff-only failure that says nothing at all would be a
+    # fixture with no real counterpart, so the fallback stands unpinned while
+    # the reporting surfaces that CAN go silent are covered.
     ff_reason=$(first_line "$out")
     [ -n "$ff_reason" ] || ff_reason="the fast-forward failed without a reported reason"
     echo "$label: skipped: fast-forward failed: $ff_reason"
