@@ -296,8 +296,9 @@ test_shared_ff_library_selects_every_reporting_family() {
   pass "the shared fast-forward library selects every family that pins its reports"
 }
 
-# Session start owns the nudge and respawn reports pinned by the secondmate
-# suites, so its curated arm must reach that family too, not only its own.
+# bin/fm-bootstrap.sh alone owns the nudge and respawn reports pinned by the
+# secondmate suites, so it carries its own arm reaching that family as well as
+# session-bootstrap; the startup scripts beside it keep session-bootstrap only.
 test_bootstrap_selects_every_reporting_family() {
   local tmp repo listed
   tmp=$(mktemp -d "${TMPDIR:-/tmp}/fm-test-run-bootstrap.XXXXXX")
