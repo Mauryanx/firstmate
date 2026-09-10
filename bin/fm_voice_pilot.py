@@ -17,6 +17,11 @@ explicitly owner-published replies, under the owner's disclosure authorization.
 Credentials must never be spoken or published. The browser uses no other speech
 service. Every substantive utterance goes to the existing Firstmate conversation.
 
+/allowance reports what is left of the account's single character pool before a
+session is offered, so an allowance too small to finish an exchange, or an
+account that may bill past that pool, is refused in words rather than heard as a
+silence. It spends nothing: it reads the same subscription the guards below read.
+
 This pilot serves ONE page, the hosted-agent page. The self-driving front end it
 used to serve - its own microphone handling, transcription, speech playback and
 prerecorded acknowledgement artifacts - was removed once the hosted agent took
@@ -111,28 +116,79 @@ class Budget:
         self.update(operation)
 
 
+# The agent's minutes and everything else that speaks draw on the ONE character
+# allowance the account reports, so what is left there is also what the captain
+# has left to talk with. Measured 2026-09-10 as an UPPER bound: 3,979 characters
+# were burned in the window six conversations totalling 116 seconds ran, and other
+# traffic shared that window. Being an upper bound is what makes it safe to divide
+# by - the seconds it yields are understated, so the page never promises more
+# conversation than the account can pay for.
+CHARACTERS_PER_SECOND = 34
+
+# Below this the page refuses to start rather than let him be cut off mid-word:
+# one exchange is a question and an answer, and a conversation that cannot reach
+# the end of one is not worth inviting him into.
+MIN_CONVERSATION_SECONDS = 20
+
+
 class ElevenLabs:
     def __init__(self, key, budget):
         self.key, self.budget = key, budget
+
+    def subscription(self, unavailable):
+        """The account's own allowance and overage posture, read live.
+
+        One owner, because every caller needs the same two facts and a second
+        copy of this read is a second place for the no-overage check to drift.
+        """
+        check(bool(self.key), 'ElevenLabs credential is unavailable')
+        try:
+            with urllib.request.urlopen(urllib.request.Request(
+                    'https://api.elevenlabs.io/v1/user/subscription',
+                    headers={'xi-api-key': self.key}), timeout=20) as response:
+                return json.load(response)
+        except Exception:
+            raise PilotError(unavailable) from None
+
+    def remaining(self, subscription):
+        """Included characters left, floored at zero so a spent account reads as spent."""
+        try:
+            return max(0, int(subscription['character_limit']) - int(subscription['character_count']))
+        except (KeyError, TypeError, ValueError):
+            raise PilotError('the account did not report its included allowance') from None
+
+    def allowance(self):
+        """What is left to talk with, in the terms the captain is owed before he starts.
+
+        Seconds are floored deliberately: CHARACTERS_PER_SECOND is a measured
+        upper bound on the burn rate, so dividing by it understates the time
+        available and he is never cut off earlier than the page promised.
+
+        The overage posture is reported rather than enforced here, because this
+        answers a question the page asks before anything is spent. The guards that
+        refuse a call still refuse it; this only lets the page say why in advance
+        instead of leaving him to discover it at Connect.
+        """
+        subscription = self.subscription('cannot read the remaining allowance')
+        characters = self.remaining(subscription)
+        return {'characters': characters,
+                'seconds': int(characters / CHARACTERS_PER_SECOND),
+                'enough': characters >= MIN_CONVERSATION_SECONDS * CHARACTERS_PER_SECOND,
+                'minimum_seconds': MIN_CONVERSATION_SECONDS,
+                'resets_at': subscription.get('next_character_count_reset_unix'),
+                'can_overage': subscription.get('can_extend_character_limit') is not False or
+                               subscription.get('allowed_to_extend_character_limit') is not False}
 
     def call(self, path, body, content_type, request_id, reserve):
         check(bool(self.key), 'ElevenLabs credential is unavailable')
         # The account must itself disallow paid extension, so concurrent use of
         # included credits cannot silently turn this local reservation into overage.
-        try:
-            with urllib.request.urlopen(urllib.request.Request(
-                    'https://api.elevenlabs.io/v1/user/subscription',
-                    headers={'xi-api-key': self.key}), timeout=20) as response:
-                subscription = json.load(response)
-            check(subscription.get('can_extend_character_limit') is False and
-                  subscription.get('allowed_to_extend_character_limit') is False,
-                  'account can incur overage; owner must disable it before use')
-            check(subscription['character_limit'] - subscription['character_count'] >= reserve,
-                  'insufficient included allowance')
-        except PilotError:
-            raise
-        except Exception:
-            raise PilotError('cannot verify included allowance and no-overage account policy') from None
+        subscription = self.subscription(
+            'cannot verify included allowance and no-overage account policy')
+        check(subscription.get('can_extend_character_limit') is False and
+              subscription.get('allowed_to_extend_character_limit') is False,
+              'account can incur overage; owner must disable it before use')
+        check(self.remaining(subscription) >= reserve, 'insufficient included allowance')
         self.budget.reserve(request_id, reserve)
         request = urllib.request.Request('https://api.elevenlabs.io' + path, data=body,
                                          headers={'xi-api-key': self.key, 'Content-Type': content_type})
@@ -286,7 +342,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     AGENT_PATHS = ('/agent', '/agent.js', '/elevenlabs.js', '/libsamplerate.worklet.js',
-                   '/agent-config', '/agent-token')
+                   '/agent-config', '/agent-token', '/allowance')
 
     def policy(self):
         """Same-origin everywhere; the agent page also needs its worklet sources.
@@ -358,6 +414,10 @@ class Handler(BaseHTTPRequestHandler):
                 with self.server.auth_lock:
                     self.server.cookie = None
                 self.send({'disconnected': True}, cookie='fm_voice=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0')
+            elif self.path == '/allowance':
+                # Answered before he presses anything, so an account that cannot
+                # pay is a sentence he reads rather than a silence he sits in.
+                self.send(self.server.provider.allowance())
             elif self.path == '/agent-config':
                 self.send({'agent_id': self.server.agent_id})
             elif self.path == '/agent-token':

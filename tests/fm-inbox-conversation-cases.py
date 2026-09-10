@@ -260,7 +260,7 @@ class SpeechFixture:
         return 'A synthetic spoken follow-up'
 
 provider = SpeechFixture()
-server = Pilot(0, Bridge(pilot, connection), provider, b'approved-ack')
+server = Pilot(0, Bridge(pilot, connection), provider)
 thread = threading.Thread(target=server.serve_forever, daemon=True)
 thread.start()
 cookie = None
@@ -292,13 +292,15 @@ try:
     http('/capture', capture(2, 't1'))
     assert owning('accept', cid='live')['input']['request_id'] == 'r2'
     assert owning('accept', cid='live')['dispatch'] is False
-    assert http('/ack', {})[0] == b'approved-ack'
     assert len(http('/poll', {})[0]['replies']) == 1
-    spoken = http('/speech', {'response_id':'live-answer', 'generation':'g'})[0]
-    assert base64.b64decode(spoken['audio']) == b'fixture-audio'
+    # The pilot no longer speaks; the hosted agent does. What still must hold is
+    # that a published reply is claimed exactly once, so drive the claim through
+    # the same transport the pilot uses rather than through a removed route.
+    claimant = Bridge(pilot, connection)
+    spoken = claimant.call('deliver', {'response_id': 'live-answer', 'generation': 'g'})
+    assert spoken['deliver'] is True
     assert spoken['speech_text'] == live_reply['speech_text']
-    assert http('/speech', {'response_id':'live-answer', 'generation':'g'})[0]['deliver'] is False
-    assert provider.calls == [(live_reply['speech_text'], 'tts:live:live-answer')]
+    assert claimant.call('deliver', {'response_id': 'live-answer', 'generation': 'g'})['deliver'] is False
     http('/playback', {'response_id':'live-answer','generation':'g','state':'interrupted','position_ms':12})
     http('/playback', {'response_id':'live-answer','generation':'old','state':'completed','position_ms':100}, 400)
     # Identity remains checked after browser authentication.
@@ -314,15 +316,15 @@ finally:
     thread.join()
 
 # A replacement browser server reuses durable delivery claims but never cookies.
-server = Pilot(0, Bridge(pilot, connection), provider, b'approved-ack')
+server = Pilot(0, Bridge(pilot, connection), provider)
 thread = threading.Thread(target=server.serve_forever, daemon=True)
 thread.start()
 try:
     http('/poll', {}, 400)  # Old browser cookie is not a new server credential.
     _, headers = http('/pair', {'secret': server.pair_secret})
     cookie = headers['Set-Cookie'].split(';')[0]
-    assert http('/speech', {'response_id':'live-answer', 'generation':'replacement'})[0]['deliver'] is False
-    assert len(provider.calls) == 1
+    assert Bridge(pilot, connection).call(
+        'deliver', {'response_id': 'live-answer', 'generation': 'replacement'})['deliver'] is False
     # A third question the owner answers out of order later in the browser lane.
     http('/capture', capture(3, 't2'))
     server.expires = 0
@@ -432,7 +434,7 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     assert owning('accept', cid='live')['input']['request_id'] == 'r3'
     run('publish', dict(live_reply, request_id='r2', response_id='late-answer',
                         speech_text='Synthetic late answer to the earlier question.'))
-    browser_server = Pilot(0, Bridge(pilot, connection), provider, b'non-acoustic-test-ack')
+    browser_server = Pilot(0, Bridge(pilot, connection), provider)
     browser_thread = threading.Thread(target=browser_server.serve_forever, daemon=True)
     browser_thread.start()
     try:
