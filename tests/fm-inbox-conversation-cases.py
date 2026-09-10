@@ -628,6 +628,20 @@ try:
     assert 'the deploy' in ask('Tell me about the deploy.')
     assert 'the voice bridge' in ask('Look into the voice bridge.')
 
+    # A question puts its subject wherever it likes, and an imperative can sit
+    # behind a polite or vocative prefix. All of these are how he actually asks,
+    # and the opener is about what he asked rather than the same filler again.
+    for question, subject in (('What did we find on the deploy?', 'the deploy'),
+                              ('Give me an update on the migration.', 'the migration'),
+                              ('Look into what happened with the funnel.', 'the funnel'),
+                              ('Firstmate, check on the release notes.', 'the release notes'),
+                              ('Can you look into the flaky test?', 'the flaky test')):
+        assert subject in ask(question), (question, subject)
+    # Widening where the subject is found never widens what may be said: a
+    # subject longer than a determiner and two words still gets the neutral line.
+    assert ask('Tell me about the anomaly insertion research.').strip() in (
+        'first ack.', 'second ack.')
+
     # A transcript carrying no captain turn at all is refused, not guessed at.
     ask('', 400, messages=[{'role': 'system', 'content': 'only a system prompt'}])
     ask('', 400, messages=[])

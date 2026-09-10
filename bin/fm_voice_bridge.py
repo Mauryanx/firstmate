@@ -117,8 +117,11 @@ TOPIC_OPENERS = (
 # until then, in the captain's ear on every turn, which is why it was still worth
 # making it refuse by default rather than leaving it to be replaced eventually.
 
-# Phrases that introduce what the captain is asking about.
-TOPIC_LEADS = (' about ', ' regarding ', ' with regard to ', ' on the subject of ')
+# Phrases that introduce what the captain is asking about, anywhere in what he
+# said. The plain ' on ' and ' with ' come last, so the longer phrases that
+# contain them are recognised as themselves first.
+TOPIC_LEADS = (' about ', ' regarding ', ' with regard to ', ' on the subject of ',
+               ' on ', ' with ')
 TOPIC_IMPERATIVES = ('tell me about', 'find out about', 'look into', 'look up', 'look at',
                      'pull up', 'check on', 'check', 'review')
 # Words that open a clause, which is where an assertion lives. "the deploy THAT
@@ -175,7 +178,9 @@ def topic_of(said):
     """The subject the captain named, or None when nothing can be said truthfully.
 
     Conservative by design: it returns a noun phrase drawn from his own words,
-    and nothing at all when that phrase cannot be shown to carry no claim.
+    and nothing at all when that phrase cannot be shown to carry no claim. Where
+    the subject is looked for is generous, because a question can put it
+    anywhere; what may then be spoken is not, because that is the boundary.
     """
     lowered = said.lower()
     candidate = None
@@ -186,8 +191,9 @@ def topic_of(said):
             break
     if candidate is None:
         for verb in TOPIC_IMPERATIVES:
-            if lowered.startswith(verb + ' '):
-                candidate = said[len(verb) + 1:]
+            at = lowered.find(verb + ' ')
+            if at != -1 and (at == 0 or not lowered[at - 1].isalnum()):
+                candidate = said[at + len(verb) + 1:]
                 break
     if candidate is None:
         return None
@@ -388,24 +394,10 @@ class Session:
                 result = self.bridge.call('deliver', {'response_id': reply['response_id'],
                                                       'generation': generation})
                 if result.get('deliver'):
-                    try:
-                        yield result['speech_text']
-                    except GeneratorExit:
-                        # The platform hung up after the answer was claimed but
-                        # before it could be heard. Record that it was not, so
-                        # the claim never reads as an answer the captain got.
-                        self.unheard(reply['response_id'], generation)
-                        raise
+                    yield result['speech_text']
                 return
             # Speaks nothing; keeps the stream alive while Firstmate thinks.
             yield ''
-
-    def unheard(self, response_id, generation):
-        try:
-            self.bridge.call('playback', {'response_id': response_id, 'generation': generation,
-                                          'state': 'unknown', 'position_ms': 0})
-        except PilotError:
-            pass  # Nothing further can be recorded; the durable claim still stands.
 
     def deliver(self, response_id):
         """Speak Firstmate's published words verbatim, framed if the captain moved on."""
