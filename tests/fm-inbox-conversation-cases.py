@@ -458,9 +458,9 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
 import random
 import time
 
-from fm_voice_bridge import (ANSWER_MARKER, CASCADE_MARGIN, Endpoint, HOLD_SECONDS,
-                             Session, Sessions, ShuffleBag, require_safe_hold)
-from fm_voice_pilot import TransportTimeout
+from fm_voice_bridge import (ACKNOWLEDGEMENTS, ANSWER_MARKER, CASCADE_MARGIN, DELIVER_FLOOR,
+                             Endpoint, HOLD_SECONDS, LOOK_INTERVAL, Session, Sessions,
+                             ShuffleBag, require_safe_hold)
 
 # A turn still open when the agent's cascade timeout expires ends the captain's
 # conversation rather than the turn, so an unsafe hold must never reach a socket.
@@ -473,39 +473,84 @@ for unsafe in (15.0 - CASCADE_MARGIN + 0.1, 10.0, 12.0, 20.0, -1.0):
     except PilotError:
         pass
 
-# The startup guard proves the hold is clear of the cascade timeout, but the
-# turn is only inside that window if everything it does is. A transport call
-# with its own longer allowance would keep the turn open past the cascade and
-# end the captain's conversation rather than the turn, with the guard passed.
-class SlowTransport:
-    def __init__(self, delay):
-        self.delay, self.allowed = delay, []
+# Stands in for the conversation transport so the turn's timing contract can be
+# exercised without one: what it was allowed, what it was asked for, and how long
+# it took to answer.
+class StubTransport:
+    def __init__(self, replies=(), delay=0.0):
+        self.replies, self.delay = list(replies), delay
+        self.commands, self.allowed = [], []
 
     def call(self, command, payload=None, timeout=35):
+        self.commands.append(command)
         self.allowed.append(timeout)
         time.sleep(min(self.delay, max(timeout, 0)))
         if self.delay >= timeout:
-            raise TransportTimeout('the conversation transport did not answer in time')
-        return {'requests': [], 'replies': []}
+            raise PilotError('the conversation transport did not answer in time')
+        return {'requests': [], 'replies': list(self.replies)}
 
 
-slow = SlowTransport(30.0)
-budget = 0.5 + CASCADE_MARGIN
-budgeted = Session(slow, ShuffleBag(['first ack.', 'second ack.'], random.Random(2)), hold=0.5)
+def spoken(transport, hold, said='Just checking in.', extra=None):
+    session = Session(transport, ShuffleBag(list(ACKNOWLEDGEMENTS), random.Random(5)), hold=hold)
+    return session, session.speak([{'role': 'user', 'content': said}], extra or {})
+
+
+# The startup guard proves the hold is clear of the cascade timeout, but the turn
+# is only inside that window if everything it does is. A transport call with its
+# own longer allowance would keep the turn open past the cascade and end the
+# captain's conversation rather than the turn, with the guard having passed. The
+# budget is the hold alone: CASCADE_MARGIN is headroom the guard reserves, not an
+# allowance the turn may spend.
+slow = StubTransport(delay=30.0)
+budgeted = Session(slow, ShuffleBag(list(ACKNOWLEDGEMENTS), random.Random(5)), hold=0.5)
 began = time.time()
-heard = ''.join(budgeted.speak([{'role': 'user', 'content': 'Tell me about the deploy.'}], {}))
+try:
+    ''.join(budgeted.speak([{'role': 'user', 'content': 'Just checking in.'}], {}))
+    raise AssertionError('a turn that outran its budget was not refused')
+except PilotError:
+    pass
 spent = time.time() - began
-# The turn ends inside its own budget, saying the neutral line, which claims
-# nothing. Every call it made was allowed only what was left of that budget.
-assert heard.strip() in ('first ack.', 'second ack.'), heard
-assert spent < budget + 1.5, spent
-assert slow.allowed and all(0 < allowance <= budget for allowance in slow.allowed), slow.allowed
+# It refuses audibly rather than reassuring him falsely, and leaves the turn
+# unhandled so the platform's retry can still file what he said.
+assert spent < 2.0, spent
+assert slow.allowed and all(0 < allowance <= 0.5 for allowance in slow.allowed), slow.allowed
+assert budgeted.handled_turns == 0, budgeted.handled_turns
+
+# A claim is the one call that cannot be half-done, so it is never begun on less
+# budget than it needs: below the floor the reply is left waiting for the page.
+waiting = [{'request_id': 'tail-request', 'response_id': 'tail-answer',
+            'delivery': {'state': 'waiting'}}]
+tail = StubTransport(replies=waiting)
+_, at_tail = spoken(tail, DELIVER_FLOOR / 2, extra={'request_id': 'tail-request'})
+''.join(at_tail)
+assert 'deliver' not in tail.commands, tail.commands
+roomy = StubTransport(replies=waiting)
+_, in_time = spoken(roomy, DELIVER_FLOOR + LOOK_INTERVAL + 1.0, extra={'request_id': 'tail-request'})
+''.join(in_time)
+assert 'deliver' in roomy.commands, roomy.commands
+
+# The neutral line is spoken before the filing has succeeded and is all the
+# captain hears when it fails, so no member of the set may name where his words
+# went or say they got there.
+plain = Session(StubTransport(), ShuffleBag(list(ACKNOWLEDGEMENTS), random.Random(4)), hold=0.5)
+neutral = set()
+for turn in range(len(ACKNOWLEDGEMENTS)):
+    portions = plain.speak([{'role': 'user', 'content': 'Just checking in.'}] * (turn + 1), {})
+    neutral.add(next(portions).strip())
+    portions.close()
+assert neutral == set(ACKNOWLEDGEMENTS), neutral
+for line in neutral:
+    assert not any(claim in line.lower() for claim in
+                   ('firstmate', 'fleet', 'sent', 'filed', 'passed', 'queued', 'started', 'done')), line
 
 secret = 'x' * 32
 bag_order = random.Random(7)
+# The hold is the whole turn's budget now, filing his words included, so this
+# fixture keeps a realistic multiple of what a transport call costs rather than
+# the bare wait it used to stand for.
 bridge_session = Sessions(Bridge(pilot, connection), ShuffleBag(['first ack.', 'second ack.'], bag_order),
                           topics=ShuffleBag(['Looking into {topic}.', 'On {topic} now.'], random.Random(11)),
-                          hold=0.6)
+                          hold=2.0)
 try:
     Endpoint(0, bridge_session, 'too short')
     raise AssertionError('a weak shared secret must refuse to listen')

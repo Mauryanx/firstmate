@@ -39,7 +39,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from fm_inbox_conversation import canonical
-from fm_voice_pilot import HOLD_SECONDS, Bridge, PilotError, TransportTimeout, check
+from fm_voice_pilot import HOLD_SECONDS, Bridge, PilotError, check
 
 # The browser sends this as an ordinary user message once Firstmate has published
 # a reply, because the platform offers a server no way to make the agent speak.
@@ -49,15 +49,17 @@ ANSWER_MARKER = '[firstmate-reply '
 # progress, or promises a time, and nothing fills the silence that follows: the
 # platform's generated fillers are left off, because the bridge cannot hold text
 # it never sees to that rule.
+#
+# Each is spoken before the filing has succeeded, so each must be true whatever
+# happens next. A line naming where the request went, or saying it got there, is
+# a claim, and it is the only thing the captain hears when the filing then fails.
 ACKNOWLEDGEMENTS = (
     'On it.',
     'Let me check.',
     'Give me a moment, I will find out.',
-    'Putting that to the fleet now.',
     'Right, let me look into that.',
     'Checking that for you.',
     'One moment while I ask.',
-    'Let me take that to Firstmate.',
 )
 
 MAX_BODY_BYTES = 400000
@@ -100,6 +102,13 @@ MAX_BODY_BYTES = 400000
 CASCADE_SECONDS = 15.0
 CASCADE_MARGIN = 6.0
 LOOK_INTERVAL = 0.5
+# The least budget a claim may be started on. The transport writes and fsyncs
+# the delivery claim before its answer gets back here, so a call killed after
+# that leaves the reply claimed, unspoken, and no longer waiting for the page to
+# announce - the captain never hears that answer and nothing reports it. Skipping
+# a claim costs him the answer one stand-off later, which he can sit through, so
+# the floor errs well above what the call is measured to cost.
+DELIVER_FLOOR = 2.0
 
 # An opener may reflect what the captain asked. It may never assert a finding, a
 # status or a result, because nothing has been answered when it is spoken.
@@ -330,12 +339,13 @@ class Session:
         spoken = user_turns(messages)
         said = last_user_turn(messages)
         # One budget covers the whole turn: filing his words, the opener, and
-        # the wait for an answer. require_safe_hold has proven the hold is
-        # CASCADE_MARGIN clear of the cascade timeout, so the two together are
-        # the most the turn may ever run for, and nothing inside may run on its
-        # own longer allowance - a transport call that outlasts this ends the
-        # captain's conversation rather than the turn, which nothing recovers.
-        deadline = time.time() + self.hold + CASCADE_MARGIN
+        # the wait for an answer. It is the hold, which require_safe_hold has
+        # proven CASCADE_MARGIN clear of the cascade timeout; that margin is
+        # headroom the guard reserves, not an allowance to spend. Nothing inside
+        # the turn may run on its own longer allowance, because a transport call
+        # that outlasts this ends the captain's conversation rather than the
+        # turn, and nothing recovers that.
+        deadline = time.time() + self.hold
         # The platform re-invokes this endpoint for its own filler generation and
         # on retries, resending a transcript that has not grown. Every turn is
         # handled exactly once, or one spoken instruction is dispatched twice.
@@ -384,29 +394,21 @@ class Session:
         """
         request_id = str(extra.get('request_id') or uuid.uuid4())
         turn_id = str(uuid.uuid4())
-        try:
-            previous = self.tail(deadline)
-            self.within(deadline, 'capture',
-                        {'turn_id': turn_id, 'request_id': request_id,
-                         'committed_transcript': said, 'revision': 1,
-                         'previous_turn_id': previous,
-                         'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())})
-        except TransportTimeout:
-            # The budget is spent. Say the neutral line, which claims nothing,
-            # and end the turn now: staying open past the cascade timeout ends
-            # the conversation instead, and that is not recoverable.
-            return [self.bag.draw()]
+        previous = self.tail(deadline)
+        self.within(deadline, 'capture',
+                    {'turn_id': turn_id, 'request_id': request_id,
+                     'committed_transcript': said, 'revision': 1,
+                     'previous_turn_id': previous,
+                     'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())})
         with self.lock:
             self.previous_turn = turn_id
         return self.utterance(self.opener(said), request_id, deadline)
 
-    def utterance(self, opening, request_id, turn_deadline):
+    def utterance(self, opening, request_id, deadline):
         """Speak the opener now, then hold this turn open for Firstmate's answer."""
         yield opening + ' '
-        # The wait is the hold; the turn as a whole is the budget. Whichever
-        # runs out first ends the turn, so filing his words slowly shortens the
-        # wait rather than pushing the turn past the cascade timeout.
-        deadline = min(turn_deadline, time.time() + self.hold)
+        # The wait is what is left of the turn, so filing his words slowly
+        # shortens it rather than pushing the turn past the cascade timeout.
         while True:
             time.sleep(LOOK_INTERVAL)
             try:
@@ -421,6 +423,8 @@ class Session:
             reply = next((r for r in state['replies'] if r['request_id'] == request_id and
                           r['delivery']['state'] == 'waiting'), None)
             if reply is not None:
+                if deadline - time.time() < DELIVER_FLOOR:
+                    return  # No time to finish a claim; the page announces it instead.
                 try:
                     result = self.within(deadline, 'deliver',
                                          {'response_id': reply['response_id'],

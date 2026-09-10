@@ -77,15 +77,6 @@ class PilotError(Exception):
     pass
 
 
-class TransportTimeout(PilotError):
-    """A transport call that did not answer inside the time it was given.
-
-    A PilotError, so every caller that already ends cleanly on a refused
-    transport call ends cleanly on a slow one too; named apart because a caller
-    running against a deadline must know it has run out rather than retry.
-    """
-
-
 def check(condition, message):
     if not condition:
         raise PilotError(message)
@@ -271,7 +262,7 @@ class Bridge:
                                     input=canonical(dict(payload, **self.binding)), text=True,
                                     capture_output=True, env=env, timeout=timeout)
         except subprocess.TimeoutExpired:
-            raise TransportTimeout('the conversation transport did not answer in time') from None
+            raise PilotError('the conversation transport did not answer in time') from None
         check(result.returncode == 0, 'conversation refused the request; owner can inspect the durable journal')
         return json.loads(result.stdout)
 
