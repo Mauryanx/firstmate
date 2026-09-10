@@ -1,0 +1,67 @@
+fm-crew-state.sh - captain-facing current-state line
+Real bin/fm-crew-state.sh driven over real git worktrees + real state/<id>.meta,
+with a no-mistakes CLI on PATH serving live axi status run records.
+
+#################### BEFORE (base b1ad702) ####################
+
+========== S1  concluded validation run, PR #1 still OPEN, default branch untouched ==========
+$ bin/fm-crew-state.sh feat-open
+state: done · source: run-step · run passed: PR merged/closed
+
+========== S2  concluded run carrying no PR URL (pr: empty) ==========
+$ bin/fm-crew-state.sh feat-nopr
+state: done · source: run-step · run passed: PR merged/closed
+
+========== S2b concluded run whose record has no pr field at all ==========
+$ bin/fm-crew-state.sh feat-noprfield
+state: done · source: run-step · run passed: PR merged/closed
+
+========== S3  terminal failed run, only ci monitor failed, checks green (held-for-merge) ==========
+$ bin/fm-crew-state.sh feat-held
+state: done · source: run-step · checks green: PR held for merge (ci monitor ended): https://github.com/o/r/pull/7
+
+========== S4  outcome=checks-passed (untouched sibling branch) ==========
+$ bin/fm-crew-state.sh feat-cp
+state: done · source: run-step · checks green: PR ready for review
+
+========== S5  adversarial: run passed with a branch/PR whose URL is long; assert no forge claim words ==========
+$ bin/fm-crew-state.sh feat-adv
+state: done · source: run-step · run passed: PR merged/closed
+
+fixture: /tmp/nm-crewstate.kLU6aC
+
+========== S6  adversarial: concluded run + stale status-log event claiming 'PR merged' ==========
+$ bin/fm-crew-state.sh feat-stalelog
+state: done · source: run-step · run passed: PR merged/closed
+
+#################### AFTER  (head bed96c5) ####################
+
+========== S1  concluded validation run, PR #1 still OPEN, default branch untouched ==========
+$ bin/fm-crew-state.sh feat-open
+state: done · source: run-step · run completed: https://github.com/o/r/pull/1
+
+========== S2  concluded run carrying no PR URL (pr: empty) ==========
+$ bin/fm-crew-state.sh feat-nopr
+state: done · source: run-step · run completed
+
+========== S2b concluded run whose record has no pr field at all ==========
+$ bin/fm-crew-state.sh feat-noprfield
+state: done · source: run-step · run completed
+
+========== S3  terminal failed run, only ci monitor failed, checks green (held-for-merge) ==========
+$ bin/fm-crew-state.sh feat-held
+state: done · source: run-step · checks green: PR held for merge (ci monitor ended): https://github.com/o/r/pull/7
+
+========== S4  outcome=checks-passed (untouched sibling branch) ==========
+$ bin/fm-crew-state.sh feat-cp
+state: done · source: run-step · checks green: PR ready for review
+
+========== S5  adversarial: run passed with a branch/PR whose URL is long; assert no forge claim words ==========
+$ bin/fm-crew-state.sh feat-adv
+state: done · source: run-step · run completed: https://github.com/acme/widgets/pull/4242
+
+fixture: /tmp/nm-crewstate.QlysCw
+
+========== S6  adversarial: concluded run + stale status-log event claiming 'PR merged' ==========
+$ bin/fm-crew-state.sh feat-stalelog
+state: done · source: run-step · run completed: https://github.com/o/r/pull/3

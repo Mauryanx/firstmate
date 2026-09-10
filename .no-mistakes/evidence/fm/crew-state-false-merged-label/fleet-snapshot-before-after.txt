@@ -1,0 +1,30 @@
+bin/fm-fleet-snapshot.sh --json - the composed captain-facing fleet snapshot
+One crew whose no-mistakes run concluded while its PR #1 is still OPEN.
+
+#################### BEFORE (base b1ad702) ####################
+$ FM_HOME=<fixture> bin/fm-fleet-snapshot.sh --json | jq '.tasks[] | {id, current_state}'
+{
+  "id": "feat-open",
+  "current_state": {
+    "state": "done",
+    "source": "run-step",
+    "detail": "run passed: PR merged/closed",
+    "raw": "state: done · source: run-step · run passed: PR merged/closed",
+    "observed_at": "2026-09-10T14:04:57Z",
+    "freshness": "fresh"
+  }
+}
+
+#################### AFTER  (head bed96c5) ####################
+$ FM_HOME=<fixture> bin/fm-fleet-snapshot.sh --json | jq '.tasks[] | {id, current_state}'
+{
+  "id": "feat-open",
+  "current_state": {
+    "state": "done",
+    "source": "run-step",
+    "detail": "run completed: https://github.com/o/r/pull/1",
+    "raw": "state: done · source: run-step · run completed: https://github.com/o/r/pull/1",
+    "observed_at": "2026-09-10T14:04:53Z",
+    "freshness": "fresh"
+  }
+}

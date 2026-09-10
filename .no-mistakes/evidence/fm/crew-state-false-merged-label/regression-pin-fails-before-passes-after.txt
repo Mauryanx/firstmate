@@ -1,0 +1,9 @@
+Regression pin: the new assertions in tests/fm-crew-state.test.sh
+run UNCHANGED against the PRE-FIX product (base b1ad702):
+
+not ok - passed outcome reports only run completion (missing: 'run completed')
+state: done · source: run-step · run passed: PR merged/closed
+
+...and against the fixed product (head bed96c5):
+
+ok - terminal passed run is authoritative
