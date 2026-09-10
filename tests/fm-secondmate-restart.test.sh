@@ -489,7 +489,7 @@ case "${rargs[1]:-}" in
         : > "$FM_FAKE_DIR/remote-relaunch-end"
         ;;
     esac
-    printf 'relaunched %s on remote-target harness=%s\n' \
+    printf 'relaunched %s harness=%s\n' \
       "${rargs[2]}" "${FM_FAKE_RELAUNCH_HARNESS:-${rargs[3]}}"
     ;;
 esac

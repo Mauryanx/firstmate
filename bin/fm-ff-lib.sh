@@ -254,11 +254,14 @@ changed_instr() {
 # its own diagnostic.
 REMOTE_SYNC_UNSUPPORTED_STATUS=2
 remote_sync_failure_reason() { # <exit-status> <output>
+  local reason
   if [ "$1" = "$REMOTE_SYNC_UNSUPPORTED_STATUS" ]; then
     printf '%s\n' "the Firstmate copy on that host is too old to sync to this primary's commit; run /updatefirstmate"
     return 0
   fi
-  first_line "$2"
+  reason=$(first_line "$2")
+  [ -n "$reason" ] || reason="the remote sync failed without a reported reason"
+  printf '%s\n' "$reason"
 }
 
 dirty_status() {
@@ -321,7 +324,7 @@ ff_target() {
     return 0
   fi
 
-  local default base cur instr local_rev base_rev before after out
+  local default base cur instr local_rev base_rev before after out ff_reason
   default=$(default_branch "$dir") || {
     echo "$label: skipped: cannot determine default branch"
     return 0
@@ -383,7 +386,9 @@ ff_target() {
   instr=$(changed_instr "$dir" "$base")
   before=$(git -C "$dir" rev-parse --short HEAD)
   if ! out=$(git -C "$dir" merge --ff-only "$base" 2>&1); then
-    echo "$label: skipped: fast-forward failed: $(first_line "$out")"
+    ff_reason=$(first_line "$out")
+    [ -n "$ff_reason" ] || ff_reason="the fast-forward failed without a reported reason"
+    echo "$label: skipped: fast-forward failed: $ff_reason"
     return 0
   fi
   after=$(git -C "$dir" rev-parse --short HEAD)

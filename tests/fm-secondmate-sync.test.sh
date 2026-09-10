@@ -947,6 +947,12 @@ test_failure_diagnostic_selection() {
   got=$(first_line '')
   [ -z "$got" ] || fail "empty output invented a diagnostic: $got"
 
+  # first_line stays free to say nothing; the shared remote-sync boundary is
+  # what owes its two callers a cause when the remote leg never spoke.
+  got=$(remote_sync_failure_reason 255 $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n** This session may be vulnerable to store now, decrypt later attacks.')
+  [ "$got" = 'the remote sync failed without a reported reason' ] \
+    || fail "a banner-only remote sync failure reported no cause at all: $got"
+
   pass "failure reports ignore OpenSSH banners and select the real diagnostic"
 }
 
@@ -1007,6 +1013,14 @@ rargs=()
 while IFS= read -r -d '' a; do rargs+=("$a"); done < <(decode "$argv_b64")
 cmd=${rargs[0]}
 [ "$cmd" != fm-remote-doctor.sh ] || exit 0
+# A remote leg killed before it could speak (a signalled or OOM-killed command)
+# leaves ssh reporting a bare 255 with nothing but OpenSSH's banner on stderr.
+if [ "${FM_TEST_REMOTE_LEG_SILENT:-0}" = 1 ]; then
+  printf '%s\n' \
+    '** WARNING: connection is not using a post-quantum key exchange algorithm.' \
+    '** This session may be vulnerable to store now, decrypt later attacks.' >&2
+  exit 255
+fi
 # An older remote Firstmate copy rejects a command shape it does not know with
 # the usage status, which is exactly what a parent-targeted sync meets there.
 if [ "${FM_TEST_REMOTE_LEG_REJECT_SYNC:-0}" = 1 ] \
@@ -1301,6 +1315,49 @@ test_bootstrap_syncs_remote_home_to_primary_commit() {
   pass "R8 session start converges a remote home on the primary's default-branch commit"
 }
 
+# --- R8b: a silent remote leg still names a cause on every report line ---------
+# A remote command killed before it could speak leaves ssh returning a bare 255
+# with nothing but OpenSSH's banner. Both remote convergence reports must still
+# carry a cause instead of trailing off after their colon.
+test_bootstrap_reports_a_cause_when_the_remote_leg_says_nothing() {
+  local w c1 home fakebin out
+  w=$(new_remote_world remote-silent-leg)
+  cp "$ROOT"/bin/fm-remote-*.sh "$w/main/bin/"
+  git -C "$w/main" add -A
+  git -C "$w/main" commit -qm "primary tooling"
+  git -C "$w/main" push -q origin main
+  c1=$(head_of "$w/main")
+  add_remote_home "$w" sm "$w/forge.git" "$c1"
+  bump_primary "$w" instr
+  git -C "$w/main" push -q origin main
+  home="$w/home"
+  mkdir -p "$home/config" "$home/projects"
+  printf -- '- sm - remote fixture (host: host-sm; root: %s; home: %s; scope: remote work; projects: alpha; added 2026-08-02)\n' \
+    "$w/coderoot" "$w/sm" > "$home/data/secondmates.md"
+  fm_write_secondmate_meta "$home/state/sm.meta" "$w/sm"
+  printf 'remote_host=host-sm\n' >> "$home/state/sm.meta"
+
+  fakebin=$(make_remote_leg_ssh_stub "$w")
+  fm_fake_exit0 "$fakebin" gh treehouse tmux node
+  out=$(PATH="$fakebin:$BASE_PATH" \
+    FM_HOME="$home" FM_ROOT_OVERRIDE="$w/main" \
+    FM_BOOTSTRAP_NETWORK=only \
+    FM_SSH_BIN="$fakebin/fake-ssh" FM_REMOTE_CODE_ROOT="$w/coderoot" \
+    FM_TEST_REPO_ROOT="$ROOT" FM_TEST_REMOTE_LEG_SILENT=1 \
+    FM_INHERITABLE_CONFIG=backend FM_FAKE_TREEHOUSE_LEASE_HELP=1 FM_SEND_SETTLE=0 \
+    "$ROOT/bin/fm-bootstrap.sh" 2>&1)
+
+  assert_contains "$out" \
+    "SECONDMATE_SYNC: secondmate sm: skipped: remote tracked-file sync failed on host-sm: the remote sync failed without a reported reason" \
+    "a silent remote sync leg left its report trailing off after the colon"
+  assert_contains "$out" \
+    "SECONDMATE_SYNC: secondmate sm: skipped: remote inheritance failed on host-sm: the inheritance push failed without a reported reason" \
+    "a silent remote inheritance leg left its report trailing off after the colon"
+  assert_not_contains "$out" 'host-sm: ** WARNING' \
+    "OpenSSH's banner was reported as the remote failure"
+  pass "R8b a silent remote leg still names a cause on both convergence reports"
+}
+
 # --- R10: an outdated host refuses, and the report says how to fix it ----------
 # A host still running an older Firstmate copy rejects a command shape it does
 # not know, which for this leg can only mean it predates the parent-targeted
@@ -1417,6 +1474,7 @@ test_remote_sync_skips_unimportable_target
 test_remote_sync_skips_dirty_diverged_and_feature_branch
 test_remote_sync_without_target_follows_host_copy
 test_bootstrap_syncs_remote_home_to_primary_commit
+test_bootstrap_reports_a_cause_when_the_remote_leg_says_nothing
 test_bootstrap_reports_outdated_host_actionably
 test_remote_launch_does_not_retarget_host_copy
 
