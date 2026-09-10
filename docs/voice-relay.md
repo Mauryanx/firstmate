@@ -12,7 +12,35 @@ No changes to the existing record reader's disclosure scope are part of this lab
 Acceptance is a durable single dispatch claim, not proof that work happened.
 An interrupted claim or missing playback receipt remains visible for reconciliation instead of automatically repeating an action or speech.
 The regression covers concurrent duplicate capture, out-of-order transcript completion, session ownership, explicit question and correction routing, and crashes on both sides of the return path.
-Native session integration, browser authentication, live reply disclosure and audible acceptance remain prerequisites for a live conversational interface.
+The separately enabled pilot below connects the browser through explicit owning-turn acceptance and reply publication; the lab alone is not evidence of live audible acceptance.
+
+## Browser pilot
+
+The pilot uses the same durable conversation transport with explicit reply publication by the owning Firstmate turn.
+Firstmate retains all reasoning and action authority; the voice adapter can capture requests and play published answers only.
+An authenticated publication records the exact content digest, author, destination and turn.
+This is accountability for deliberate speech, not an automated claim that a label or scan makes arbitrary private content safe.
+Enabling the live policy requires the owner's authorization for disclosure to ElevenLabs; credentials must never be published.
+The record reader's counts/full scopes and exclusions remain unchanged and the pilot never calls it.
+
+`bin/fm-inbox.sh conversation --help` owns live policy initialization, session binding and publication commands.
+`python3 bin/fm_voice_pilot.py --help` owns browser startup, pairing, provider configuration and credit-accounting mechanics.
+The loopback HTTP access layer is separate from the conversation transport and the ElevenLabs adapter so a future phone transport can replace it.
+For the Mac pilot, the operator forwards the loopback port through SSH over the private mesh; the browser uses localhost, with no public listener or external login service.
+The owner performs live-home binding and accepts/publishes replies from the existing Firstmate conversation, including while other work is pending.
+No synthetic test is submitted to an operational fleet automatically.
+
+The selected delivery is George with warm/conversational settings, with the already-approved acknowledgement supplied as a local audio artifact.
+The browser acknowledges a saved input once when an answer is not already arriving and distinguishes that acknowledgement from actual work acceptance.
+Microphone capture uses local voice activity segmentation and ElevenLabs transcription, with a visible mute control that stops capture and discards pending segments.
+Stop speaking immediately clears local playback and records an interruption; it does not cancel Firstmate's work.
+The transcript can be inspected and corrections refer to an accepted request.
+Uncertain capture, transcription and playback remain visible rather than being silently retried as new actions.
+
+All new provider requests reserve credits durably and check that the account disallows paid credit extension before sending audio or text.
+Repeated IDs cannot charge twice through automatic retry, failed requests retain their reservations, and no credits are purchased or topped up.
+The HTTP integration and publication tests use an isolated home and a substituted speech provider in `tests/fm-inbox-conversation.test.sh`.
+Device-level latency, recognition fidelity, echo handling and subjective voice quality require the live listening pilot; passing transport tests does not establish those measurements.
 
 ## Existing audio prototype
 

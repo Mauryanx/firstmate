@@ -25,10 +25,10 @@
 #   fm-inbox.sh ask  <question>...
 #   fm-inbox.sh list
 #   fm-inbox.sh drain [--ack <id>...]
-#   fm-inbox.sh conversation <command>  (offline contract lab; --help for schema)
+#   fm-inbox.sh conversation <command>  (conversation lab/pilot; --help for schema)
 #
 # Conversation transport is owned by fm_inbox_conversation.py and is restricted
-# to explicitly created empty test homes. Its vc- notes require session-bound
+# to an empty lab or an explicitly owner-enabled pilot. Its vc- notes require session-bound
 # acceptance and must never be dispatched or acknowledged by the ordinary drain.
 #
 # Configuration. A region, a model id and an AWS profile name somebody's account
@@ -81,6 +81,7 @@ export PATH
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FM_ROOT="$(cd "$SELF_DIR/.." && pwd)"
+FM_INBOX_HOME_EXPLICIT=${FM_HOME:+yes}
 FM_HOME="${FM_HOME:-$FM_ROOT}"
 STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
 DATA="${FM_DATA_OVERRIDE:-$FM_HOME/data}"
@@ -392,12 +393,12 @@ case "${1:-}" in
     case "${1:-}" in
       ''|-h|--help|help) exec python3 "$SELF_DIR/fm_inbox_conversation.py" --help ;;
     esac
-    [ -n "${FM_HOME:-}" ] && [ "$FM_HOME" != "$FM_ROOT" ] \
-      || die "conversation requires an explicit isolated FM_HOME"
+    [ "$FM_INBOX_HOME_EXPLICIT" = yes ] \
+      || die "conversation requires an explicit FM_HOME"
     [ -z "${FM_STATE_OVERRIDE:-}${FM_DATA_OVERRIDE:-}${FM_CONFIG_OVERRIDE:-}${FM_WAKE_QUEUE:-}${FM_WAKE_QUEUE_LOCK:-}" ] \
       || die "conversation refuses directory and wake overrides"
     case "${1:-}" in
-      bind|accept|reject|publish|audit)
+      pilot-init|bind|accept|reject|publish|audit)
         # Pi's supervision conversation shares main's PID, but not its dialogue.
         # shellcheck source=bin/fm-lease-lib.sh
         . "$SELF_DIR/fm-lease-lib.sh"
@@ -415,6 +416,15 @@ case "${1:-}" in
         ;;
       *) unset FM_VOICE_OWNER ;;
     esac
+    if [ ! -f "$FM_HOME/.voice-conversation-lab" ] && [ "${1:-}" != lab-init ]; then
+      # A transport process is not the owner, but must stop when its owner is replaced.
+      # shellcheck source=bin/fm-wake-lib.sh
+      . "$SELF_DIR/fm-wake-lib.sh"
+      _voice_current_pid=$(cat "$STATE/.lock" 2>/dev/null) || die "no conversation session lock"
+      FM_VOICE_CURRENT_OWNER=$(fm_pid_identity "$_voice_current_pid") || die "conversation owner is gone"
+      [ "$(cat "$STATE/.lock")" = "$_voice_current_pid" ] || die "conversation session lock changed"
+      export FM_VOICE_CURRENT_OWNER
+    fi
     export FM_HOME
     exec python3 "$SELF_DIR/fm_inbox_conversation.py" "$@"
     ;;

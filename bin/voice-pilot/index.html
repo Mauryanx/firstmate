@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Firstmate voice</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body><main><p class="eyebrow">FIRSTMATE</p><h1>Let’s talk.</h1><p>Enabled microphone audio and replies deliberately published by Firstmate use ElevenLabs. Never speak or publish credentials.</p>
+<p id="status" role="status">Disconnected</p><div class="controls"><button id="connect">Connect</button><button id="mic" disabled>Enable microphone</button><button id="stop" disabled>Stop speaking</button><button id="disconnect" disabled>Disconnect</button></div>
+<label for="text">Type a message or inspect the transcript</label><textarea id="text" rows="3" placeholder="What would you like to explore?" disabled></textarea>
+<div class="controls"><button id="send" disabled>Send</button><button id="retry" disabled>Retry saved message</button></div>
+<label for="correction">Correction to</label><select id="correction"><option value="">New question or follow-up</option></select>
+<label for="question">Answer to</label><select id="question"><option value="">No explicit question selected</option></select>
+<p id="pending" role="status"></p><ol id="transcript" aria-live="polite"></ol><p class="hint">Use headphones for the first conversation. Stop speaking silences playback; cancelling work is a separate request to Firstmate. Recognition can make mistakes: corrections reach the same conversation.</p></main></body></html>

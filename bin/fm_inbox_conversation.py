@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
-"""Offline conversation contract, composed by fm-inbox.sh conversation.
+"""Session-bound conversation contract, composed by fm-inbox.sh conversation.
 
 This first-stage lab makes no network/model/media call. lab-init requires a new
 absolute FM_HOME and JSON {"speech_catalog": {"name": "synthetic speech"}}.
 It creates that directory exclusively, never seeds or adopts an operational home.
 The catalog is the entire publication scope: publication selects a catalog key,
-never arbitrary reply text or private records. This is NOT a live disclosure
-policy. A production session adapter and owner-approved disclosure design must
-precede live use. All commands take one JSON object on stdin and return JSON.
+never arbitrary reply text or private records. This lab catalog is NOT a live disclosure policy. The separately enabled
+pilot below uses accountable explicit owning-turn publication. All commands take one JSON object on stdin and return JSON.
 Use the shell entry point; owner commands require its existing session-lock seam
 and main-actor role partition (a Pi supervision branch shares main's process).
 The local OS owner is trusted; no CLI or owner credential is a model tool.
 
+pilot-init (owner): {publication_policy: "owner-authored-elevenlabs-v1"}.
+    Explicitly enables the pilot in an existing home while holding its session
+    lock. Never run lab-init over that home. No browser or model is started.
+    This owner approves each exact reply for ElevenLabs by deliberately calling
+    publish from the owning turn. No text is scraped or automatically classified.
+    Private research is permitted only under the captain's ElevenLabs disclosure
+    authorization; credentials must never be published. Other providers are not
+    authorized by this policy. The author is accountable as for written replies.
+    Authorization of speech content does not grant action/merge/spend authority.
+    Session replacement fails closed; it never adopts a prior conversation.
+
 bind (owner): {conversation_id, authenticated_principal}. Returns a random
     transport credential bound to this owner process identity and conversation.
     Repeat bind is idempotent; another owner cannot adopt the conversation.
-    This models pairing; it does not implement browser authentication.
+    The private browser pilot exchanges its own one-use pairing secret and keeps
+    this transport credential on the server (fm_voice_pilot.py).
 All remaining commands require conversation_id. Transport commands also require
     credential. Owner commands accept only the currently bound session owner.
 capture (transport): {turn_id, request_id, committed_transcript, revision,
@@ -33,6 +44,10 @@ reject (owner): {request_id, reason}. Declines an unaccepted input explicitly;
 publish (owner): {request_id, response_id, sequence, kind, speech_key, final,
     question_binding?}. kind is receipt/progress/question/answer/error; sequence
     starts at 1 per request. IDs are immutable and retries must match exactly.
+    In the live pilot replace speech_key with speech_text and
+    destination:"elevenlabs". The owner publishes that exact text for that exact
+    turn. Author process identity, timestamp, destination and content digest are
+    durable accountability evidence, not a claim of automated privacy detection.
     Questions require a unique binding. A bound answer consumes that question at
     acceptance. Missing, ambiguous or stale bindings never become approvals.
     Explicit work outcome is separate from playback: final closes this request's
@@ -75,6 +90,7 @@ from pathlib import Path
 import secrets
 import subprocess
 import sys
+import time
 
 
 class ContractError(Exception):
@@ -148,15 +164,41 @@ def init(home, payload):
     return {'lab': True, 'network': False}
 
 
+def pilot_init(home, payload):
+    """The owning turn explicitly enables publication, never a transport peer."""
+    require(string(os.environ.get('FM_VOICE_OWNER')), 'owning session required')
+    require(payload == {'publication_policy': 'owner-authored-elevenlabs-v1'},
+            'explicit owner-authored ElevenLabs publication policy required')
+    require(home.is_absolute() and (home / 'state').is_dir(), 'existing operational home required')
+    require(not (home / '.voice-conversation-lab').exists(), 'cannot convert a lab into a live home')
+    root = home / 'state/voice-conversation'
+    root.mkdir(mode=0o700, exist_ok=True)
+    policy = dict(payload, enabled_by=os.environ['FM_VOICE_OWNER'])
+    target = root / 'policy.json'
+    if target.exists():
+        require(json.loads(target.read_text()) == policy, 'publication policy already belongs to another owner')
+    else:
+        write(target, canonical(policy))
+    (home / 'state/inbox/handled').mkdir(mode=0o700, parents=True, exist_ok=True)
+    return {'pilot': True, 'destination': 'elevenlabs'}
+
+
 class Conversation:
     def __init__(self, home, command, payload):
         self.home, self.command, self.p = home, command, payload
         self.state = home / 'state'
         self.root = self.state / 'voice-conversation'
         self.inbox = self.state / 'inbox'
-        require((home / '.voice-conversation-lab').read_text() == 'synthetic-only-v1\n',
-                'only an initialized synthetic lab is supported')
-        self.catalog = json.loads((self.root / 'catalog.json').read_text())
+        self.lab = (home / '.voice-conversation-lab').exists()
+        if self.lab:
+            require((home / '.voice-conversation-lab').read_text() == 'synthetic-only-v1\n',
+                    'invalid lab marker')
+            self.catalog = json.loads((self.root / 'catalog.json').read_text())
+        else:
+            policy = json.loads((self.root / 'policy.json').read_text())
+            require(policy.get('publication_policy') == 'owner-authored-elevenlabs-v1',
+                    'live publication has not been explicitly enabled by the owner')
+            self.policy_owner = policy['enabled_by']
         self.path = self.root / 'journal.json'
         self.lock = (self.root / 'lock').open('a')
         fcntl.flock(self.lock, fcntl.LOCK_EX)
@@ -168,6 +210,8 @@ class Conversation:
         self.c = self.j['conversations'].get(self.cid)
         if command != 'bind':
             require(self.c is not None, 'unknown conversation')
+            if not self.lab:
+                require(self.c['owner'] == os.environ.get('FM_VOICE_CURRENT_OWNER'), 'owning session changed or ended')
             if command in ('accept', 'reject', 'publish', 'audit'):
                 require(self.c['owner'] == os.environ.get('FM_VOICE_OWNER'), 'wrong owning session')
             else:
@@ -225,6 +269,8 @@ class Conversation:
         owner = os.environ.get('FM_VOICE_OWNER')
         principal = self.p.get('authenticated_principal')
         require(string(owner) and identifier(principal), 'owner and authenticated principal are required')
+        if not self.lab:
+            require(owner == self.policy_owner, 'publication policy belongs to another owning session')
         if self.c:
             require(self.c['owner'] == owner and self.c['principal'] == principal, 'conversation already bound')
         else:
@@ -322,13 +368,24 @@ class Conversation:
         return {'request_id': self.p['request_id'], 'state': 'rejected'}
 
     def publish(self):
-        fields = ('request_id', 'response_id', 'sequence', 'kind', 'speech_key', 'final', 'question_binding')
+        fields = ('request_id', 'response_id', 'sequence', 'kind', 'final', 'question_binding')
+        fields += ('speech_key',) if self.lab else ('speech_text', 'destination')
         require(not (set(self.p) - set(fields) - {'conversation_id'}), 'unsupported publication fields')
         event = {k: self.p.get(k) for k in fields}
         require(identifier(event['request_id']) and identifier(event['response_id']), 'reply identity is required')
         require(integer(event['sequence'], 1) and type(event['final']) is bool, 'invalid sequence or final flag')
         require(event['kind'] in ('receipt', 'progress', 'question', 'answer', 'error'), 'invalid reply kind')
-        require(event['speech_key'] in self.catalog, 'speech must select the synthetic catalog; live disclosure is gated')
+        if self.lab:
+            require(event['speech_key'] in self.catalog, 'speech must select the synthetic catalog; live disclosure is gated')
+            speech = self.catalog[event['speech_key']]
+            disclosure = {'scope': 'synthetic-catalog', 'digest': digest(speech)}
+        else:
+            require(string(event['speech_text']), 'explicit speech_text is required')
+            require(event['destination'] == 'elevenlabs', 'this publication policy authorizes ElevenLabs only')
+            speech = event['speech_text']
+            disclosure = {'destination': 'elevenlabs', 'digest': digest(speech),
+                          'author': self.c['owner'], 'published_at': int(time.time()),
+                          'policy': 'owner-authored-elevenlabs-v1'}
         binding = event['question_binding']
         require(identifier(binding) if event['kind'] == 'question' else binding is None, 'invalid question binding')
         request = self.j['requests'].get(self.key(self.cid, event['request_id']))
@@ -349,8 +406,7 @@ class Conversation:
                                 for r in self.j['replies'].values()), 'question binding already used')
             self.j['replies'][key] = {'conversation_id': self.cid, 'event': event,
                                       'order': len(self.j['replies']) + 1,
-                                      'speech_text': self.catalog[event['speech_key']],
-                                      'disclosure': {'scope': 'synthetic-catalog', 'digest': digest(self.catalog[event['speech_key']])}}
+                                      'speech_text': speech, 'disclosure': disclosure}
             self.save()
             fault('publication')
         return {'published': True, 'response_id': event['response_id']}
@@ -409,7 +465,7 @@ class Conversation:
                      'previous_turn_id': e['previous_turn_id'], 'correction_of': e['correction_of'],
                      'question_binding': e['question_binding']} for key, r, e in self.rows()]
         replies = [{'request_id': r['event']['request_id'], 'response_id': r['event']['response_id'],
-                    'final': r['event']['final'], 'delivery': r.get('delivery', {'state': 'waiting'})}
+                    'final': r['event']['final'], 'disclosure': r['disclosure'], 'delivery': r.get('delivery', {'state': 'waiting'})}
                    for r in self.j['replies'].values() if r['conversation_id'] == self.cid]
         return {'conversation_id': self.cid, 'requests': requests, 'replies': replies,
                 'work_outcome': 'Firstmate-owned; acceptance and playback do not prove action completion'}
@@ -421,7 +477,7 @@ def main():
         return 0
     command = sys.argv[1]
     try:
-        require(command in ('lab-init', 'bind', 'capture', 'accept', 'reject', 'publish', 'poll',
+        require(command in ('lab-init', 'pilot-init', 'bind', 'capture', 'accept', 'reject', 'publish', 'poll',
                             'deliver', 'playback', 'audit'),
                 'unknown conversation command')
         payload = json.load(sys.stdin)
@@ -431,6 +487,8 @@ def main():
         os.umask(0o077)
         if command == 'lab-init':
             result = init(home, payload)
+        elif command == 'pilot-init':
+            result = pilot_init(home, payload)
         else:
             controller = Conversation(home, command, payload)
             try:

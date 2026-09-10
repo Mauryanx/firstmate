@@ -208,3 +208,143 @@ assert 'committed_transcript' not in json.dumps(accounting)
 assert owning('audit', cid='other')['requests'] == []
 print('PASS: 9 inputs accounted for; 8 single dispatch claims, 1 stale bound input explicitly rejected; 6 replies retained')
 print('PASS: capture/accept/publication/playback crash windows, duplicate races and wrong-session refusals')
+
+# Live publication uses the same owner seam, never a transport-supplied author.
+pilot = temp / 'pilot'
+(pilot / 'state').mkdir(parents=True)
+(pilot / 'state/.lock').write_text(owner + '\n')
+env['FM_HOME'] = str(pilot)
+run('pilot-init', {'publication_policy': 'owner-authored-elevenlabs-v1'})
+run('pilot-init', {'publication_policy': 'owner-authored-elevenlabs-v1'})
+connection = bind('live')
+run('capture', dict(connection, **capture(1)))
+assert owning('accept', cid='live')['dispatch']
+live_reply = dict(conversation_id='live', request_id='r1', response_id='live-answer', sequence=1,
+                  kind='answer', final=True, destination='elevenlabs',
+                  speech_text='Synthetic live calculation: 12.5 is greater than 1.25; nothing was changed.')
+run('publish', dict(live_reply, destination='other-provider'), code=2)
+run('publish', dict(live_reply, authenticated_principal='captain'), code=2)
+run('publish', live_reply)
+assert run('publish', live_reply)['published']
+run('publish', dict(live_reply, speech_text='different'), code=2)
+live_journal = json.loads((pilot / 'state/voice-conversation/journal.json').read_text())
+proof = next(iter(live_journal['replies'].values()))['disclosure']
+assert proof['author'] == live_journal['conversations']['live']['owner']
+assert proof['destination'] == 'elevenlabs' and proof['published_at'] > 0
+
+# Real loopback HTTP handlers, scoped pairing and provider substitution only.
+sys.path.insert(0, str(root / 'bin'))
+from fm_voice_pilot import Bridge, Budget, Pilot, PilotError, ElevenLabs
+import threading
+import urllib.request
+import urllib.error
+import hashlib
+import io
+import wave
+from unittest.mock import patch
+
+class SpeechFixture:
+    def __init__(self):
+        self.calls = []
+    def speech(self, text, request_id):
+        self.calls.append((text, request_id))
+        return b'fixture-audio'
+    def transcribe(self, audio, request_id):
+        return 'A synthetic spoken follow-up'
+
+provider = SpeechFixture()
+server = Pilot(0, Bridge(pilot, connection), provider, b'approved-ack')
+thread = threading.Thread(target=server.serve_forever, daemon=True)
+thread.start()
+cookie = None
+
+def http(path, data, expected=200, origin=None):
+    headers = {'Origin': origin or server.origin, 'Content-Type': 'application/json'}
+    if cookie:
+        headers['Cookie'] = cookie
+    request = urllib.request.Request(server.origin + path, json.dumps(data).encode(), headers)
+    try:
+        response = urllib.request.urlopen(request, timeout=5)
+    except urllib.error.HTTPError as error:
+        response = error
+    assert response.status == expected, (path, response.status, response.read())
+    body = response.read()
+    return (json.loads(body) if response.headers.get('Content-Type') == 'application/json' else body,
+            response.headers)
+
+try:
+    http('/poll', {}, 400)
+    http('/pair', {'secret': server.pair_secret}, 400, origin='https://attacker.invalid')
+    token = server.pair_secret
+    paired, headers = http('/pair', {'secret': token})
+    assert paired['conversation_id'] == 'live'
+    cookie = headers['Set-Cookie'].split(';')[0]
+    http('/pair', {'secret': token}, 400)
+    http('/capture', dict(capture(2, 't1'), conversation_id='other'), 400)
+    http('/capture', capture(2, 't1'))
+    http('/capture', capture(2, 't1'))
+    assert owning('accept', cid='live')['input']['request_id'] == 'r2'
+    assert owning('accept', cid='live')['dispatch'] is False
+    assert http('/ack', {})[0] == b'approved-ack'
+    assert len(http('/poll', {})[0]['replies']) == 1
+    assert http('/speech', {'response_id':'live-answer', 'generation':'g'})[0] == b'fixture-audio'
+    assert http('/speech', {'response_id':'live-answer', 'generation':'g'})[0]['deliver'] is False
+    assert provider.calls == [(live_reply['speech_text'], 'tts:live:live-answer')]
+    http('/playback', {'response_id':'live-answer','generation':'g','state':'interrupted','position_ms':12})
+    http('/playback', {'response_id':'live-answer','generation':'old','state':'completed','position_ms':100}, 400)
+    # Identity remains checked after browser authentication.
+    old_lock = (pilot / 'state/.lock').read_text()
+    (pilot / 'state/.lock').write_text('999999999\n')
+    http('/poll', {}, 400)
+    (pilot / 'state/.lock').write_text(old_lock)
+    http('/disconnect', {})
+    http('/poll', {}, 400)
+finally:
+    server.shutdown()
+    server.server_close()
+    thread.join()
+
+budget = Budget(temp / 'credits.json', 100)
+budget.reserve('one', 60)
+for key, amount in [('one', 1), ('two', 41)]:
+    try:
+        Budget(temp / 'credits.json', 100).reserve(key, amount)
+        raise AssertionError('budget accepted duplicate or excess')
+    except PilotError:
+        pass
+budget.finish('one', failed=True)
+try:
+    budget.reserve('three', 1)
+    raise AssertionError('uncertain request did not halt paid calls')
+except PilotError:
+    pass
+
+# Exercise the real adapter serialization and no-overage gate, never a provider.
+class Response(io.BytesIO):
+    def __init__(self, data, headers=None):
+        super().__init__(data)
+        self.headers = headers or {}
+
+account = {'can_extend_character_limit': False, 'allowed_to_extend_character_limit': False,
+           'character_limit': 10000, 'character_count': 573}
+requests = []
+def network(request, timeout):
+    requests.append(request)
+    if request.full_url.endswith('/subscription'):
+        return Response(json.dumps(account).encode())
+    return Response(b'x' * 1200, {'Content-Type':'audio/mpeg', 'character-cost':'4'})
+
+adapter = ElevenLabs('test-only-secret', Budget(temp / 'adapter-credits.json', 100))
+with patch('urllib.request.urlopen', network):
+    assert len(adapter.speech('Probably.', 'sample')) == 1200
+    payload = json.loads(requests[-1].data)
+    assert payload['text'] == 'Probably.' and payload['voice_settings']['stability'] == .40
+    assert 'JBFqnCBsd6RMkjVDRZzb' in requests[-1].full_url
+    account['can_extend_character_limit'] = True
+    try:
+        adapter.speech('No overages.', 'refused')
+        raise AssertionError('account overage was not refused')
+    except PilotError:
+        pass
+    assert len(requests) == 3  # metadata only on the refused call
+print('pilot: exact owner publication, HTTP isolation, single delivery, credit and overage guards passed')
