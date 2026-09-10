@@ -1013,6 +1013,15 @@ rargs=()
 while IFS= read -r -d '' a; do rargs+=("$a"); done < <(decode "$argv_b64")
 cmd=${rargs[0]}
 [ "$cmd" != fm-remote-doctor.sh ] || exit 0
+if [ "${FM_TEST_REMOTE_LEG_SSH_BANNER:-0}" = 1 ]; then
+  case "$cmd ${rargs[1]:-}" in
+    'fm-remote-secondmate-control.sh sync'|'fm-remote-inherit.sh '*)
+      printf '%s\n' \
+        '** WARNING: connection is not using a post-quantum key exchange algorithm.' \
+        '** This session may be vulnerable to store now, decrypt later attacks.' >&2
+      ;;
+  esac
+fi
 # A remote leg killed before it could speak (a signalled or OOM-killed command)
 # leaves ssh reporting a bare 255 with nothing but OpenSSH's banner on stderr.
 if [ "${FM_TEST_REMOTE_LEG_SILENT:-0}" = 1 ]; then
@@ -1020,6 +1029,13 @@ if [ "${FM_TEST_REMOTE_LEG_SILENT:-0}" = 1 ]; then
     '** WARNING: connection is not using a post-quantum key exchange algorithm.' \
     '** This session may be vulnerable to store now, decrypt later attacks.' >&2
   exit 255
+fi
+# A steer accepted at the boundary: the remote pane is out of scope here, so the
+# leg records the delivered payload instead of ringing a live agent.
+if [ -n "${FM_TEST_REMOTE_SEND_LOG:-}" ] \
+  && [ "$cmd" = fm-remote-secondmate-control.sh ] && [ "${rargs[1]:-}" = send ]; then
+  printf '%s\n' "${rargs[*]:2}" >> "$FM_TEST_REMOTE_SEND_LOG"
+  exit 0
 fi
 # An older remote Firstmate copy rejects a command shape it does not know with
 # the usage status, which is exactly what a parent-targeted sync meets there.
@@ -1358,6 +1374,54 @@ test_bootstrap_reports_a_cause_when_the_remote_leg_says_nothing() {
   pass "R8b a silent remote leg still names a cause on both convergence reports"
 }
 
+# The same captured banner must not swallow a successful sync: a home the sweep
+# just advanced still owes its running agent a re-read nudge, and the
+# banner-prefixed `synced:` line is the only signal that says so.
+test_bootstrap_nudges_after_banner_prefixed_sync() {
+  local w c1 c2 home fakebin out
+  w=$(new_remote_world remote-banner-nudge)
+  cp "$ROOT"/bin/fm-remote-*.sh "$w/main/bin/"
+  git -C "$w/main" add -A
+  git -C "$w/main" commit -qm "primary tooling"
+  git -C "$w/main" push -q origin main
+  c1=$(head_of "$w/main")
+  add_remote_home "$w" sm "$w/forge.git" "$c1"
+  bump_primary "$w" instr
+  c2=$(head_of "$w/main")
+  git -C "$w/main" push -q origin main
+  home="$w/home"
+  mkdir -p "$home/config" "$home/projects"
+  printf -- '- sm - remote fixture (host: host-sm; root: %s; home: %s; scope: remote work; projects: alpha; added 2026-08-02)\n' \
+    "$w/coderoot" "$w/sm" > "$home/data/secondmates.md"
+  fm_write_secondmate_meta "$home/state/sm.meta" "$w/sm"
+  printf 'remote_host=host-sm\n' >> "$home/state/sm.meta"
+  mkdir -p "$w/sm/state/parent-route"
+  fm_write_meta "$w/sm/state/parent-route/sm.meta" \
+    'window=fm-remote:p1' 'endpoint_task_id=sm' 'worktree=-' 'project=-' \
+    'backend=herdr' 'harness=codex' 'herdr_session=fm-remote' \
+    'herdr_workspace_id=w1' 'herdr_tab_id=t1' 'herdr_pane_id=p1'
+
+  fakebin=$(make_remote_leg_ssh_stub "$w")
+  fm_fake_exit0 "$fakebin" gh treehouse tmux node
+  out=$(PATH="$fakebin:$BASE_PATH" \
+    FM_HOME="$home" FM_ROOT_OVERRIDE="$w/main" \
+    FM_BOOTSTRAP_NETWORK=only \
+    FM_SSH_BIN="$fakebin/fake-ssh" FM_REMOTE_CODE_ROOT="$w/coderoot" \
+    FM_TEST_REPO_ROOT="$ROOT" FM_TEST_REMOTE_LEG_SSH_BANNER=1 \
+    FM_TEST_REMOTE_SEND_LOG="$w/steers.log" \
+    FM_INHERITABLE_CONFIG='' FM_FAKE_TREEHOUSE_LEASE_HELP=1 FM_SEND_SETTLE=0 \
+    "$ROOT/bin/fm-bootstrap.sh" 2>&1)
+
+  [ "$(head_of "$w/sm")" = "$c2" ] \
+    || fail "the banner-prefixed sweep left the remote home off the primary's commit (out: $out)"
+  assert_contains "$(cat "$w/steers.log" 2>/dev/null || true)" \
+    'Re-read AGENTS.md' \
+    "a banner-prefixed successful sync never steered the remote secondmate to re-read (out: $out)"
+  [ ! -f "$home/state/.secondmate-nudge-pending/sm.pending" ] \
+    || fail "the delivered remote re-read intent was left pending (out: $out)"
+  pass "a banner-prefixed successful sync still nudges the converged remote secondmate"
+}
+
 # --- R10: an outdated host refuses, and the report says how to fix it ----------
 # A host still running an older Firstmate copy rejects a command shape it does
 # not know, which for this leg can only mean it predates the parent-targeted
@@ -1475,6 +1539,7 @@ test_remote_sync_skips_dirty_diverged_and_feature_branch
 test_remote_sync_without_target_follows_host_copy
 test_bootstrap_syncs_remote_home_to_primary_commit
 test_bootstrap_reports_a_cause_when_the_remote_leg_says_nothing
+test_bootstrap_nudges_after_banner_prefixed_sync
 test_bootstrap_reports_outdated_host_actionably
 test_remote_launch_does_not_retarget_host_copy
 
