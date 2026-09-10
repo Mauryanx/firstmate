@@ -144,6 +144,26 @@ Turn the platform's generated pause line on, with a prompt override forbidding a
 That line is what he hears while Firstmate reads, and it is generated in the context of what he actually said, which is what he asked for and what the bridge could not do by rule.
 The override is the whole safety argument for it: the text is the platform's, the bridge never sees it, and the only thing holding it to the rule that nothing may claim a result before Firstmate has answered is that instruction.
 
+`backup_llm_config` must stay empty.
+The platform can otherwise fall back to another company's model when ours is slow or fails, and a fallback model answering as Firstmate would say things Firstmate never said.
+That is the honesty boundary breached by configuration rather than by code, and it is what this path costs: choosing a hosted agent over a server written end to end trades a structural guarantee for a configured one.
+Because it is configuration, it is only ever verified by reading the agent back from the platform, never by remembering that someone changed it.
+
+### What this agent's own record says
+
+Read back from the platform on 2026-09-10, and recorded because the honesty rule on this path rests on the first line of it:
+
+| Setting | Value | Why it matters |
+| --- | --- | --- |
+| `backup_llm_config` | preference `disabled` | No other company's model can answer as Firstmate |
+| `cascade_timeout_seconds` | 15 | The ceiling every turn must finish inside; pass this to `--cascade-seconds` rather than the vendor's documented default of 4 |
+| `turn_timeout` | 7 | The agent's own turn-taking timeout, which is a different number from the one above |
+| `max_duration_seconds` | 600 | The platform's cap on one conversation |
+
+Treat this as verified then, not verified forever.
+Every one of these is a setting a person or a console can change without touching this repository, so re-read them from the platform whenever they matter rather than citing this table.
+Writing them down is the opposite of a licence to trust them: it records that they were read once, on a date, so a later reading has something to be compared against.
+
 ### What the page says before he starts
 
 The account's characters are a single pool.
