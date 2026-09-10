@@ -50,6 +50,11 @@ first_line() {
   # so a leading ** run is transport noise and never the command's diagnostic.
   # Everything after it is the command's own output: report its first line that
   # carries anything, flattened to one readable line.
+  # Banner-only or silent output therefore selects NOTHING, and this returns
+  # empty rather than inventing a reason. Do not add a placeholder here: each
+  # reporting surface owns the wording it appends after its own "...: ", and a
+  # sentinel returned from here would silently outrank every one of those
+  # per-surface fallbacks.
   printf '%s\n' "$1" | awk '
     /^\*\* / { next }
     {
@@ -257,8 +262,11 @@ changed_instr() {
 # Translate one remote home sync leg's failure into an operator-actionable
 # reason. The remote leg refuses a command shape it does not recognize with this
 # status, which on this leg can only mean that host's Firstmate copy predates the
-# parent-targeted sync it was just asked for; every other failure already carries
-# its own diagnostic.
+# parent-targeted sync it was just asked for; every other failure normally
+# carries its own diagnostic. When it carries none - a leg killed before it could
+# speak, leaving at most the SSH banner - this is the one boundary that names a
+# fallback for its callers, so bin/fm-spawn.sh and bin/fm-bootstrap.sh do not
+# each repeat one.
 REMOTE_SYNC_UNSUPPORTED_STATUS=2
 remote_sync_failure_reason() { # <exit-status> <output>
   local reason
