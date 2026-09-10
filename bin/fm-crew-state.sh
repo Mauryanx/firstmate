@@ -448,6 +448,16 @@ EOF
   [ "$(nm_ci_checks_state)" = green ]
 }
 
+# Append the attributed run's PR URL to RUN_DETAIL, so a terminal state points
+# at the artifact the run produced. A run that carries no PR URL appends
+# nothing.
+nm_append_run_pr_url() {
+  local pr_url
+  pr_url=$(strip_quotes "$(nm_field pr)")
+  [ -n "$pr_url" ] && RUN_DETAIL="$RUN_DETAIL: $pr_url"
+  return 0
+}
+
 # Reclassify a terminal failed run as done (held-for-merge) when
 # nm_failed_run_is_green_held_ci matches, surfacing the run's PR URL so the
 # supervisor reads the concrete review-ready outcome instead of a failure.
@@ -455,9 +465,7 @@ nm_reclassify_failed_run_as_held_green() {
   nm_failed_run_is_green_held_ci || return 1
   RUN_STATE="done"
   RUN_DETAIL="checks green: PR held for merge (ci monitor ended)"
-  local pr_url
-  pr_url=$(strip_quotes "$(nm_field pr)")
-  [ -n "$pr_url" ] && RUN_DETAIL="$RUN_DETAIL: $pr_url"
+  nm_append_run_pr_url
   return 0
 }
 
@@ -663,7 +671,7 @@ if [ "$HAVE_RUN" = 1 ]; then
 
     if [ -n "$outcome" ]; then
       case "$outcome" in
-        passed)        RUN_STATE="done"; RUN_DETAIL="run completed" ;;
+        passed)        RUN_STATE="done"; RUN_DETAIL="run completed"; nm_append_run_pr_url ;;
         checks-passed) RUN_STATE="done"; RUN_DETAIL="checks green: PR ready for review" ;;
         failed)
           if nm_reclassify_failed_run_as_held_green; then :; else

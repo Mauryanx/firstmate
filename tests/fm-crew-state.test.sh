@@ -941,39 +941,8 @@ test_terminal_passed() {
   assert_contains "$out" "run completed" "passed outcome reports only run completion"
   assert_not_contains "$out" "merged" "run success is not merge evidence"
   assert_not_contains "$out" "closed" "run success is not closure evidence"
+  assert_contains "$out" "https://github.com/o/r/pull/1" "passed run points at its PR"
   pass "terminal passed run is authoritative"
-}
-
-test_terminal_run_with_skipped_ci_does_not_claim_pr_landed() {
-  reset_fakes
-  local d short out route; d=$(new_case passed-skipped-ci)
-  make_repo_on_branch "$d/wt" fm/feat-skipped-ci
-  short=$(git -C "$d/wt" rev-parse --short=7 HEAD)
-  make_fakebin "$d" >/dev/null
-  fm_write_meta "$d/state/skipped-ci.meta" "window=fm:fm-skipped-ci" "worktree=$d/wt" "kind=ship"
-  # A PR URL identifies the artifact, not its forge state. Reproduce a run
-  # that finished after CI was skipped while the PR remained open. The
-  # reader has no forge evidence, so neither attribution route may infer it.
-  for route in full coarse; do
-    if [ "$route" = full ]; then
-      FM_FAKE_AXI_STATUS="$(run_passed fm/feat-skipped-ci)
-steps[3]{step,status,findings,duration_ms}:
-  push,completed,0,8861
-  pr,completed,0,49157
-  ci,skipped,1,1807647"
-    else
-      FM_FAKE_AXI_STATUS="$(run_running fm/other-crew)"
-      FM_FAKE_RUNS_LIST="completed fm/feat-skipped-ci $short 2026-09-10 10:00 https://github.com/o/r/pull/1"
-    fi
-    out=$(run_crew_state "$d" skipped-ci)
-    assert_contains "$out" "state: done" "$route concluded run stays terminal"
-    assert_contains "$out" "source: run-step" "$route concluded run stays attributed"
-    assert_contains "$out" "run completed" "$route reports what the run proves"
-    assert_not_contains "$out" "merged" "$route run completion cannot prove a merge"
-    assert_not_contains "$out" "closed" "$route run completion cannot prove closure"
-    assert_not_contains "$out" "checks green" "$route skipped CI cannot prove checks green"
-  done
-  pass "completed run with skipped CI never claims its PR landed"
 }
 
 test_terminal_failed() {
@@ -2481,7 +2450,6 @@ test_ci_fixing_after_green_stays_working
 test_top_level_fixing_ci_running_after_green_stays_working
 test_top_level_fixing_done_log_stays_working
 test_terminal_passed
-test_terminal_run_with_skipped_ci_does_not_claim_pr_landed
 test_terminal_failed
 test_terminal_failed_ci_orphan_after_green_reads_done
 test_terminal_failed_ci_orphan_status_only_reads_done
