@@ -1665,12 +1665,48 @@ fm_wake_clean_field() {
   LC_ALL=C tr '\t\r\n' '   '
 }
 
+# fm_wake_append <kind> <key> <payload>
+# Appends one durable wake row under the queue lock, then taps this home's
+# sleeping watcher (fm_wake_tap_watcher below) so the cycle that surfaces the
+# row runs now instead of at the poll cadence. The tap is best-effort and never
+# changes the append's result: the row is durable before the tap is attempted,
+# and the watcher's next ordinary poll surfaces it if no tap lands.
 fm_wake_append() {
   local status=0
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
   fm_wake_append_locked "$@" || status=$?
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+  [ "$status" -ne 0 ] || fm_wake_tap_watcher
   return "$status"
+}
+
+# fm_wake_tap_watcher
+# Ring this home's watcher so its terminal wait ends now: the watcher parks in
+# a signal-interruptible wait between cycles (bin/fm-watch.sh poll_wait), and a
+# durable append is the one event worth ending that wait early for, because the
+# next cycle surfaces the row through the recovery marker the append published.
+# Producers outside the watcher (a captain inbox note, a voice capture, a
+# process-event result) otherwise sit 0..FM_POLL seconds before anything reads
+# what they queued.
+# Safety: the signal goes only to the pid recorded in this home's watcher lock,
+# and only when that lock's recorded process identity still matches the live
+# pid, so a recycled or foreign pid is never signalled. A watcher advertises
+# that it traps the tap by publishing <lock>/tap after installing the handler;
+# an older watcher without that marker is left to its own poll, never signalled
+# with something it would die on. Always returns 0: a missed tap is a slower
+# surface, not a failure, and the durable row is already committed.
+fm_wake_tap_watcher() {
+  local lockdir="$STATE/.watch.lock" pid recorded current
+  [ -f "$lockdir/tap" ] && [ ! -L "$lockdir/tap" ] || return 0
+  pid=$(cat "$lockdir/pid" 2>/dev/null) || return 0
+  case "$pid" in ''|*[!0-9]*|0) return 0 ;; esac
+  [ "$(cat "$lockdir/fm-home" 2>/dev/null)" = "$FM_HOME" ] || return 0
+  recorded=$(cat "$lockdir/pid-identity" 2>/dev/null) || return 0
+  [ -n "$recorded" ] || return 0
+  current=$(fm_pid_identity "$pid" 2>/dev/null) || return 0
+  [ "$current" = "$recorded" ] || return 0
+  kill -USR1 "$pid" 2>/dev/null || true
+  return 0
 }
 
 # fm_wake_append_locked <kind> <key> <payload>

@@ -117,11 +117,14 @@ CAP_CALLS=0
 fm_backend_events_capable() { CAP_CALLS=$((CAP_CALLS + 1)); return 0; }
 # shellcheck disable=SC2329 # Runtime overrides called by the isolated watcher.
 fm_backend_wait_transition() {
-  [ "${FM_BACKEND_EVENTS_CAPABILITY_CONFIRMED:-0}" = 1 ] || fail "cached capability verdict was not passed to the wait"
+  # Runs in the wait's own subprocess now, so record the miss for the parent to assert.
+  [ "${FM_BACKEND_EVENTS_CAPABILITY_CONFIRMED:-0}" = 1 ] || printf 'unconfirmed\n' >> "$TMP/unconfirmed"
   return 1
 }
+rm -f "$TMP/unconfirmed"
 event_wait_or_sleep
 event_wait_or_sleep
+[ ! -e "$TMP/unconfirmed" ] || fail "cached capability verdict was not passed to the wait"
 [ "$CAP_CALLS" = 1 ] || fail "capability probe must be memoized across waits, got $CAP_CALLS calls"
 pass "event_wait_or_sleep: one cached capability probe owns validation across bounded waits"
 
@@ -152,5 +155,101 @@ event_wait_or_sleep   # disabled: sleeps without calling wait_transition
 WTN=$(wc -l < "$TMP/wtcalls" | tr -d '[:space:]')
 [ "$WTN" = 2 ] || fail "after EVENT_CAP_FAIL_MAX connect failures the event path must be disabled for the process (expected 2 wait_transition calls, got $WTN)"
 pass "event_wait_or_sleep: consecutive event-path failures disable the fast-path and revert to pure polling (fail-closed)"
+
+
+# --- event_wait_or_sleep: a native edge record reaches handle_push_transition --
+# The wait now runs in its own process group and hands its record back through
+# a private file, so this pins that an actionable edge still arrives intact.
+
+reset_state
+fm_write_meta "$STATE_DIR/tk6.meta" "window=default:wG:pQ" "backend=herdr" "kind=ship"
+# shellcheck disable=SC2329 # Runtime overrides called by the isolated watcher.
+fm_backend_events_capable() { return 0; }
+# shellcheck disable=SC2329 # Runtime overrides called by the isolated watcher.
+fm_backend_wait_transition() { printf 'EDGE-RECORD-6'; return 0; }
+# shellcheck disable=SC2329 # Runtime override called by the isolated watcher.
+handle_push_transition() { printf '%s' "$3" > "$TMP/handled"; }
+event_wait_or_sleep
+[ "$(cat "$TMP/handled" 2>/dev/null || true)" = EDGE-RECORD-6 ] || fail "an actionable edge must reach handle_push_transition verbatim, got '$(cat "$TMP/handled" 2>/dev/null || true)'"
+[ -z "$(ls "$STATE_DIR"/.fm-eventwait.* 2>/dev/null || true)" ] || fail "the wait's private record file must not be left behind"
+pass "event_wait_or_sleep: a native edge record is handed to handle_push_transition intact and its scratch file is removed"
+
+# --- the tap: a durable append ends the terminal wait at once -----------------
+# fm_wake_tap_watcher rings the watcher with USR1; the handler below is the one
+# the main entry installs. These cases install it in this shell, use a real
+# sleep, and ring from a helper subprocess.
+
+trap watcher_tap USR1
+# The real sleep for the timed cases below, run the way the watcher's own
+# background wait behaves: the stopped child forwards TERM to what it forked,
+# so a tapped wait leaves no sleeper behind (asserted after each case).
+# shellcheck disable=SC2329 # Runtime override called by the sourced watcher.
+sleep() {
+  local s
+  command sleep "$@" &
+  s=$!
+  # shellcheck disable=SC2064 # Expanded now on purpose: the pid is this call's.
+  trap "kill '$s' 2>/dev/null; exit 143" TERM
+  wait "$s"
+}
+ring_after() { ( command sleep "$1"; kill -USR1 "$2" ) & }
+no_sleeper_left() {  # <seconds> - the distinctive sleep the case started
+  ! pgrep -x -f "sleep $1" >/dev/null 2>&1
+}
+
+# A tap that already landed mid-cycle skips the wait entirely.
+reset_state
+FM_WATCH_TAPPED=1
+# shellcheck disable=SC2034 # Read by the sourced watcher's poll_wait.
+POLL=5
+started=$(date +%s)
+poll_wait
+[ $(( $(date +%s) - started )) -lt 3 ] || fail "an already-tapped watcher must not sleep its poll"
+[ "$FM_WATCH_WAIT_STATUS" = tapped ] || fail "an already-tapped wait must report tapped, got '$FM_WATCH_WAIT_STATUS'"
+pass "poll_wait: a tap that landed earlier in the cycle skips the terminal wait"
+
+# A tap during the sleep ends it at once and leaves no child behind.
+reset_state
+FM_WATCH_TAPPED=0
+# shellcheck disable=SC2034 # Read by the sourced watcher's poll_wait.
+POLL=53
+ring_after 0.3 "$$"
+started=$(date +%s)
+poll_wait
+wait  # the ringer
+[ $(( $(date +%s) - started )) -lt 3 ] || fail "a tap during the poll sleep must end it at once"
+no_sleeper_left 53 || fail "the tapped poll sleep left its sleeper running"
+[ "$FM_WATCH_WAIT_STATUS" = tapped ] || fail "a tapped sleep must report tapped, got '$FM_WATCH_WAIT_STATUS'"
+[ -z "$FM_WATCH_WAIT_CHILD" ] || fail "the wait child must be cleared after a tap"
+[ "$FM_WATCH_TAPPED" = 1 ] || fail "the tap flag stays set until the next cycle top resets it"
+pass "poll_wait: a tap during the sleep ends the wait immediately"
+
+# A tap during the native event wait ends it too, counts as a clean wait, and
+# never hands a partial or absent record to handle_push_transition.
+reset_state
+FM_WATCH_TAPPED=0
+# shellcheck disable=SC2034 # Read by the sourced watcher's poll_wait.
+POLL=5
+fm_write_meta "$STATE_DIR/tk7.meta" "window=default:wG:pQ" "backend=herdr" "kind=ship"
+# shellcheck disable=SC2329 # Runtime overrides called by the isolated watcher.
+fm_backend_events_capable() { return 0; }
+# Blocks the way the real Herdr wait does: a forked helper it stops on TERM.
+# shellcheck disable=SC2329 # Runtime overrides called by the isolated watcher.
+fm_backend_wait_transition() { sleep 54; printf 'LATE-EDGE'; return 0; }
+rm -f "$TMP/handled"
+# shellcheck disable=SC2329 # Runtime override called by the isolated watcher.
+handle_push_transition() { printf '%s' "$3" > "$TMP/handled"; }
+ring_after 0.3 "$$"
+started=$(date +%s)
+event_wait_or_sleep
+wait  # the ringer
+[ $(( $(date +%s) - started )) -lt 3 ] || fail "a tap during the native event wait must end it at once"
+[ ! -e "$TMP/handled" ] || fail "a tapped event wait must not deliver a record"
+[ "$_event_cap_fails" = 0 ] || fail "a tapped event wait is a clean wait, not an event-path failure (fails=$_event_cap_fails)"
+[ "$_event_cap_ok" = 1 ] || fail "a tapped event wait must leave the event path enabled"
+[ -z "$(ls "$STATE_DIR"/.fm-eventwait.* 2>/dev/null || true)" ] || fail "a tapped event wait must remove its scratch record file"
+no_sleeper_left 54 || fail "the tapped event wait left its helper running"
+pass "event_wait_or_sleep: a tap during the native event wait ends it cleanly with the event path intact"
+trap - USR1
 
 echo "# fm-supervision-events.test.sh: all assertions passed"

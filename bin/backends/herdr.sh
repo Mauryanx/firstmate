@@ -3482,10 +3482,19 @@ fm_backend_herdr_wait_transition() {  # <session> <timeout_secs> <state_dir> <pa
   fi
   "${reader[@]}" "$sock" "$timeout" "${pane_ids[@]}" > "$fifo" 2>/dev/null &
   reader_pid=$!
+  # The watcher may end this wait early (its tap) by stopping the child this
+  # runs in. Leave nothing behind when that TERM lands: the reader is stopped
+  # and the scratch fifo removed here, and the caller's own TERM disposition is
+  # restored on every ordinary return below.
+  local saved_term_trap
+  saved_term_trap=$(trap -p TERM)
+  # shellcheck disable=SC2064 # Expanded now on purpose: the pids and paths are this call's.
+  trap "kill '$reader_pid' 2>/dev/null; exec 9<&- 2>/dev/null; rm -rf '$fifo_dir' 2>/dev/null; exit 143" TERM
   if ! exec 9< "$fifo"; then
     kill "$reader_pid" 2>/dev/null || true
     wait "$reader_pid" 2>/dev/null || true
     rm -rf "$fifo_dir" 2>/dev/null || true
+    eval "${saved_term_trap:-trap - TERM}"
     return 2
   fi
   if ! IFS= read -r -u 9 line || [ "$line" != "@subscribed" ]; then
@@ -3547,6 +3556,7 @@ fm_backend_herdr_wait_transition() {  # <session> <timeout_secs> <state_dir> <pa
   wait "$reader_pid" 2>/dev/null || reader_rc=$?
   exec 9<&-
   rm -rf "$fifo_dir" 2>/dev/null || true
+  eval "${saved_term_trap:-trap - TERM}"
   [ "$rc" -eq 0 ] && return 0
   [ "$rc" -eq 2 ] && return 2
   [ "$reader_rc" -eq 0 ] && return 1

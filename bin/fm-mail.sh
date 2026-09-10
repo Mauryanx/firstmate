@@ -405,6 +405,9 @@ wake_for() {
     fi
   fi
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
+  # The row is durable whenever it was not rolled back (1) or never appended
+  # (3); ring the watcher now rather than leaving the mail to the poll cadence.
+  case "$status" in 1|3) ;; *) fm_wake_tap_watcher ;; esac
   return "$status"
 }
 

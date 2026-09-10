@@ -94,6 +94,12 @@
 #                          external-wait pause rows do not feed this escalation,
 #                          observation is read-only, and one parent notification
 #                          covers each no-progress episode
+# The terminal wait between cycles is tap-interruptible: a durable wake append
+# from any producer rings this process (bin/fm-wake-lib.sh fm_wake_tap_watcher,
+# SIGUSR1 to the identity-matched lock holder only), the wait ends at once, and
+# the next cycle surfaces the append through the recovery marker it published,
+# instead of 0..FM_POLL seconds later. The poll cadence stays the backstop for
+# a missed tap. poll_wait below owns the mechanics.
 # For normal supervision, resume the session-start primary-harness protocol
 # after each printed reason. Direct duplicate invocations of this script still
 # no-op through the watcher singleton lock.
@@ -1606,6 +1612,59 @@ heartbeat_scan_finds_actionable() {
   return "$found"
 }
 
+# Tap state. A durable wake append rings this watcher with SIGUSR1 (see
+# fm_wake_tap_watcher in bin/fm-wake-lib.sh); the handler records the tap and
+# stops whatever the terminal wait is parked on, so the cycle that surfaces the
+# append starts now. The flag is reset at the top of every cycle, so a tap that
+# lands mid-cycle still shortens that cycle's terminal wait to nothing. The
+# handler is installed and its <lock>/tap advertisement published only by the
+# main entry below, so a sourcing test never traps a signal in its own shell.
+FM_WATCH_TAPPED=0
+FM_WATCH_WAIT_CHILD=
+watcher_tap() {
+  FM_WATCH_TAPPED=1
+  [ -z "$FM_WATCH_WAIT_CHILD" ] || kill "$FM_WATCH_WAIT_CHILD" 2>/dev/null || true
+}
+
+# watch_wait_bg <command...>: run one bounded wait as a background child and
+# block on it, ending early when a tap lands. Sets FM_WATCH_WAIT_STATUS to the
+# command's exit status, or to "tapped" when the wait was cut short. The tap
+# stops the direct child only: a plain sleep is that child, and the Herdr event
+# wait installs its own TERM cleanup for the reader and scratch fifo it forks
+# (fm_backend_herdr_wait_transition), so nothing outlives the stopped wait.
+FM_WATCH_WAIT_STATUS=
+watch_wait_bg() {
+  local rc=0
+  FM_WATCH_WAIT_STATUS=
+  if [ "$FM_WATCH_TAPPED" -eq 1 ]; then
+    FM_WATCH_WAIT_STATUS=tapped
+    return 0
+  fi
+  "$@" &
+  FM_WATCH_WAIT_CHILD=$!
+  # A tap between the flag check and the assignment above ran the handler with
+  # no child to stop; it is stopped here instead of waiting out the budget.
+  if [ "$FM_WATCH_TAPPED" -eq 1 ]; then
+    kill "$FM_WATCH_WAIT_CHILD" 2>/dev/null || true
+  fi
+  # A trapped signal returns `wait` immediately; the second wait reaps the
+  # child the handler stopped so no zombie is left for the next cycle.
+  wait "$FM_WATCH_WAIT_CHILD" 2>/dev/null || rc=$?
+  if [ "$FM_WATCH_TAPPED" -eq 1 ]; then
+    wait "$FM_WATCH_WAIT_CHILD" 2>/dev/null || true
+    FM_WATCH_WAIT_STATUS=tapped
+  else
+    FM_WATCH_WAIT_STATUS=$rc
+  fi
+  FM_WATCH_WAIT_CHILD=
+  return 0
+}
+
+# poll_wait: the blind `sleep POLL`, made tap-interruptible.
+poll_wait() {
+  watch_wait_bg sleep "$POLL"
+}
+
 # event_wait_or_sleep: the terminal wait of each supervision cycle. For a home
 # with push-capable windows (herdr), it replaces the blind `sleep POLL` with a
 # bounded wait on the backend's native transition stream, so a crew going
@@ -1617,8 +1676,17 @@ heartbeat_scan_finds_actionable() {
 # loop is the permanent fail-closed backstop). This preserves the single live
 # supervision cycle: the reader is a short-lived subprocess of THIS watcher, not
 # a second watcher, so every guard/beacon/arm/turn-end mechanism is unchanged.
+# event_wait_capture <record-file> <backend> <session> <window...>: the
+# backend wait as watch_wait_bg runs it, writing the transition record to the
+# private file and exiting with the wait's own status (0 edge, 1 clean, 2 unusable).
+event_wait_capture() {
+  local rec_file=$1 backend=$2 session=$3
+  shift 3
+  FM_BACKEND_EVENTS_CAPABILITY_CONFIRMED=1 fm_backend_wait_transition "$backend" "$session" "$POLL" "$STATE" "$@" > "$rec_file"
+}
+
 event_wait_or_sleep() {
-  local w b session first_backend="" first_session="" rec rc
+  local w b session first_backend="" first_session="" rec rc rec_file
   local windows=()
   while IFS= read -r w; do
     b=$(window_backend "$w")
@@ -1640,7 +1708,7 @@ event_wait_or_sleep() {
   done < <(recorded_windows)
 
   if [ "${#windows[@]}" -eq 0 ]; then
-    sleep "$POLL"
+    poll_wait
     return
   fi
 
@@ -1656,12 +1724,22 @@ event_wait_or_sleep() {
     _event_cap_fails=0
   fi
   if [ "$_event_cap_ok" != 1 ]; then
-    sleep "$POLL"
+    poll_wait
     return
   fi
 
-  rec=$(FM_BACKEND_EVENTS_CAPABILITY_CONFIRMED=1 fm_backend_wait_transition "$first_backend" "$first_session" "$POLL" "$STATE" "${windows[@]}")
-  rc=$?
+  # The wait runs as a background child so a tap can end it too; its record
+  # comes back through a private file rather than a command substitution,
+  # which a trapped signal could not interrupt.
+  rec_file=$(mktemp "$STATE/.fm-eventwait.XXXXXX") || { poll_wait; return; }
+  watch_wait_bg event_wait_capture "$rec_file" "$first_backend" "$first_session" "${windows[@]}"
+  rec=$(cat "$rec_file" 2>/dev/null || true)
+  rm -f "$rec_file"
+  case "$FM_WATCH_WAIT_STATUS" in
+    tapped) rc=1 ;;
+    ''|*[!0-9]*) rc=2 ;;
+    *) rc=$FM_WATCH_WAIT_STATUS ;;
+  esac
   case "$rc" in
     0)
       _event_cap_fails=0
@@ -1673,7 +1751,7 @@ event_wait_or_sleep() {
       # pure polling for the rest of this watcher process.
       _event_cap_fails=$((_event_cap_fails + 1))
       [ "$_event_cap_fails" -ge "$EVENT_CAP_FAIL_MAX" ] && _event_cap_ok=0
-      sleep "$POLL"
+      poll_wait
       ;;
     *)
       # 1: a clean full-budget wait with no actionable edge - the reader already
@@ -1794,6 +1872,10 @@ watcher_cleanup() {
       transition=release-lock-existing
     fi
   fi
+  # A terminal wait still parked when this watcher exits (an arm --restart, a
+  # hook teardown) must not outlive it: its child is stopped here, and the
+  # Herdr event wait's own TERM cleanup owns the reader it forked.
+  [ -z "${FM_WATCH_WAIT_CHILD:-}" ] || kill "$FM_WATCH_WAIT_CHILD" 2>/dev/null || true
   fm_active_check_stop || cleanup_status=1
   fm_check_output_cleanup
   fm_custom_check_snapshot_cleanup
@@ -1806,6 +1888,7 @@ watcher_cleanup() {
 }
 trap watcher_cleanup EXIT
 trap 'exit 1' HUP INT TERM
+trap watcher_tap USR1
 # This watcher's own pid, as recorded in the lock by fm_lock_claim (which writes
 # ${BASHPID:-$$} from this same main shell). Read directly, never via a command
 # substitution, so it matches the stored holder pid for the self-eviction check.
@@ -1816,6 +1899,9 @@ printf '%s\n' "$WATCH_PATH" > "$WATCH_LOCK/watcher-path" || true
 FM_WATCH_DELIVERY_PID=$WATCHER_PID
 FM_WATCH_DELIVERY_IDENTITY=$(fm_pid_identity "$WATCHER_PID" 2>/dev/null || true)
 printf '%s\n' "$FM_WATCH_DELIVERY_IDENTITY" > "$WATCH_LOCK/pid-identity" 2>/dev/null || true
+# Advertise the tap only once the handler above is installed and the identity
+# a tapper checks is published; fm_wake_tap_watcher signals nothing without it.
+printf 'usr1\n' > "$WATCH_LOCK/tap" 2>/dev/null || true
 
 [ -e "$STATE/.last-heartbeat" ] || touch "$STATE/.last-heartbeat"
 
@@ -1872,6 +1958,9 @@ while :; do
   # Liveness beacon for fm-guard.sh: a fresh mtime here means a watcher is
   # alive. Supervision scripts warn when this goes stale with tasks in flight.
   touch "$STATE/.last-watcher-beat"
+  # A tap before this point has done its job: this cycle is the one it asked
+  # for. One that lands from here on shortens this cycle's terminal wait.
+  FM_WATCH_TAPPED=0
 
   if [ "$(age_of "$STATE/home-summary.json")" -ge "$HOME_SUMMARY_INTERVAL" ]; then
     home_summary_refresh_detached
