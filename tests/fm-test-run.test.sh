@@ -308,12 +308,12 @@ test_bootstrap_selects_every_reporting_family() {
   printf '\n' >>"$repo/bin/fm-bootstrap.sh"
   listed=$(cd "$repo" && bin/fm-test-run.sh --list --changed --base HEAD | LC_ALL=C sort)
   assert_contains "$listed" "tests/fm-secondmate-safety.test.sh" \
-    "session start did not select the secondmate family that pins its nudge and respawn reports"
+    "bin/fm-bootstrap.sh did not select the secondmate family that pins its nudge and respawn reports"
   assert_contains "$listed" "tests/fm-session-start.test.sh" \
-    "session start lost its own session-bootstrap coverage"
+    "bin/fm-bootstrap.sh lost its own session-bootstrap coverage"
 
   rm -rf "$tmp"
-  pass "session start selects every family that pins its reports"
+  pass "bin/fm-bootstrap.sh selects every family that pins its reports"
 }
 
 test_shell_line_ending_policy_selects_runner_contract() {

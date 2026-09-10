@@ -385,8 +385,15 @@ secondmate_sync() {
     fm_secondmate_nudge_write "$STATE" "$id" "$home" "$commit" "$instr" "$message" "$remote"
   }
 
+  report_nudge_send_failure() {  # <id> <send-output>
+    local reason
+    reason=$(first_line "$2")
+    [ -n "$reason" ] || reason="the send failed without a reported reason"
+    echo "NUDGE_SECONDMATES: secondmate $1: send failed: $reason"
+  }
+
   secondmate_send_nudge() {
-    local id=$1 home=$2 commit=$3 instr=$4 selector marker out reason
+    local id=$1 home=$2 commit=$3 instr=$4 selector marker out
     selector="fm-$id"
     marker=$(secondmate_nudge_marker_path "$id") || {
       echo "NUDGE_SECONDMATES: secondmate $id: send failed: unsafe id"
@@ -400,9 +407,7 @@ secondmate_sync() {
       rm -f "$marker"
       echo "BOOTSTRAP_INFO: nudged $selector with '$SECOND_MATE_NUDGE_MESSAGE'"
     else
-      reason=$(first_line "$out")
-      [ -n "$reason" ] || reason="the send failed without a reported reason"
-      echo "NUDGE_SECONDMATES: secondmate $id: send failed: $reason"
+      report_nudge_send_failure "$id" "$out"
     fi
   }
 
@@ -412,7 +417,7 @@ secondmate_sync() {
   }
 
   secondmate_retry_pending_nudges() {
-    local marker id selector home commit message remote expected_marker meta meta_home home_real head out reason
+    local marker id selector home commit message remote expected_marker meta meta_home home_real head out
     [ -d "$SECOND_MATE_NUDGE_PENDING_DIR" ] || return 0
     for marker in "$SECOND_MATE_NUDGE_PENDING_DIR"/*.pending; do
       [ -f "$marker" ] || continue
@@ -475,9 +480,7 @@ secondmate_sync() {
         rm -f "$marker"
         echo "BOOTSTRAP_INFO: nudged $selector with '$SECOND_MATE_NUDGE_MESSAGE'"
       else
-        reason=$(first_line "$out")
-        [ -n "$reason" ] || reason="the send failed without a reported reason"
-        echo "NUDGE_SECONDMATES: secondmate $id: send failed: $reason"
+        report_nudge_send_failure "$id" "$out"
       fi
     done
   }
@@ -626,9 +629,7 @@ secondmate_sync() {
         rm -f "$remote_marker"
         [ "${FM_BOOTSTRAP_VERBOSE_FACTS:-0}" != 1 ] || echo "BOOTSTRAP_INFO: nudged remote fm-$id after convergence"
       else
-        reason=$(first_line "$out")
-        [ -n "$reason" ] || reason="the send failed without a reported reason"
-        echo "NUDGE_SECONDMATES: secondmate $id: send failed: $reason"
+        report_nudge_send_failure "$id" "$out"
       fi
     elif [ "$converged" -eq 1 ]; then
       rm -f "$remote_marker"
@@ -725,7 +726,13 @@ secondmate_liveness_one_timed() {  # <meta> <id> <label>
 # secondmate_note_respawned so a concurrent sweep can collect them after wait.
 secondmate_liveness_one() {  # <meta> <id>
   local meta=$1 id=$2
-  local window harness backend target agent_state out cause remote_host remote_rc readiness_reason route_out remote_backend reason
+  local window harness backend target agent_state out cause remote_host remote_rc readiness_reason route_out remote_backend
+  report_respawn_failure() {  # <id> <cause> <spawn-output>
+    local reason
+    reason=$(first_line "$3")
+    [ -n "$reason" ] || reason="the respawn failed without a reported reason"
+    echo "SECONDMATE_LIVENESS: secondmate $1: respawn failed after $2: $reason"
+  }
   window=$(fm_meta_get "$meta" window)
   [ -n "$window" ] || return 0
   harness=$(fm_meta_get "$meta" harness)
@@ -787,9 +794,7 @@ secondmate_liveness_one() {  # <meta> <id>
           secondmate_note_respawned "$id"
           report_relaunch "$id" "$cause" "host=$remote_host"
         else
-          reason=$(first_line "$out")
-          [ -n "$reason" ] || reason="the respawn failed without a reported reason"
-          echo "SECONDMATE_LIVENESS: secondmate $id: respawn failed after $cause: $reason"
+          report_respawn_failure "$id" "$cause" "$out"
         fi
         ;;
       ambiguous|unreadable|unverified)
@@ -826,9 +831,7 @@ secondmate_liveness_one() {  # <meta> <id>
         secondmate_note_respawned "$id"
         report_relaunch "$id" "$cause" "backend=$backend"
       else
-        reason=$(first_line "$out")
-        [ -n "$reason" ] || reason="the respawn failed without a reported reason"
-        echo "SECONDMATE_LIVENESS: secondmate $id: respawn failed after $cause: $reason"
+        report_respawn_failure "$id" "$cause" "$out"
       fi
       ;;
     ambiguous)
