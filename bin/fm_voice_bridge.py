@@ -30,6 +30,7 @@ import json
 import os
 from pathlib import Path
 import random
+import re
 import secrets
 import sys
 import threading
@@ -110,25 +111,58 @@ TOPIC_OPENERS = (
     'Right, {topic}. Let me find out.',
 )
 
+# TEMPORARY. Drawing the subject out of the captain's words belongs to the
+# watcher tap, which will let Firstmate's own first sentence be spoken instead of
+# a line assembled here, and this whole block goes when that lands. It is live
+# until then, in the captain's ear on every turn, which is why it was still worth
+# making it refuse by default rather than leaving it to be replaced eventually.
+
 # Phrases that introduce what the captain is asking about.
 TOPIC_LEADS = (' about ', ' regarding ', ' with regard to ', ' on the subject of ')
 TOPIC_IMPERATIVES = ('tell me about', 'find out about', 'look into', 'look up', 'look at',
-                     'pull up', 'check on', 'check', 'review', 'read')
-# A topic carrying a verb is a claim, not a subject. Echoing it would put words
-# about the state of the work into the bridge's mouth before Firstmate answered.
-CLAIM_WORDS = frozenset("""is are was were be been being do does did doing done has have had
-    will would shall should can could may might must broke broken break breaks failed fails
-    fail works worked working went gone goes ran run running said says say think thinks
-    happened happening seems seem looks look""".split())
+                     'pull up', 'check on', 'check', 'review')
+# Words that open a clause, which is where an assertion lives. "the deploy THAT
+# crashed" is a claim about the deploy; "the deploy" is a subject.
+CLAUSE_WORDS = frozenset("""that which who whom whose what when where why how if whether
+    because since while until unless though although than so but after before""".split())
+# A word wearing a verb's inflection is a verb until something proves otherwise,
+# and nothing here can prove otherwise, so it is refused.
+VERB_ENDINGS = ('ed', 'ing', 'en')
+# Copulas and bare irregular verbs, which wear no ending to recognise them by.
+CLAIM_WORDS = frozenset("""is are was were be am do does did has have had
+    will would shall should can could may might must broke break breaks failed fails
+    fail works went goes ran run said says say think thinks seems seem looks look""".split())
+PLAIN_WORD = re.compile(r"^[a-z0-9][a-z0-9'.&/-]*$")
 MAX_TOPIC_WORDS = 8
 MAX_TOPIC_CHARS = 60
+
+
+def plain_noun_phrase(words):
+    """True only for words that can be shown to assert nothing.
+
+    The test is positive and the default is refusal: a subject is spoken only
+    when every word in it is an ordinary token wearing no verb's inflection and
+    opening no clause. Plenty of harmless phrases fail this, and that costs the
+    captain a neutral opener. The failure it exists to prevent costs him the
+    bridge asserting, in its own voice, that his deploy crashed, before anything
+    has been looked at. Those two are not the same size.
+    """
+    for word in words:
+        word = word.strip('?.!,;:"()').lower()
+        if not word or not PLAIN_WORD.match(word):
+            return False
+        if word in CLAUSE_WORDS or word in CLAIM_WORDS:
+            return False
+        if word.endswith(VERB_ENDINGS):
+            return False
+    return True
 
 
 def topic_of(said):
     """The subject the captain named, or None when nothing can be said truthfully.
 
-    Conservative by design: it returns a noun-ish phrase drawn from his own
-    words, and nothing at all when the phrase would carry a claim or read badly.
+    Conservative by design: it returns a noun phrase drawn from his own words,
+    and nothing at all when that phrase cannot be shown to carry no claim.
     """
     lowered = said.lower()
     candidate = None
@@ -148,7 +182,7 @@ def topic_of(said):
     words = candidate.split()
     if not words or len(words) > MAX_TOPIC_WORDS or len(candidate) > MAX_TOPIC_CHARS:
         return None
-    if any(word.strip('?.!,;:').lower() in CLAIM_WORDS for word in words):
+    if not plain_noun_phrase(words):
         return None
     return ' '.join(words)
 

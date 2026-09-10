@@ -32,13 +32,23 @@ async function api(path, data = {}) {
 // as announce_after_ms; the page never restates it. Do not announce sooner: a
 // marker sent while the turn is still held either steals the answer or
 // interrupts it mid-sentence, and the transport then reads it as already spoken.
+//
+// That window applies only to a reply a held turn could still be entitled to.
+// An answer may be published as ordered portions, and a held turn speaks one
+// portion and ends, so a portion whose sibling has already been claimed belongs
+// to a stream nothing is holding any more. Those go out at once: waiting there
+// would put ten seconds of silence in the middle of one answer.
 function pending(replies, now) {
+  const begun = new Set(replies.filter(reply => reply.delivery.state !== 'waiting')
+                               .map(reply => reply.request_id));
   const ready = [];
   for (const reply of replies) {
     if (reply.delivery.state !== 'waiting') { firstSeen.delete(reply.response_id); continue; }
     if (announced.has(reply.response_id)) continue;
     if (!firstSeen.has(reply.response_id)) firstSeen.set(reply.response_id, now);
-    if (now - firstSeen.get(reply.response_id) >= standoff) ready.push(reply);
+    if (begun.has(reply.request_id) || now - firstSeen.get(reply.response_id) >= standoff) {
+      ready.push(reply);
+    }
   }
   return ready;
 }

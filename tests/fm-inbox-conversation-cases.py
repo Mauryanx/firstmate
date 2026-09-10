@@ -601,6 +601,18 @@ try:
     again = ask('Why is the deploy failing?').strip()
     assert again in ('first ack.', 'second ack.') and again != neutral, (neutral, again)
 
+    # A list of verbs to avoid is always one participle behind, so a subject is
+    # spoken only when it can be shown to assert nothing. None of these tells the
+    # captain what happened before anything has been looked at.
+    for claiming, claim in (('Tell me about the deploy that crashed last night.', 'crashed'),
+                            ('Tell me about the release that shipped without review.', 'shipped'),
+                            ('Tell me about the merge queue being blocked.', 'blocked')):
+        refused = ask(claiming).strip()
+        assert refused in ('first ack.', 'second ack.'), (claiming, refused)
+        assert claim not in refused, (claiming, refused)
+    # A plain subject is still spoken back, or this whole opener is pointless.
+    assert 'the overnight simulation' in ask('Check on the overnight simulation.')
+
     # A transcript carrying no captain turn at all is refused, not guessed at.
     ask('', 400, messages=[{'role': 'system', 'content': 'only a system prompt'}])
     ask('', 400, messages=[])
@@ -724,8 +736,14 @@ print('bridge: opener drawn from the captain words, answer continuing the same h
 # The page that tells the agent an answer is ready, against the real transport
 # with the vendor SDK stubbed. No account, agent minute or acoustic claim.
 if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
+    # An answer may be published as ordered portions. A held turn speaks one and
+    # ends, so a portion whose sibling is already claimed is waiting on nothing:
+    # it must not sit out the stand-off, which would be a silence mid-answer.
     run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer',
-                        speech_text='Synthetic answer for the announcing page.'))
+                        sequence=1, final=False, speech_text='The first portion of one answer.'))
+    run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer-rest',
+                        sequence=2, final=True, speech_text='The rest of that same answer.'))
+    run('deliver', dict(connection, response_id='agent-answer', generation='held-turn-generation'))
     worklet = temp / 'libsamplerate.worklet.js'
     worklet.write_text('// stand-in for the operator-supplied resampler worklet\n')
     agent_server = Pilot(0, Bridge(pilot, connection), provider, b'agent-lane-ack',
@@ -733,13 +751,17 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     agent_thread = threading.Thread(target=agent_server.serve_forever, daemon=True)
     agent_thread.start()
     try:
-        waiting = sum(1 for r in owning('audit', cid='live')['replies']
-                      if r['delivery']['state'] == 'waiting')
+        published = owning('audit', cid='live')['replies']
+        claimed = {r['request_id'] for r in published if r['delivery']['state'] != 'waiting'}
+        waiting = [r for r in published if r['delivery']['state'] == 'waiting']
+        continuing = [r for r in waiting if r['request_id'] in claimed]
+        assert [r['response_id'] for r in continuing] == ['agent-answer-rest'], continuing
         subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
                         agent_server.origin + '/agent#' + agent_server.pair_secret,
-                        AGENT_TOKEN, str(waiting)], check=True, timeout=120)
+                        AGENT_TOKEN, str(len(waiting)), str(len(continuing))],
+                       check=True, timeout=120)
         delivery = next(r for r in owning('audit', cid='live')['replies']
-                        if r['response_id'] == 'agent-answer')
+                        if r['response_id'] == 'agent-answer-rest')
         # The page only announces; the bridge is what actually delivers speech.
         assert delivery['delivery']['state'] == 'waiting', delivery
     finally:
