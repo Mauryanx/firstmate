@@ -1,6 +1,6 @@
 // Mechanical acceptance for the page that tells the voice agent an answer is
 // ready. The vendor SDK is stubbed, so this asserts our own loop only: pairing,
-// polling the real isolated transport, and announcing each published reply once.
+// polling the real isolated transport, and carrying every published reply once.
 // No account, microphone, speaker, agent minute or acoustic claim is involved.
 const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
 (async () => {
@@ -9,25 +9,48 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  // Stand in for the vendor bundle the operator installs, recording what the
-  // page would say to the agent instead of opening a real session.
+  // Stand in for the vendor bundle the operator installs, and for the bridge
+  // behind it, which does not run in this lane: a marker is claimed through the
+  // pilot exactly as the bridge's deliver would, and only THEN does the agent
+  // begin to speak. That gap is real - synthesis takes a moment - and it is the
+  // window in which a second marker would cut the first answer in half.
   await page.route('**/elevenlabs.js', route => route.fulfill({contentType:'text/javascript', body:`
     window.__sent = [];
     window.__attempts = 0;
+    window.__carrying = false;
+    window.__overlapped = false;
     // The first attempt fails, standing in for an agent that is briefly unreachable.
     window.__failNext = true;
+    // The next marker after that is accepted and then dropped, standing in for a
+    // bridge that declines a claim it has no time left to finish: nothing is
+    // claimed, nothing is spoken, and the page is told none of it.
+    window.__declineNext = true;
     window.ElevenLabsClient = {Conversation: {startSession: async opts => {
       window.__opts = {libsampleratePath: opts.libsampleratePath, connectionType: opts.connectionType,
                        conversationToken: opts.conversationToken, agentId: opts.agentId};
+      window.__setMode = mode => opts.onModeChange({mode});
       // The agent is already mid-answer when this page connects, which is when
       // a marker would cut what it is saying in half.
-      window.__setMode = mode => opts.onModeChange({mode});
       window.__setMode('speaking');
+      const wait = ms => new Promise(done => setTimeout(done, ms));
+      const carry = async id => {
+        await fetch('/speech', {method:'POST', headers:{'Content-Type':'application/json'},
+                                body:JSON.stringify({response_id:id, generation:'agent-lane-' + id})});
+        await wait(700);
+        window.__setMode('speaking');
+        await wait(400);
+        window.__setMode('listening');
+        window.__carrying = false;
+      };
       return {
         sendUserMessage: async text => {
           window.__attempts++;
           if (window.__failNext) { window.__failNext = false; throw Error('agent unreachable'); }
+          if (window.__carrying) window.__overlapped = true;
+          window.__carrying = true;
           window.__sent.push(text);
+          if (window.__declineNext) { window.__declineNext = false; window.__carrying = false; return; }
+          carry(text.slice('[firstmate-reply '.length, -1));
         },
         endSession: async () => { window.__ended = true; },
       };
@@ -53,28 +76,37 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
   if (duringSpeech !== 0) throw Error('an answer was announced over a speaking agent: ' + duringSpeech);
   await page.evaluate(() => window.__setMode('listening'));
 
-  // Every answer waiting is then announced, and nothing else claims one, so a
-  // portion left unannounced is an answer the captain never hears. The first
-  // attempt fails, so it must be retried by a later poll rather than lost, and
-  // no answer may ever be announced twice however many polls run.
+  // Every published answer is carried, in order, one at a time. The declined
+  // one is offered again rather than lost, which is the only way this page can
+  // tell a bridge that took an answer from one that quietly did not.
   const expected = Number(process.argv[4]);
-  await page.waitForFunction(n => window.__sent.length === n, expected, {timeout:20000});
-  const attempts = await page.evaluate(() => window.__attempts);
-  if (attempts !== expected + 1) throw Error('an unreachable agent did not cost exactly one retry: ' + attempts);
+  await page.waitForFunction(n => new Set(window.__sent).size === n, expected, {timeout:60000});
   const sent = await page.evaluate(() => window.__sent);
   for (const marker of sent) {
     if (!marker.startsWith('[firstmate-reply ') || !marker.endsWith(']')) throw Error('bad marker: ' + marker);
   }
+  // No marker was ever sent while the one before it was still being carried:
+  // claimed is not spoken, and the gap between them is where an answer is lost.
+  if (await page.evaluate(() => window.__overlapped)) {
+    throw Error('a marker went out while the answer before it was still being carried');
+  }
+  if (sent.length !== expected + 1) {
+    throw Error('the declined answer was not offered again exactly once: ' + sent.length);
+  }
+  const repeated = sent.find((marker, at) => sent.indexOf(marker) !== at);
+  if (repeated !== sent[0]) throw Error('an answer other than the declined one was offered twice');
+  const attempts = await page.evaluate(() => window.__attempts);
+  if (attempts !== expected + 2) throw Error('unexpected number of attempts: ' + attempts);
   await page.waitForTimeout(2000);
-  const after = await page.evaluate(() => window.__sent);
-  if (after.length !== expected) throw Error('an answer was announced more than once');
-  if (new Set(after).size !== after.length) throw Error('the same answer was announced twice');
+  if ((await page.evaluate(() => window.__sent)).length !== sent.length) {
+    throw Error('an answer already carried was announced again');
+  }
 
   await page.getByRole('button', {name:'Disconnect', exact:true}).click();
   await page.waitForFunction(() => document.getElementById('status').textContent.startsWith('Disconnected.'));
   if (!await page.evaluate(() => window.__ended)) throw Error('the agent session was not ended');
   if (errors.length) throw Error(JSON.stringify(errors));
   console.log(JSON.stringify({result:'PASS', browser:browser.version(), page_errors:errors,
-    evidence:'pairing, transport polling, a tokened session, silence while the agent has the floor, one announcement per published answer including every portion of one, retry after an unreachable agent, and session end; stubbed vendor SDK, no account or acoustic acceptance'}, null, 2));
+    evidence:'pairing, transport polling, a tokened session, silence while the agent has the floor, one marker outstanding at a time across a delayed speaking start, every published answer carried once in order, a declined answer offered again, retry after an unreachable agent, and session end; stubbed vendor SDK and stand-in bridge, no account or acoustic acceptance'}, null, 2));
  } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });

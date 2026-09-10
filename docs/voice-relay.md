@@ -70,8 +70,8 @@ The margin held back is deliberately wide: an agent on another of the vendor's p
 That margin is provisional: it derives from that other product, this path's own ceiling has never been measured, and `bin/fm_voice_bridge.py` records what it rests on and when to revisit it.
 The agent's fallback model is disabled deliberately, so a slow or failing bridge can never let a general-purpose model answer him about the work.
 
-On an answer marker sent as an ordinary user message it speaks the text Firstmate published, verbatim, framed as belonging to the earlier question when the captain has since moved on.
-It never invents an answer: every word it speaks is text Firstmate actually published, apart from the fixed line that frames a late one.
+On an answer marker sent as an ordinary user message it speaks the text Firstmate published, verbatim and with nothing around it, however long ago the question was asked.
+It never invents an answer and never says anything of its own: every word it speaks is text Firstmate actually published.
 It holds no fleet data and calls no project tool, so nothing it says is an action or evidence of one, and it files the captain's own words rather than any summary of them.
 Answering ordinary conversational turns without waking Firstmate needs a metered fast model and is deliberately absent until that spend is authorized.
 
@@ -105,9 +105,14 @@ It pairs with the pilot exactly as the browser pilot does, watches the transport
 The page never reads or speaks the answer itself; the bridge does that, verbatim, when the agent asks it to.
 An answer is announced once, and an agent that cannot be reached leaves it for a later poll rather than losing it.
 
-The page is the only thing that claims a published reply, so it announces one as soon as it sees it; nothing else is waiting for it, and a reply it leaves unannounced is an answer the captain never hears.
-That includes every portion of an answer published as ordered portions.
-The page does send nothing at all while the agent has the floor, because a marker is an interruption and the agent is configured to treat it as one, so a marker sent then would cut an answer in half while the transport went on recording it as delivered.
+The page is the only thing that carries a published reply to the agent, so a reply it leaves unannounced is an answer the captain never hears - including every portion of an answer published as ordered portions.
+It carries them one at a time, in the order Firstmate published them, with at most one marker outstanding.
+A marker is an interruption and the agent is configured to treat it as one, so the page sends nothing while the agent has the floor - and nothing in the gap before it takes the floor either.
+That gap is the dangerous one: the bridge claims the answer before the agent has begun to say it, so a page that treated the claim as the end of the matter would send the next marker into the silence and cut the answer in half, with the transport already recording it delivered.
+The outstanding marker is finished only when the agent has been heard speaking and has stopped.
+The transport is the page's only memory of what has been carried: a claimed reply is no longer waiting, so nothing is carried twice, and one still waiting is still owed.
+A marker that produces no speech - the bridge can decline a claim it has no time to finish, and nothing tells the page it did - leaves that reply waiting, so it is offered again after longer than a whole bridge turn can take.
+That wait is what keeps a retry from racing a marker still being worked on, and it is the difference between an answer arriving late and an answer never arriving.
 
 The bridge will not begin a claim it cannot finish inside the turn's remaining budget.
 The transport writes and fsyncs the claim before its answer gets back, so a call killed after that leaves the reply claimed, unspoken, and no longer waiting for the page - the captain never hears it and nothing reports it.
@@ -136,8 +141,8 @@ Turn the platform's generated pause line on, with a prompt override forbidding a
 That line is what he hears while Firstmate reads, and it is generated in the context of what he actually said, which is what he asked for and what the bridge could not do by rule.
 The override is the whole safety argument for it: the text is the platform's, the bridge never sees it, and the only thing holding it to the rule that nothing may claim a result before Firstmate has answered is that instruction.
 
-`tests/fm-inbox-conversation.test.sh` covers the bridge against the real isolated transport: refusal of absent, empty, wrong, truncated and extended secrets before any request is parsed or recorded, that a refused call changes nothing behind the gate, that a substantive turn is filed and answered with silence rather than filler, verbatim single delivery of a published answer, late-answer framing, transcript order across turns, and the turn budget - that a slow transport call is refused inside the turn instead of carrying it past the cascade timeout, and that a claim is never begun on less budget than it needs to finish.
-It covers the announcing page in the same runner with the vendor SDK stubbed: pairing, polling, one announcement per published answer including every portion of one, silence while the agent has the floor, retry when the agent is briefly unreachable, and session end.
+`tests/fm-inbox-conversation.test.sh` covers the bridge against the real isolated transport: refusal of absent, empty, wrong, truncated and extended secrets before any request is parsed or recorded, that a refused call changes nothing behind the gate, that a substantive turn is filed and answered with silence rather than filler, verbatim single delivery of a published answer with nothing around it, transcript order across turns, and the turn budget - that a slow transport call is refused inside the turn instead of carrying it past the cascade timeout, and that a claim is never begun on less budget than it needs to finish.
+It covers the announcing page in the same runner with the vendor SDK and the bridge behind it both stubbed: pairing, polling, one marker outstanding at a time across a delayed speaking start, every published answer carried once and in order, a declined answer offered again rather than lost, retry when the agent is briefly unreachable, and session end.
 It establishes nothing about turn latency, recognition, interruption or voice quality, all of which need the live agent and the captain's ear.
 
 ## Existing audio prototype

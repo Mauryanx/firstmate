@@ -615,10 +615,9 @@ try:
     run('publish', dict(live_reply, request_id='bridge-1', response_id='bridge-answer',
                         speech_text=answer))
     marker = ANSWER_MARKER + 'bridge-answer]'
-    heard = ask(marker)
-    # bridge-2 was asked after bridge-1, so this answer is late and says so.
-    assert heard.endswith(answer) and heard != answer, heard
-    assert 'earlier question' in heard, heard
+    # Verbatim and nothing besides, however long ago it was asked: the words
+    # spoken are Firstmate's, with nothing of the bridge's own around them.
+    assert ask(marker) == answer
     assert ask(marker) == '', 'a published answer was spoken twice'
     # A marker naming no published reply is refused, and refusing it consumes
     # nothing, so the platform may retry the same turn.
@@ -626,10 +625,6 @@ try:
         {'role': 'user', 'content': ANSWER_MARKER + 'no-such-answer]'}]
     ask('', 400, grow=False, messages=unknown)
     ask('', 400, grow=False, messages=unknown)
-
-    # The bridge never invents: every word it has spoken is text Firstmate
-    # actually published, apart from the fixed framing of a late answer.
-    assert answer in heard and heard.replace(answer, '').strip() != answer
 
     # The platform re-invokes the endpoint for its own generated pause line and
     # on retries, resending a transcript that has not grown. Nothing may be filed
@@ -714,12 +709,13 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
         subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
                         agent_server.origin + '/agent#' + agent_server.pair_secret,
                         AGENT_TOKEN, str(len(waiting))],
-                       check=True, timeout=120)
-        for still in ('agent-answer', 'agent-answer-rest'):
+                       check=True, timeout=180)
+        # Every answer the page was owed was carried, including the one the
+        # stand-in bridge declined the first time it was offered.
+        for carried in waiting:
             delivery = next(r for r in owning('audit', cid='live')['replies']
-                            if r['response_id'] == still)
-            # The page only announces; the bridge is what actually delivers speech.
-            assert delivery['delivery']['state'] == 'waiting', delivery
+                            if r['response_id'] == carried['response_id'])
+            assert delivery['delivery']['state'] != 'waiting', delivery
     finally:
         agent_server.shutdown()
         agent_server.server_close()

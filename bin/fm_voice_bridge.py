@@ -226,11 +226,11 @@ class Session:
         return []
 
     def deliver(self, response_id, deadline):
-        """Speak Firstmate's published words verbatim, framed if the captain moved on."""
+        """Speak Firstmate's published words verbatim, and nothing besides."""
         check(response_id and len(response_id) <= 200, 'a published reply identity is required')
         state = self.within(deadline, 'poll')
-        reply = next((r for r in state['replies'] if r['response_id'] == response_id), None)
-        check(reply is not None, 'no such published reply in this conversation')
+        check(any(r['response_id'] == response_id for r in state['replies']),
+              'no such published reply in this conversation')
         if deadline - time.time() < DELIVER_FLOOR:
             # No time left to finish a claim, and a claim that cannot be
             # finished is the one loss nothing recovers. It stays waiting.
@@ -240,13 +240,7 @@ class Session:
         if not result.get('deliver'):
             # Already spoken once; never say the same answer twice.
             return []
-        asked = next((n for n, r in enumerate(state['requests'])
-                      if r['request_id'] == reply['request_id']), -1)
-        late = 0 <= asked < len(state['requests']) - 1
-        spoken = result['speech_text']
-        if late:
-            return ['Coming back to your earlier question. ', spoken]
-        return [spoken]
+        return [result['speech_text']]
 
 
 class Endpoint(ThreadingHTTPServer):
