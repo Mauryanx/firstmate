@@ -68,6 +68,7 @@ The hold must stay below the agent's own cascade timeout: measured against the l
 That coupling is enforced at startup rather than left to be remembered, because the two settings live in different places and only ever meet in a failure the captain feels.
 The margin required is deliberately wide: an agent on another of the vendor's products was killed fourteen seconds in, on a turn that had already finalised around eleven, so the real ceiling sits lower than the timeout suggests and ending before it is not by itself safe.
 Being wrong about that margin costs a conversation dropped while he waits for an answer, which is why the hold is set well short of what our own turns have survived rather than at the edge of it.
+The required margin is provisional: it derives from that other product, this path's own ceiling has never been measured, and `bin/fm_voice_bridge.py` records what it rests on and when to revisit it.
 Holding does not delay what he hears, because the opener is synthesised and audible about two seconds in whether the turn is held or not; only the platform's own bookkeeping waits for the stream to finish.
 The agent's fallback model is disabled deliberately, so a slow or failing bridge can never let a general-purpose model answer him about the work.
 Nothing is spoken during the wait beyond content-free keepalives that hold the stream.

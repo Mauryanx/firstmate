@@ -75,14 +75,23 @@ HOLD_SECONDS = 7.0
 # does not time the turn out, it ends the captain's conversation, so the margin is
 # enforced at startup rather than left to whoever edits the flag next.
 #
-# The margin is deliberately wide. A sibling agent on another of the vendor's
-# products was killed fourteen seconds in, on a turn that had already finalised
-# around eleven, so the real ceiling sits lower than the timeout suggests and a
-# turn that merely ends before it is not obviously safe. That agent's own
-# configuration was not readable, so this is a conservative reading of someone
-# else's failure rather than a measurement of ours: our own turns have never been
-# killed at a hold of ten. Being wrong here costs the captain a dropped
-# conversation while he waits, so it is the right direction to be wrong in.
+# PROVISIONAL: the six second margin is a judgement, not a measurement.
+#
+# It derives from a sibling agent on the vendor's Speech Engine product, which was
+# killed fourteen seconds in on a turn that had already finalised around eleven.
+# That agent's own configuration could not be read from here. The ceiling on THIS
+# path, the custom reasoning endpoint, has never been measured: our own turns were
+# never killed at a hold of ten, across roughly twenty conversations.
+#
+# So this margin very likely refuses settings that are perfectly safe here. It was
+# chosen because the two ways of being wrong are not symmetric. Too loose ends the
+# captain's conversation while he is waiting for an answer. Too strict means his
+# answers arrive later, by a slower path. The second is recoverable and the first
+# is not, so the error was taken deliberately in that direction.
+#
+# Revisit it the moment there is allowance to measure this path's real ceiling.
+# Until then, treat six as a placeholder someone chose under a constraint, not as
+# a number anyone established.
 CASCADE_SECONDS = 15.0
 CASCADE_MARGIN = 6.0
 LOOK_INTERVAL = 0.5
