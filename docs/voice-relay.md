@@ -33,14 +33,20 @@ No synthetic test is submitted to an operational fleet automatically.
 The selected delivery is George with warm/conversational settings, with the already-approved acknowledgement supplied as a local audio artifact.
 The browser acknowledges a saved input once when an answer is not already arriving and distinguishes that acknowledgement from actual work acceptance.
 Microphone capture uses local voice activity segmentation and ElevenLabs transcription, with a visible mute control that stops capture and discards pending segments.
+Hands-free mode offers a selectable thinking pause, and optional push-to-talk records a segment only while its button is held after the microphone is explicitly enabled.
+Changing listening mode turns the microphone off, requiring a deliberate enable in the new mode.
 Stop speaking immediately clears local playback and records an interruption; it does not cancel Firstmate's work.
 The transcript can be inspected and corrections refer to an accepted request.
+The written reply beside playback is the exact owner-published speech text, with no intermediary paraphrase.
 Uncertain capture, transcription and playback remain visible rather than being silently retried as new actions.
 
 All new provider requests reserve credits durably and check that the account disallows paid credit extension before sending audio or text.
 Repeated IDs cannot charge twice through automatic retry, failed requests retain their reservations, and no credits are purchased or topped up.
 The HTTP integration and publication tests use an isolated home and a substituted speech provider in `tests/fm-inbox-conversation.test.sh`.
+That runner's header also owns the opt-in Playwright check for browser controls, lost capture receipts, reload retries and follow-up order against the real isolated transport.
 Device-level latency, recognition fidelity, echo handling and subjective voice quality require the live listening pilot; passing transport tests does not establish those measurements.
+Export timing produces bounded, content-free events for the current page session, including failed/uncertain capture and delivery, discarded segments and the number of older events dropped.
+Its playback timestamps describe browser software callbacks, not sound measured at the ear, and a reload begins a new timing session.
 
 ## Existing audio prototype
 

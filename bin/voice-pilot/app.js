@@ -6,6 +6,13 @@ let connected = false, cid = null, previous = null, pending = null;
 let player = null, playing = null, playerURL = null, generation = 0, busy = false, speakingInput = false;
 let micStream = null, context = null, processor = null, micEpoch = 0, audioChain = Promise.resolve();
 let ackTimer = null, ackBlob = null, seenReplies = new Set(), inputBusy = false, queuedAudio = 0;
+let talkHeld = false, finishUtterance = null;
+const timing = [], timingSession = crypto.randomUUID();
+let timingDropped = 0;
+function mark(event, identity = {}) {
+  timing.push({event, at_ms:Date.now(), monotonic_ms:performance.now(), ...identity});
+  if (timing.length > 2000) { timing.shift(); timingDropped++; }
+}
 const status = text => { $('status').textContent = text; };
 function log(text) { const li = document.createElement('li'); li.textContent = text; $('transcript').append(li); }
 async function api(path, data = {}, binary = false) {
@@ -23,6 +30,7 @@ async function silence(state = 'interrupted') {
   if (player) { player.pause(); player.removeAttribute('src'); player.load(); }
   if (playerURL) URL.revokeObjectURL(playerURL);
   playerURL = null; player = null; playing = null;
+  mark('local_playback_cleared', {response_id:old?.response_id || null, state, position_ms:position});
   if (old) {
     try { await api('/playback', {...old, state, position_ms:position}); }
     catch (_) { log('Playback receipt is uncertain; the answer will not replay automatically.'); }
@@ -36,6 +44,7 @@ async function play(blob, identity, expectedGeneration) {
     URL.revokeObjectURL(url);
     if (player !== sound) return;
     const receipt = playing;
+    mark('browser_playback_ended', {response_id:receipt?.response_id || null});
     player = null; playerURL = null; playing = null;
     if (receipt) {
       try { await api('/playback', {...receipt, state:'completed', position_ms:Math.round(sound.currentTime * 1000)}); }
@@ -43,9 +52,22 @@ async function play(blob, identity, expectedGeneration) {
     }
     status(micStream ? 'Listening' : 'Connected · microphone off');
   };
-  sound.onerror = () => { URL.revokeObjectURL(url); silence('unknown'); status('Could not play this answer.'); };
-  try { await sound.play(); status(identity ? 'Speaking' : 'Waiting for Firstmate'); }
-  catch (_) { URL.revokeObjectURL(url); await silence('unknown'); status('Playback was blocked. Use Connect again to enable audio.'); }
+  sound.onerror = () => {
+    URL.revokeObjectURL(url);
+    if (player !== sound) return;
+    silence('unknown'); status('Could not play this answer.');
+  };
+  try {
+    await sound.play();
+    if (player !== sound || generation !== expectedGeneration) return;
+    mark('browser_playback_started', {response_id:identity?.response_id || null});
+    status(identity ? 'Speaking' : 'Waiting for Firstmate');
+  } catch (_) {
+    URL.revokeObjectURL(url);
+    if (player !== sound) return;
+    await silence('unknown');
+    status('Playback was blocked. Check site sound permissions and ask Firstmate to repeat the answer.');
+  }
 }
 function acknowledge() {
   clearTimeout(ackTimer);
@@ -59,13 +81,18 @@ async function savePending() {
   inputBusy = true;
   const item = pending;
   try {
-  const result = await api('/capture', item);
-  previous = item.turn_id; pending = null; remember();
-  $('correction').value = ''; $('question').value = '';
-  $('retry').disabled = true;
-  log('You: ' + item.committed_transcript);
-  $('pending').textContent = 'Saved for Firstmate · ' + result.state;
-  acknowledge();
+    mark('capture_attempt', {request_id:item.request_id});
+    const result = await api('/capture', item);
+    mark('capture_saved', {request_id:item.request_id, state:result.state});
+    previous = item.turn_id; pending = null; remember();
+    $('correction').value = ''; $('question').value = '';
+    $('retry').disabled = true;
+    log('You: ' + item.committed_transcript);
+    $('pending').textContent = 'Saved for Firstmate · ' + result.state;
+    acknowledge();
+  } catch(error) {
+    mark('capture_uncertain', {request_id:item.request_id});
+    throw error;
   } finally { inputBusy = false; }
 }
 async function submit(text, requestId = crypto.randomUUID()) {
@@ -76,6 +103,7 @@ async function submit(text, requestId = crypto.randomUUID()) {
   pending = {turn_id:crypto.randomUUID(), request_id:requestId, committed_transcript:text,
     revision:1, previous_turn_id:previous, created_at:new Date().toISOString(),
     correction_of:$('correction').value || null, question_binding:$('question').value || null};
+  mark('transcript_committed', {request_id:requestId});
   remember(); $('retry').disabled = false;
   await stopped;
   await savePending();
@@ -101,12 +129,19 @@ async function poll() {
       seenReplies.add(reply.response_id);
       const epoch = generation, identity = {response_id:reply.response_id, generation:crypto.randomUUID()};
       try {
-        const audio = await api('/speech', identity, true);
-        if (audio instanceof Blob) {
+        mark('reply_requested', {response_id:reply.response_id, request_id:reply.request_id});
+        const result = await api('/speech', identity);
+        if (typeof result.audio === 'string') {
+          const audio = new Blob([Uint8Array.from(atob(result.audio), c=>c.charCodeAt(0))], {type:'audio/mpeg'});
+          log('Firstmate: ' + result.speech_text);
+          mark('reply_audio_received', {response_id:reply.response_id});
           if (generation !== epoch || speakingInput || !connected) {
             await api('/playback', {...identity, state:'interrupted', position_ms:0});
           } else { await play(audio, identity, epoch); }
         }
+      } catch(error) {
+        mark('reply_delivery_uncertain', {response_id:reply.response_id});
+        throw error;
       } finally { busy = false; }
     }
   } catch (error) { status(error.message); }
@@ -126,11 +161,13 @@ function wav(samples) {
 }
 async function microphoneOff() {
   micEpoch++; speakingInput=false;
+  talkHeld=false; finishUtterance=null; $('talk').disabled=true;
   if (micStream) micStream.getTracks().forEach(track => track.stop());
   micStream=null;
   if (processor) { processor.disconnect(); processor.onaudioprocess=null; processor=null; }
   if (context) { await context.close(); context=null; }
   $('mic').textContent='Enable microphone';
+  mark('microphone_off');
 }
 async function microphoneOn() {
   const epoch=++micEpoch;
@@ -143,34 +180,46 @@ async function microphoneOn() {
   const source=context.createMediaStreamSource(stream), silent=context.createGain(); silent.gain.value=0;
   source.connect(processor); processor.connect(silent); silent.connect(context.destination);
   let frames=[], count=0, quiet=0, pre=[];
+  finishUtterance=()=>{
+    if (!count) { speakingInput=false; return; }
+    const joined=new Float32Array(count); let offset=0; for(const f of frames){joined.set(f,offset);offset+=f.length;}
+    frames=[];count=0;quiet=0;pre=[];speakingInput=false;
+    if (joined.length < 1600) return;
+    const requestId=crypto.randomUUID();
+    mark('speech_segment_closed', {request_id:requestId, duration_ms:joined.length/16});
+    queuedAudio++;
+    audioChain=audioChain.then(async()=>{
+      if (!connected || epoch!==micEpoch) { mark('segment_discarded', {request_id:requestId}); return; }
+      status('Transcribing');
+      mark('transcription_requested', {request_id:requestId});
+      const result=await api('/transcribe',{request_id:requestId,audio:wav(Array.from(joined))});
+      // Mute/disconnect invalidates any in-flight recognition before dispatch.
+      if (!connected || epoch!==micEpoch) { mark('transcription_discarded', {request_id:requestId}); return; }
+      $('text').value=result.text;
+      await submit(result.text,requestId);
+    }).catch(error=>{
+      mark('utterance_not_confirmed_saved', {request_id:requestId});
+      status(error.message);log('This utterance was not confirmed saved. Inspect the transcript before repeating it.');
+    }).finally(()=>{queuedAudio--;});
+  };
   processor.onaudioprocess=event=>{
     if (!connected || epoch!==micEpoch) return;
+    const push=$('listen-mode').value==='push';
+    if (push && !talkHeld) return;
     const frame=Float32Array.from(event.inputBuffer.getChannelData(0));
     const rms=Math.sqrt(frame.reduce((sum,x)=>sum+x*x,0)/frame.length);
-    if (rms>.022) {
+    if ((push && talkHeld) || rms>.022) {
       if (!speakingInput) { speakingInput=true; silence(); frames=pre.slice(); count=frames.reduce((n,f)=>n+f.length,0); }
       quiet=0;
     } else { quiet+=frame.length; }
     pre.push(frame); if(pre.length>2)pre.shift();
     if (!speakingInput) return;
     frames.push(frame); count+=frame.length;
-    if (quiet>11200 || count>=470000) {
-      const joined=new Float32Array(count); let offset=0; for(const f of frames){joined.set(f,offset);offset+=f.length;}
-      frames=[];count=0;quiet=0;pre=[];speakingInput=false;
-      const requestId=crypto.randomUUID();
-      queuedAudio++;
-      audioChain=audioChain.then(async()=>{
-        if (!connected || epoch!==micEpoch) return;
-        status('Transcribing');
-        const result=await api('/transcribe',{request_id:requestId,audio:wav(Array.from(joined))});
-        // Mute/disconnect invalidates any in-flight recognition before dispatch.
-        if (!connected || epoch!==micEpoch) return;
-        $('text').value=result.text;
-        await submit(result.text,requestId);
-      }).catch(error=>{status(error.message);log('This utterance was not confirmed saved. Inspect the transcript before repeating it.');}).finally(()=>{queuedAudio--;});
-    }
+    if ((!push && quiet>16000*Number($('pause').value)) || count>=470000) finishUtterance();
   };
-  $('mic').textContent='Mute microphone';status('Listening');
+  $('talk').disabled=$('listen-mode').value!=='push';
+  $('mic').textContent='Mute microphone';status($('listen-mode').value==='push'?'Microphone ready · hold to talk':'Listening');
+  mark('microphone_enabled', {mode:$('listen-mode').value});
 }
 $('connect').onclick=async()=>{
   try {
@@ -186,19 +235,42 @@ $('connect').onclick=async()=>{
     ackBlob=await api('/ack',{},true);
     // Prime playback within the Connect gesture where the browser permits it.
     connected=true;
-    for(const id of ['mic','stop','disconnect','text','send'])$(id).disabled=false;
+    for(const id of ['mic','stop','disconnect','text','send','timing'])$(id).disabled=false;
     $('retry').disabled=!pending;$('connect').disabled=true;
     status('Connected · microphone off');poll();
+    mark('connected', {conversation_id:cid});
   } catch(error){status(error.message);}
 };
 $('send').onclick=async()=>{try{await submit($('text').value);$('text').value='';}catch(error){status(error.message);}};
 $('retry').onclick=async()=>{try{await savePending();}catch(error){status(error.message);}};
 $('stop').onclick=()=>silence();
+function releaseTalk() {
+  if (!talkHeld) return;
+  talkHeld=false;
+  if (finishUtterance) finishUtterance();
+}
+$('talk').onpointerdown=event=>{
+  if (!micStream || $('listen-mode').value!=='push') return;
+  $('talk').setPointerCapture(event.pointerId); talkHeld=true; silence();
+};
+$('talk').onpointerup=releaseTalk;
+$('talk').onpointercancel=()=>{talkHeld=false;microphoneOff();};
+$('talk').onkeydown=event=>{if ((event.code==='Space'||event.code==='Enter')&&!event.repeat) {event.preventDefault();talkHeld=true;silence();}};
+$('talk').onkeyup=event=>{if(event.code==='Space'||event.code==='Enter'){event.preventDefault();releaseTalk();}};
+$('talk').onblur=releaseTalk;
+$('listen-mode').onchange=async()=>{await microphoneOff();status(connected?'Connected · microphone off':'Disconnected');};
+$('timing').onclick=()=>{
+  const blob=new Blob([JSON.stringify({schema:'fm-voice-timing.v1', session_id:timingSession, conversation_id:cid,
+    measurement:'Browser software events only; no acoustic timing or speech content', dropped_events:timingDropped, events:timing},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob), link=document.createElement('a');
+  link.href=url;link.download='firstmate-voice-timing.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+};
 $('mic').onclick=async()=>{try{if(micStream){await microphoneOff();status('Connected · microphone off');}else{await microphoneOn();}}catch(error){status(error.message);}};
 $('disconnect').onclick=async()=>{
   connected=false;await microphoneOff();await silence();
   try{await api('/disconnect');}catch(_){}
   for(const id of ['mic','stop','disconnect','send','retry','text'])$(id).disabled=true;
   status('Disconnected. A new private pairing is needed to reconnect.');
+  mark('disconnected');
 };
 window.addEventListener('pagehide',()=>{connected=false;microphoneOff();silence('unknown');});

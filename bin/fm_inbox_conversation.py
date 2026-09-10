@@ -46,8 +46,9 @@ publish (owner): {request_id, response_id, sequence, kind, speech_key, final,
     starts at 1 per request. IDs are immutable and retries must match exactly.
     In the live pilot replace speech_key with speech_text and
     destination:"elevenlabs". The owner publishes that exact text for that exact
-    turn. Author process identity, timestamp, destination and content digest are
-    durable accountability evidence, not a claim of automated privacy detection.
+    turn, in portions of at most 1200 characters. Author process identity,
+    timestamp, destination and content digest are durable accountability
+    evidence, not a claim of automated privacy detection.
     Questions require a unique binding. A bound answer consumes that question at
     acceptance. Missing, ambiguous or stale bindings never become approvals.
     Explicit work outcome is separate from playback: final closes this request's
@@ -91,6 +92,8 @@ import secrets
 import subprocess
 import sys
 import time
+
+MAX_SPEECH_CHARS = 1200
 
 
 class ContractError(Exception):
@@ -381,6 +384,8 @@ class Conversation:
             disclosure = {'scope': 'synthetic-catalog', 'digest': digest(speech)}
         else:
             require(string(event['speech_text']), 'explicit speech_text is required')
+            require(len(event['speech_text']) <= MAX_SPEECH_CHARS,
+                    'speech portion exceeds 1200 characters; publish shorter ordered portions')
             require(event['destination'] == 'elevenlabs', 'this publication policy authorizes ElevenLabs only')
             speech = event['speech_text']
             disclosure = {'destination': 'elevenlabs', 'digest': digest(speech),

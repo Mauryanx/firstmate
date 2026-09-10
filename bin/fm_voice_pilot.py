@@ -61,7 +61,7 @@ import urllib.error
 import urllib.request
 import wave
 
-from fm_inbox_conversation import canonical, write
+from fm_inbox_conversation import MAX_SPEECH_CHARS, canonical, write
 
 
 class PilotError(Exception):
@@ -146,7 +146,8 @@ class ElevenLabs:
             raise PilotError('provider request failed; usage may be uncertain; no automatic retry') from None
 
     def speech(self, text, request_id):
-        check(isinstance(text, str) and 0 < len(text) <= 1200, 'speech portion must contain 1-1200 characters')
+        check(isinstance(text, str) and 0 < len(text) <= MAX_SPEECH_CHARS,
+              'speech portion must contain 1-%d characters' % MAX_SPEECH_CHARS)
         check(not self.key or self.key not in text, 'credential must never be published')
         body = {'text': text, 'model_id': 'eleven_flash_v2_5',
                 'voice_settings': {'stability': .40, 'similarity_boost': .75, 'style': .15,
@@ -292,7 +293,8 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     audio = self.server.provider.speech(reply['speech_text'],
                         'tts:' + self.server.bridge.binding['conversation_id'] + ':' + reply['response_id'])
-                    self.send(audio, kind='audio/mpeg')
+                    self.send({'audio': base64.b64encode(audio).decode('ascii'),
+                               'speech_text': reply['speech_text']})
             elif self.path == '/transcribe':
                 rid = data.get('request_id')
                 check(isinstance(rid, str) and 0 < len(rid) <= 200, 'request identity required')

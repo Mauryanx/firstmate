@@ -2,6 +2,9 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Firstmate voice</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
 <body><main><p class="eyebrow">FIRSTMATE</p><h1>Let’s talk.</h1><p>Enabled microphone audio and replies deliberately published by Firstmate use ElevenLabs. Never speak or publish credentials.</p>
 <p id="status" role="status">Disconnected</p><div class="controls"><button id="connect">Connect</button><button id="mic" disabled>Enable microphone</button><button id="stop" disabled>Stop speaking</button><button id="disconnect" disabled>Disconnect</button></div>
+<label for="listen-mode">Listening mode</label><select id="listen-mode"><option value="natural">Hands-free</option><option value="push">Push to talk</option></select>
+<div class="controls"><button id="talk" disabled>Hold to talk</button><button id="timing" disabled>Export timing</button></div>
+<label for="pause">Thinking pause before sending</label><select id="pause"><option value="0.7">0.7 seconds</option><option value="1.2">1.2 seconds</option><option value="1.8">1.8 seconds</option></select>
 <label for="text">Type a message or inspect the transcript</label><textarea id="text" rows="3" placeholder="What would you like to explore?" disabled></textarea>
 <div class="controls"><button id="send" disabled>Send</button><button id="retry" disabled>Retry saved message</button></div>
 <label for="correction">Correction to</label><select id="correction"><option value="">New question or follow-up</option></select>

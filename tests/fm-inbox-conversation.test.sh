@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Offline stage-one acceptance: public inbox entry point, real session-lock
 # ownership checks, immutable identities, crash recovery, and mocked playback.
-# No harness prompts, provider, device, network, or live fleet writes.
+# No harness prompts, provider/device calls, external network, or live fleet writes.
+# Loopback HTTP is exercised against the real isolated conversation controller.
+# Optional actual browser mechanics: set FM_VOICE_PLAYWRIGHT_MODULE to an
+# installed Node Playwright module and FM_VOICE_CHROMIUM to its Chromium binary.
+# The browser lane uses no microphone/audio simulation or acoustic assertions.
 set -eu
 # shellcheck source=tests/lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"

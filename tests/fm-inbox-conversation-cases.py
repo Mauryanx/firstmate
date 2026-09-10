@@ -224,6 +224,7 @@ live_reply = dict(conversation_id='live', request_id='r1', response_id='live-ans
                   speech_text='Synthetic live calculation: 12.5 is greater than 1.25; nothing was changed.')
 run('publish', dict(live_reply, destination='other-provider'), code=2)
 run('publish', dict(live_reply, authenticated_principal='captain'), code=2)
+run('publish', dict(live_reply, speech_text='x' * 1201), code=2)
 run('publish', live_reply)
 assert run('publish', live_reply)['published']
 run('publish', dict(live_reply, speech_text='different'), code=2)
@@ -241,6 +242,7 @@ import urllib.error
 import hashlib
 import io
 import wave
+import base64
 from unittest.mock import patch
 
 class SpeechFixture:
@@ -287,7 +289,9 @@ try:
     assert owning('accept', cid='live')['dispatch'] is False
     assert http('/ack', {})[0] == b'approved-ack'
     assert len(http('/poll', {})[0]['replies']) == 1
-    assert http('/speech', {'response_id':'live-answer', 'generation':'g'})[0] == b'fixture-audio'
+    spoken = http('/speech', {'response_id':'live-answer', 'generation':'g'})[0]
+    assert base64.b64decode(spoken['audio']) == b'fixture-audio'
+    assert spoken['speech_text'] == live_reply['speech_text']
     assert http('/speech', {'response_id':'live-answer', 'generation':'g'})[0]['deliver'] is False
     assert provider.calls == [(live_reply['speech_text'], 'tts:live:live-answer')]
     http('/playback', {'response_id':'live-answer','generation':'g','state':'interrupted','position_ms':12})
@@ -299,6 +303,24 @@ try:
     (pilot / 'state/.lock').write_text(old_lock)
     http('/disconnect', {})
     http('/poll', {}, 400)
+finally:
+    server.shutdown()
+    server.server_close()
+    thread.join()
+
+# A replacement browser server reuses durable delivery claims but never cookies.
+server = Pilot(0, Bridge(pilot, connection), provider, b'approved-ack')
+thread = threading.Thread(target=server.serve_forever, daemon=True)
+thread.start()
+try:
+    http('/poll', {}, 400)  # Old browser cookie is not a new server credential.
+    _, headers = http('/pair', {'secret': server.pair_secret})
+    cookie = headers['Set-Cookie'].split(';')[0]
+    assert http('/speech', {'response_id':'live-answer', 'generation':'replacement'})[0]['deliver'] is False
+    assert len(provider.calls) == 1
+    server.expires = 0
+    http('/capture', capture(3, 't2'), 400)
+    assert len(owning('audit', cid='live')['requests']) == 2
 finally:
     server.shutdown()
     server.server_close()
@@ -319,6 +341,16 @@ try:
 except PilotError:
     pass
 
+def competing_reservation(key):
+    try:
+        Budget(temp / 'race-credits.json', 100).reserve(key, 60)
+        return True
+    except PilotError:
+        return False
+with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+    assert sum(pool.map(competing_reservation, ['a', 'b'])) == 1
+assert json.loads((temp / 'race-credits.json').read_text())['reserved_credits'] == 60
+
 # Exercise the real adapter serialization and no-overage gate, never a provider.
 class Response(io.BytesIO):
     def __init__(self, data, headers=None):
@@ -332,6 +364,8 @@ def network(request, timeout):
     requests.append(request)
     if request.full_url.endswith('/subscription'):
         return Response(json.dumps(account).encode())
+    if request.full_url.endswith('/speech-to-text'):
+        return Response(json.dumps({'text':'No, do not change option B.'}).encode())
     return Response(b'x' * 1200, {'Content-Type':'audio/mpeg', 'character-cost':'4'})
 
 adapter = ElevenLabs('test-only-secret', Budget(temp / 'adapter-credits.json', 100))
@@ -347,4 +381,33 @@ with patch('urllib.request.urlopen', network):
     except PilotError:
         pass
     assert len(requests) == 3  # metadata only on the refused call
+    account['can_extend_character_limit'] = False
+    wav = io.BytesIO()
+    with wave.open(wav, 'wb') as audio:
+        audio.setnchannels(1)
+        audio.setsampwidth(2)
+        audio.setframerate(16000)
+        audio.writeframes(b'\0' * 16000)
+    assert adapter.transcribe(wav.getvalue(), 'stt-contract') == 'No, do not change option B.'
+    assert requests[-1].full_url.endswith('/speech-to-text')
+    assert b'RIFF' in requests[-1].data and b'scribe_v2' in requests[-1].data
 print('pilot: exact owner publication, HTTP isolation, single delivery, credit and overage guards passed')
+
+# Opt-in actual browser mechanics share the real isolated transport and current
+# owner fixture above. No microphone input or acoustic output is synthesized.
+if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
+    browser_server = Pilot(0, Bridge(pilot, connection), provider, b'non-acoustic-test-ack')
+    browser_thread = threading.Thread(target=browser_server.serve_forever, daemon=True)
+    browser_thread.start()
+    try:
+        subprocess.run(['node', str(root / 'tests/fm-voice-browser-cases.cjs'),
+                        browser_server.origin + '/#' + browser_server.pair_secret],
+                       check=True, timeout=60)
+        accounting = owning('audit', cid='live')
+        assert len(accounting['requests']) == 4
+        assert [r['state'] for r in accounting['requests']] == ['accepted', 'accepted', 'saved', 'saved']
+        assert len(provider.calls) == 1  # Browser verification never synthesizes speech.
+    finally:
+        browser_server.shutdown()
+        browser_server.server_close()
+        browser_thread.join()
