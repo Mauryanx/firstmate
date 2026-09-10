@@ -4678,10 +4678,11 @@ test_paused_until_that_passed_is_rechecked_before_the_cadence() {
 # --- tap: an external append ends the terminal wait, not the poll cadence ----
 # A producer outside the watcher (a captain inbox note, a voice capture) appends
 # a durable row and rings the watcher; the cycle that surfaces the append runs
-# at once. With a 31 s poll, only a tapped watcher can exit inside three
-# seconds, and the reason it prints is the recovery resurface the append's
-# downtime marker asks for. The terminal wait's own sleeper pid is captured
-# while the watcher still owns it (a host-wide command-line match would see
+# at once. With a 31 s poll, an untapped watcher cannot exit inside this file's
+# standard 100-tick budget, which still leaves a whole supervision cycle's worth
+# of forks room on a loaded shared machine, and the reason it prints is the
+# recovery resurface the append's downtime marker asks for. The terminal wait's
+# own sleeper pid is captured while the watcher still owns it (a host-wide command-line match would see
 # every unrelated sleeper on these shared always-on machines), so its death
 # after the exit proves the interrupted wait left no orphan behind.
 test_external_append_taps_the_sleeping_watcher() {
@@ -4710,7 +4711,7 @@ test_external_append_taps_the_sleeping_watcher() {
   done
   [ -n "$sleeper" ] || { reap "$pid"; fail "the watcher never reached its 31s terminal wait"; }
   append_wake "$state" check inbox:tap-note "check: captain inbox note tap-note" || fail "external append failed"
-  wait_for_exit "$pid" 30 || fail "a tapped watcher did not exit within three seconds of the append (poll is 31s)"
+  wait_for_exit "$pid" 100 || fail "a tapped watcher did not exit within 10s of the append (poll is 31s)"
   grep -F 'check: rearm-resurface' "$out" >/dev/null || fail "the tapped cycle did not surface the append: $(cat "$out")"
   i=0
   while [ "$i" -lt 30 ] && kill -0 "$sleeper" 2>/dev/null; do

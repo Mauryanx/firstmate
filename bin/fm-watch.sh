@@ -1460,17 +1460,25 @@ fm_check_output_cleanup() {
 # early with a >128 status while the child is still running - so a tap arriving
 # during an unrelated wait would otherwise look like "the child finished" and
 # the caller would tear down a live child and read its half-written output.
-# Only a status >128 whose child is genuinely gone is that child's own death by
-# signal; anything else is re-waited until the child is reaped.
+# A live child means the tap interrupted us, so the wait is re-issued. A child
+# that is already gone is ambiguous - it either died by signal, or it finished
+# normally and bash reaped it in the window after the interrupt - so its status
+# is re-read rather than assumed: a status the interrupted wait never consumed
+# is still pending and comes back for real, while a shell that already reported
+# it answers 127 and the first status stands.
 FM_WAIT_STATUS=
 watcher_wait_reap() {  # <pid>
-  local pid=$1 rc=0
+  local pid=$1 rc=0 final=0
   FM_WAIT_STATUS=
   while :; do
     rc=0
     wait "$pid" 2>/dev/null || rc=$?
     [ "$rc" -gt 128 ] || break
-    kill -0 "$pid" 2>/dev/null || break
+    kill -0 "$pid" 2>/dev/null && continue
+    final=0
+    wait "$pid" 2>/dev/null || final=$?
+    [ "$final" -eq 127 ] || rc=$final
+    break
   done
   FM_WAIT_STATUS=$rc
   return 0
