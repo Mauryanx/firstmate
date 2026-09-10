@@ -70,12 +70,21 @@ MAX_BODY_BYTES = 400000
 # documented maximum of 15 seconds, 10 leaves a proven margin. Holding does not
 # delay speech: the opener is synthesised and heard about two seconds in either
 # way, and only the platform's own bookkeeping waits for the stream to finish.
-HOLD_SECONDS = 10.0
+HOLD_SECONDS = 7.0
 # The agent's own cascade timeout, which the hold must stay clear of. Exceeding it
 # does not time the turn out, it ends the captain's conversation, so the margin is
 # enforced at startup rather than left to whoever edits the flag next.
+#
+# The margin is deliberately wide. A sibling agent on another of the vendor's
+# products was killed fourteen seconds in, on a turn that had already finalised
+# around eleven, so the real ceiling sits lower than the timeout suggests and a
+# turn that merely ends before it is not obviously safe. That agent's own
+# configuration was not readable, so this is a conservative reading of someone
+# else's failure rather than a measurement of ours: our own turns have never been
+# killed at a hold of ten. Being wrong here costs the captain a dropped
+# conversation while he waits, so it is the right direction to be wrong in.
 CASCADE_SECONDS = 15.0
-CASCADE_MARGIN = 2.0
+CASCADE_MARGIN = 6.0
 LOOK_INTERVAL = 0.5
 
 # An opener may reflect what the captain asked. It may never assert a finding, a
@@ -149,6 +158,20 @@ class ShuffleBag:
                     self.remaining.append(self.remaining.pop(0))
             self.last = self.remaining.pop(0)
             return self.last
+
+
+def require_safe_hold(hold, cascade):
+    """Refuse a hold that is not clear of the cascade timeout.
+
+    A turn still open when that timeout expires ends the captain's conversation
+    rather than merely ending the turn, so this is checked before the socket
+    exists instead of being left to whoever edits the flag next.
+    """
+    check(hold >= 0, 'hold cannot be negative')
+    check(hold <= cascade - CASCADE_MARGIN,
+          'hold of %gs is not clear of the %gs cascade timeout; a turn still open when that '
+          'expires ends the conversation, so keep at least %gs between them'
+          % (hold, cascade, CASCADE_MARGIN))
 
 
 def chunk(text, finish=None):
@@ -448,11 +471,7 @@ def main():
                         help="the agent's own cascade timeout, which the hold must stay clear of")
     args = parser.parse_args()
     try:
-        check(args.hold_seconds >= 0, 'hold cannot be negative')
-        check(args.hold_seconds <= args.cascade_seconds - CASCADE_MARGIN,
-              'hold of %gs is not clear of the %gs cascade timeout; a turn still open when that '
-              'expires ends the conversation, so keep at least %gs between them'
-              % (args.hold_seconds, args.cascade_seconds, CASCADE_MARGIN))
+        require_safe_hold(args.hold_seconds, args.cascade_seconds)
         secret = args.secret_file.read_text().strip()
         binding = json.loads(args.binding.read_text())
         check(isinstance(binding, dict) and binding.get('conversation_id'), 'binding is not a conversation')

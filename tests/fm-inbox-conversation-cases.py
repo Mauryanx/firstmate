@@ -432,7 +432,19 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
 import random
 import time
 
-from fm_voice_bridge import ANSWER_MARKER, Endpoint, Sessions, ShuffleBag
+from fm_voice_bridge import (ANSWER_MARKER, CASCADE_MARGIN, Endpoint, HOLD_SECONDS,
+                             Sessions, ShuffleBag, require_safe_hold)
+
+# A turn still open when the agent's cascade timeout expires ends the captain's
+# conversation rather than the turn, so an unsafe hold must never reach a socket.
+require_safe_hold(HOLD_SECONDS, 15.0)
+require_safe_hold(15.0 - CASCADE_MARGIN, 15.0)
+for unsafe in (15.0 - CASCADE_MARGIN + 0.1, 10.0, 12.0, 20.0, -1.0):
+    try:
+        require_safe_hold(unsafe, 15.0)
+        raise AssertionError('a hold of %g was allowed against a 15s cascade timeout' % unsafe)
+    except PilotError:
+        pass
 
 secret = 'x' * 32
 bag_order = random.Random(7)
