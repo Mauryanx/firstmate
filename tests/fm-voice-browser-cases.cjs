@@ -13,6 +13,12 @@ const fs = require('fs');
   await page.getByRole('button',{name:'Connect',exact:true}).click();
   await page.waitForFunction(()=>document.getElementById('status').textContent==='Connected · microphone off');
   if(await page.evaluate(()=>location.hash))throw Error('pairing secret remained in location');
+  // The answer waiting for r2 belongs to a question the captain has moved past,
+  // so it must name that question instead of arriving as the current answer.
+  await page.waitForFunction(()=>document.querySelector('#transcript').textContent.includes('answering your earlier question'));
+  // No approved introduction clip is configured here, so the written framing carries it alone.
+  if(await page.evaluate(()=>introBlob!==null))throw Error('Absent introduction artifact was not handled as optional');
+  await page.getByRole('button',{name:'Stop speaking',exact:true}).click();
   await page.locator('#listen-mode').selectOption('push');
   if(!await page.locator('#talk').isDisabled())throw Error('Push-to-talk active before microphone permission');
   await page.locator('#pause').selectOption('1.2');
@@ -38,7 +44,8 @@ const fs = require('fs');
   await page.getByRole('button',{name:'Send',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('#transcript').textContent.includes('A follow-up in the same conversation.'));
   const state=await page.evaluate(async()=>{const r=await fetch('/poll',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});return r.json();});
-  if(state.requests.length!==4||state.requests[3].previous_turn_id!==state.requests[2].turn_id)throw Error('Retry or follow-up corrupted request identity/order');
+  const own=state.requests.slice(-2);
+  if(state.requests.length!==5||own[1].previous_turn_id!==own[0].turn_id)throw Error('Retry or follow-up corrupted request identity/order');
   const downloadPromise=page.waitForEvent('download');
   await page.getByRole('button',{name:'Export timing',exact:true}).click();
   const download=await downloadPromise;

@@ -6,7 +6,7 @@ let connected = false, cid = null, previous = null, pending = null;
 let player = null, playing = null, playerURL = null, generation = 0, busy = false, speakingInput = false;
 let micStream = null, context = null, processor = null, micEpoch = 0, audioChain = Promise.resolve();
 let ackTimer = null, ackBlob = null, seenReplies = new Set(), inputBusy = false, queuedAudio = 0;
-let talkHeld = false, finishUtterance = null;
+let talkHeld = false, finishUtterance = null, introBlob = null, cue = null;
 const timing = [], timingSession = crypto.randomUUID();
 let timingDropped = 0;
 function mark(event, identity = {}) {
@@ -25,6 +25,7 @@ function remember() { sessionStorage.setItem('fm-voice:' + cid, JSON.stringify({
 async function silence(state = 'interrupted') {
   generation++;
   clearTimeout(ackTimer);
+  if (cue) { cue.pause(); cue.removeAttribute('src'); cue.load(); cue = null; }
   const old = playing;
   const position = player ? Math.round(player.currentTime * 1000) : 0;
   if (player) { player.pause(); player.removeAttribute('src'); player.load(); }
@@ -68,6 +69,26 @@ async function play(blob, identity, expectedGeneration) {
     await silence('unknown');
     status('Playback was blocked. Check site sound permissions and ask Firstmate to repeat the answer.');
   }
+}
+async function introduce(expectedGeneration) {
+  await new Promise(resolve => {
+    if (!connected || speakingInput || generation !== expectedGeneration) return resolve();
+    const url = URL.createObjectURL(introBlob), sound = new Audio(url);
+    cue = sound;
+    let settled = false;
+    // Stop speaking clears cue, so the answer is never stranded behind a paused clip.
+    const watch = setInterval(() => { if (cue !== sound) done(); }, 100);
+    function done() {
+      if (settled) return;
+      settled = true; clearInterval(watch);
+      URL.revokeObjectURL(url);
+      if (cue === sound) cue = null;
+      resolve();
+    }
+    sound.onended = done; sound.onerror = done;
+    mark('late_answer_introduced');
+    sound.play().catch(done);
+  });
 }
 function acknowledge() {
   clearTimeout(ackTimer);
@@ -133,11 +154,19 @@ async function poll() {
         const result = await api('/speech', identity);
         if (typeof result.audio === 'string') {
           const audio = new Blob([Uint8Array.from(atob(result.audio), c=>c.charCodeAt(0))], {type:'audio/mpeg'});
-          log('Firstmate: ' + result.speech_text);
-          mark('reply_audio_received', {response_id:reply.response_id});
+          // An answer to anything but the captain's newest question arrives after
+          // he has moved on, so name the question it belongs to before playing it.
+          const asked = data.requests.findIndex(r => r.request_id === reply.request_id);
+          const late = asked >= 0 && asked < data.requests.length - 1;
+          log((late ? 'Firstmate, answering your earlier question (' + reply.request_id + '): ' : 'Firstmate: ')
+              + result.speech_text);
+          mark('reply_audio_received', {response_id:reply.response_id, late});
           if (generation !== epoch || speakingInput || !connected) {
             await api('/playback', {...identity, state:'interrupted', position_ms:0});
-          } else { await play(audio, identity, epoch); }
+          } else {
+            if (late && introBlob instanceof Blob) await introduce(epoch);
+            await play(audio, identity, epoch);
+          }
         }
       } catch(error) {
         mark('reply_delivery_uncertain', {response_id:reply.response_id});
@@ -233,6 +262,7 @@ $('connect').onclick=async()=>{
     const state=await api('/poll');
     if (!pending && state.requests.length) previous=state.requests[state.requests.length-1].turn_id;
     ackBlob=await api('/ack',{},true);
+    try { introBlob=await api('/intro',{},true); } catch(_) { introBlob=null; }
     // Prime playback within the Connect gesture where the browser permits it.
     connected=true;
     for(const id of ['mic','stop','disconnect','text','send','timing'])$(id).disabled=false;

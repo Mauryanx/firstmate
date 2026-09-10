@@ -318,9 +318,11 @@ try:
     cookie = headers['Set-Cookie'].split(';')[0]
     assert http('/speech', {'response_id':'live-answer', 'generation':'replacement'})[0]['deliver'] is False
     assert len(provider.calls) == 1
+    # A third question the owner answers out of order later in the browser lane.
+    http('/capture', capture(3, 't2'))
     server.expires = 0
-    http('/capture', capture(3, 't2'), 400)
-    assert len(owning('audit', cid='live')['requests']) == 2
+    http('/capture', capture(4, 't3'), 400)
+    assert len(owning('audit', cid='live')['requests']) == 3
 finally:
     server.shutdown()
     server.server_close()
@@ -396,17 +398,26 @@ print('pilot: exact owner publication, HTTP isolation, single delivery, credit a
 # Opt-in actual browser mechanics share the real isolated transport and current
 # owner fixture above. No microphone input or acoustic output is synthesized.
 if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
+    # r2's answer is provably late: the captain asked r3 before the browser
+    # ever connects, so the reply must name the question it belongs to.
+    assert owning('accept', cid='live')['input']['request_id'] == 'r3'
+    run('publish', dict(live_reply, request_id='r2', response_id='late-answer',
+                        speech_text='Synthetic late answer to the earlier question.'))
     browser_server = Pilot(0, Bridge(pilot, connection), provider, b'non-acoustic-test-ack')
     browser_thread = threading.Thread(target=browser_server.serve_forever, daemon=True)
     browser_thread.start()
     try:
         subprocess.run(['node', str(root / 'tests/fm-voice-browser-cases.cjs'),
                         browser_server.origin + '/#' + browser_server.pair_secret],
-                       check=True, timeout=60)
+                       check=True, timeout=90)
         accounting = owning('audit', cid='live')
-        assert len(accounting['requests']) == 4
-        assert [r['state'] for r in accounting['requests']] == ['accepted', 'accepted', 'saved', 'saved']
-        assert len(provider.calls) == 1  # Browser verification never synthesizes speech.
+        assert len(accounting['requests']) == 5
+        assert [r['state'] for r in accounting['requests']] == [
+            'accepted', 'accepted', 'accepted', 'saved', 'saved']
+        # The fixture provider stands in for ElevenLabs; the late answer is the
+        # only speech the browser lane ever requests.
+        assert len(provider.calls) == 2
+        assert provider.calls[1][0] == 'Synthetic late answer to the earlier question.'
     finally:
         browser_server.shutdown()
         browser_server.server_close()

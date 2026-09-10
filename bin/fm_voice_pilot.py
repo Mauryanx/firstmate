@@ -19,6 +19,11 @@ service. Every substantive utterance goes to the existing Firstmate conversation
 
 George warm uses eleven_flash_v2_5 and the audition settings. --ack-file must
 match --ack-sha256; it is the already-approved prerecorded acknowledgement.
+Optional --intro-file/--intro-sha256 supply the equally prerecorded line that
+introduces an answer arriving after the captain has moved on. Both artifacts are
+replayed rather than synthesized, so neither spends credits. Without an
+introduction artifact the late answer is still framed in writing before it
+plays.
 Scribe v2 transcribes bounded mono PCM WAV utterances. No audio archive is kept.
 The browser keeps unsaved final transcripts in sessionStorage for retry with
 stable IDs; raw audio is memory-only and uncertain transcription is never
@@ -208,10 +213,10 @@ class Bridge:
 class Pilot(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, port, bridge, provider, ack):
+    def __init__(self, port, bridge, provider, ack, intro=None):
         super().__init__(('127.0.0.1', port), Handler)
         self.origin = 'http://127.0.0.1:' + str(self.server_port)
-        self.bridge, self.provider, self.ack = bridge, provider, ack
+        self.bridge, self.provider, self.ack, self.intro = bridge, provider, ack, intro
         self.pair_secret = secrets.token_urlsafe(32)
         self.cookie, self.expires = None, 0
         self.auth_lock = threading.Lock()
@@ -282,6 +287,10 @@ class Handler(BaseHTTPRequestHandler):
                 self.send({'disconnected': True}, cookie='fm_voice=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0')
             elif self.path == '/ack':
                 self.send(self.server.ack, kind='audio/mpeg')
+            elif self.path == '/intro':
+                # Absent artifact is normal: the written framing still names the earlier question.
+                check(self.server.intro is not None, 'no approved introduction artifact is configured')
+                self.send(self.server.intro, kind='audio/mpeg')
             elif self.path == '/poll':
                 self.send(self.server.bridge.call('poll'))
             elif self.path in ('/capture', '/playback'):
@@ -304,8 +313,11 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self.send({'error': 'not found'}, 404)
         except (PilotError, ValueError, KeyError, TypeError, OSError, subprocess.TimeoutExpired) as exc:
-            # Only locally authored PilotError strings may be returned.
-            self.send({'error': str(exc) if isinstance(exc, PilotError) else 'request failed; no automatic provider retry'}, 400)
+            try:
+                # Only locally authored PilotError strings may be returned.
+                self.send({'error': str(exc) if isinstance(exc, PilotError) else 'request failed; no automatic provider retry'}, 400)
+            except OSError:
+                pass  # The browser closed this connection; nothing is left to tell it.
 
 
 def main():
@@ -317,6 +329,8 @@ def main():
     parser.add_argument('--credit-limit', type=int, default=0)
     parser.add_argument('--ack-file', type=Path, required=True)
     parser.add_argument('--ack-sha256', required=True)
+    parser.add_argument('--intro-file', type=Path)
+    parser.add_argument('--intro-sha256')
     parser.add_argument('--port', type=int, default=8765)
     args = parser.parse_args()
     os.umask(0o077)
@@ -325,11 +339,15 @@ def main():
     check(args.binding.stat().st_mode & 0o077 == 0, 'binding must be private (0600)')
     ack = args.ack_file.read_bytes()
     check(hashlib.sha256(ack).hexdigest() == args.ack_sha256, 'acknowledgement differs from approved artifact')
+    check(bool(args.intro_file) == bool(args.intro_sha256), 'an introduction artifact requires its digest')
+    intro = args.intro_file.read_bytes() if args.intro_file else None
+    if intro is not None:
+        check(hashlib.sha256(intro).hexdigest() == args.intro_sha256, 'introduction differs from approved artifact')
     keys = {os.environ[n] for n in ('ELEVENLABS_API_KEY', 'ELEVEN_LABS_API_KEY', 'XI_API_KEY', 'ELEVEN_API_KEY')
             if os.environ.get(n)}
     check(len(keys) <= 1, 'conflicting ElevenLabs credentials')
     server = Pilot(args.port, Bridge(args.home, binding),
-                   ElevenLabs(next(iter(keys), None), Budget(args.spend_file, args.credit_limit)), ack)
+                   ElevenLabs(next(iter(keys), None), Budget(args.spend_file, args.credit_limit)), ack, intro)
     # Verify bound owner before creating browser access, without any provider call.
     server.bridge.call('poll')
     with args.access_file.open('x') as handle:

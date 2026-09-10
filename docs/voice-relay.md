@@ -38,6 +38,8 @@ Changing listening mode turns the microphone off, requiring a deliberate enable 
 Stop speaking immediately clears local playback and records an interruption; it does not cancel Firstmate's work.
 The transcript can be inspected and corrections refer to an accepted request.
 The written reply beside playback is the exact owner-published speech text, with no intermediary paraphrase.
+An answer is never read over a newer question: a reply reaching a captain who has already moved on names the earlier question it belongs to before it plays.
+That framing is written, and an optional prerecorded introduction artifact can speak it; like the acknowledgement it is replayed rather than synthesized, so neither spends credits.
 Uncertain capture, transcription and playback remain visible rather than being silently retried as new actions.
 
 All new provider requests reserve credits durably and check that the account disallows paid credit extension before sending audio or text.
