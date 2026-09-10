@@ -1281,6 +1281,7 @@ families_for_changed_path() {
     bin/fm-sessionstart-nudge.sh|bin/fm-startup-network.sh|bin/fm-tangle*|bin/fm-update.sh|\
     bin/fm-gate-refuse*|bin/fm-lock*)
       printf '%s\n' session-bootstrap
+      printf '%s\n' secondmate
       ;;
     bin/fm-quota-axi-lib.sh)
       printf '%s\n' session-bootstrap

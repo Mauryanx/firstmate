@@ -78,7 +78,6 @@ SH
   printf '#!/usr/bin/env bash\nexit 0\n' > "$w/seed/bin/fm-remote-secondmate-control.sh"
   chmod +x "$w/seed/bin/fm-remote-secondmate-control.sh"
   printf 's1\n' > "$w/seed/.agents/skills/note.md"
-  printf '/data/\n/state/\n/config/\n/projects/\n/.no-mistakes/\n.fm-secondmate-home\n' > "$w/seed/.gitignore"
   git -C "$w/seed" add -A
   git -C "$w/seed" commit -qm c1
   git -C "$w/seed" push -q origin main

@@ -131,6 +131,7 @@ init_changed_fixture_repo() {
   : >"$repo/bin/fm-quota-axi-lib.sh"
   : >"$repo/bin/fm-quota-choose.sh"
   : >"$repo/bin/fm-ff-lib.sh"
+  : >"$repo/bin/fm-bootstrap.sh"
   : >"$repo/bin/unmapped-source.sh"
   # A shared helper with no curated family of its own, named by exactly ONE
   # script of the expensive real-Herdr family and consumed by one curated
@@ -293,6 +294,25 @@ test_shared_ff_library_selects_every_reporting_family() {
 
   rm -rf "$tmp"
   pass "the shared fast-forward library selects every family that pins its reports"
+}
+
+# Session start owns the nudge and respawn reports pinned by the secondmate
+# suites, so its curated arm must reach that family too, not only its own.
+test_bootstrap_selects_every_reporting_family() {
+  local tmp repo listed
+  tmp=$(mktemp -d "${TMPDIR:-/tmp}/fm-test-run-bootstrap.XXXXXX")
+  repo="$tmp/repo"
+  init_changed_fixture_repo "$repo"
+
+  printf '\n' >>"$repo/bin/fm-bootstrap.sh"
+  listed=$(cd "$repo" && bin/fm-test-run.sh --list --changed --base HEAD | LC_ALL=C sort)
+  assert_contains "$listed" "tests/fm-secondmate-safety.test.sh" \
+    "session start did not select the secondmate family that pins its nudge and respawn reports"
+  assert_contains "$listed" "tests/fm-session-start.test.sh" \
+    "session start lost its own session-bootstrap coverage"
+
+  rm -rf "$tmp"
+  pass "session start selects every family that pins its reports"
 }
 
 test_shell_line_ending_policy_selects_runner_contract() {
@@ -1610,6 +1630,7 @@ test_changed_file_selection_is_conservative
 test_task_marker_refuses_the_primary_checkout
 test_changed_runner_surfaces_select_their_family
 test_shared_ff_library_selects_every_reporting_family
+test_bootstrap_selects_every_reporting_family
 test_shell_line_ending_policy_selects_runner_contract
 test_changed_dependency_selection_and_unmapped_failure
 test_changed_bin_reference_selects_per_script_not_per_family
