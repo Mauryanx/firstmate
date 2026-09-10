@@ -144,8 +144,25 @@ Turn the platform's generated pause line on, with a prompt override forbidding a
 That line is what he hears while Firstmate reads, and it is generated in the context of what he actually said, which is what he asked for and what the bridge could not do by rule.
 The override is the whole safety argument for it: the text is the platform's, the bridge never sees it, and the only thing holding it to the rule that nothing may claim a result before Firstmate has answered is that instruction.
 
+### What the page says before he starts
+
+The account's characters are a single pool.
+The agent's minutes, this pilot's speech and its transcription all draw on it, so what the account reports as remaining is also how much conversation the captain has left.
+Running that pool out mid-sentence is a real way to be cut off, and being cut off without warning is worse than not starting.
+
+So the page reads the pool through the pilot before it offers the button, says in words roughly how many seconds of conversation remain, and refuses to connect at all when the account cannot pay for a whole exchange.
+Two separate facts refuse it: a pool too small to finish one exchange, and an account that is allowed to bill past its included pool.
+Both are checked in the same place, so the button can never sit enabled beside a sentence saying no session will be started.
+It re-reads while he talks, slowly and off the announcing path, so a pool that empties mid-conversation is still a sentence he can read.
+A reading that fails is reported as a failure to read, not as an allowance of zero: those are different facts and only one of them is about the account.
+None of this is a claim about the work - it is arithmetic on the account's own reported numbers, and every word about the fleet still comes from Firstmate.
+
+Interruption is the platform's, not ours.
+When he cuts in, the platform cancels the request the bridge was answering into; the page's only part is to say that it happened and to stay quiet until it is his turn again, which the same speaking gate that stops answers overlapping already does.
+
 `tests/fm-inbox-conversation.test.sh` covers the bridge against the real isolated transport: refusal of absent, empty, wrong, truncated and extended secrets before any request is parsed or recorded, that a refused call changes nothing behind the gate, that a substantive turn is filed and answered with silence rather than filler, verbatim single delivery of a published answer with nothing around it, transcript order across turns, and the turn budget - that a slow transport call is refused inside the turn instead of carrying it past the cascade timeout, and that a claim is never begun on less budget than it needs to finish.
-It covers the announcing page in the same runner with the vendor SDK and the bridge behind it both stubbed: pairing, polling, one marker outstanding at a time across a delayed speaking start, every published answer carried once and in order, a declined answer offered again rather than lost, retry when the agent is briefly unreachable, and session end.
+It covers the announcing page in the same runner with the vendor SDK and the bridge behind it both stubbed: a refusal in words with no session opened against either an allowance too small for one exchange or an account that can bill past its included pool, the remaining conversation stated before the button is offered, pairing, a reload riding the session cookie, polling, one marker outstanding at a time across a delayed speaking start, every published answer carried once and in order, a declined answer offered again rather than lost, retry when the agent is briefly unreachable, a barge-in reported rather than talked over, and session end.
+The allowance readings in that lane are stubbed, which is what lets the spent and overage refusals be driven without spending an account down or arming overage to prove them; what the pilot computes from the account's real numbers is asserted where that arithmetic lives.
 It establishes nothing about turn latency, recognition, interruption or voice quality, all of which need the live agent and the captain's ear.
 
 ## Existing audio prototype

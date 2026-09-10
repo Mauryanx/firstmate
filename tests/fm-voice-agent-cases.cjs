@@ -3,12 +3,46 @@
 // polling the real isolated transport, and carrying every published reply once.
 // No account, microphone, speaker, agent minute or acoustic claim is involved.
 const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
+// What the pilot reports about the account, stubbed so the refusals can be
+// driven without spending an account down or arming overage to prove them. The
+// arithmetic that produces these numbers belongs to the pilot; what is asserted
+// here is what the page does with them, which is the half the captain meets: a
+// sentence before he presses anything, and a refusal rather than a silence
+// whenever the account cannot pay for a whole exchange.
+const HEALTHY = {characters:34000, seconds:1000, enough:true, minimum_seconds:20,
+                 resets_at:1760000000, can_overage:false};
+const SPENT = {characters:61, seconds:1, enough:false, minimum_seconds:20,
+               resets_at:1760000000, can_overage:false};
+// Room in the pool, but the account may bill past it. Refusing this one is about
+// his money rather than his sentence, and the button must agree with the page.
+const OVERAGE = {characters:34000, seconds:1000, enough:true, minimum_seconds:20,
+                 resets_at:1760000000, can_overage:true};
+const allowance = state => route => route.fulfill({contentType:'application/json', body:JSON.stringify(state)});
+// The page reads the allowance once, at load, so each reading gets its own load.
+// A reload has no pairing secret left in the URL and rides the session cookie,
+// which is also what a refresh mid-conversation does.
+const reread = async (page, state) => {
+  await page.unroute('**/allowance');
+  await page.route('**/allowance', allowance(state));
+  await page.reload();
+};
 (async () => {
  const browser = await chromium.launch({headless:true, executablePath:process.env.FM_VOICE_CHROMIUM, args:['--no-sandbox']});
  try {
   const page = await browser.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
+  const refuses = async (opening, needle) => {
+    await page.waitForFunction(t => document.getElementById('allowance').textContent.startsWith(t), opening);
+    const said = await page.textContent('#allowance');
+    if (!said.includes(needle)) throw Error('the refusal did not say why: ' + said);
+    if (!await page.evaluate(() => document.getElementById('connect').disabled)) {
+      throw Error('a session was offered against: ' + said);
+    }
+    if (await page.evaluate(() => window.__opts !== undefined)) throw Error('a session was opened against: ' + said);
+  };
+  // The spent account first, while the pairing secret is still in the URL.
+  await page.route('**/allowance', allowance(SPENT));
   // Stand in for the vendor bundle the operator installs, and for the bridge
   // behind it, which does not run in this lane: a marker is claimed through the
   // pilot exactly as the bridge's deliver would, and only THEN does the agent
@@ -27,6 +61,10 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
       window.__opts = {libsampleratePath: opts.libsampleratePath, connectionType: opts.connectionType,
                        conversationToken: opts.conversationToken, agentId: opts.agentId};
       window.__setMode = mode => opts.onModeChange({mode});
+      // The platform's own barge-in signal, which is all this page is given: it
+      // has already cancelled the turn the bridge was speaking into by the time
+      // this fires, so what the page does with it is the only thing to assert.
+      window.__interrupt = () => opts.onInterruption();
       // The agent is already mid-answer when this page connects, which is when
       // a marker would cut what it is saying in half.
       window.__setMode('speaking');
@@ -88,6 +126,21 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
     }}};
   `}));
   await page.goto(process.argv[2]);
+  await refuses('Not enough', String(SPENT.minimum_seconds));
+
+  // Enough characters, but the account may bill past its included pool. That is
+  // a different reason and it must refuse just as firmly.
+  await reread(page, OVERAGE);
+  await refuses('This account can run into paid overage', 'turned off');
+
+  // An allowance that can cover a conversation. Before he presses anything, the
+  // page has told him what the account can pay for; the number is the account's,
+  // and nothing here claims anything about the work.
+  await reread(page, HEALTHY);
+  await page.waitForFunction(() => document.getElementById('allowance').textContent.startsWith('About '));
+  const offered = await page.textContent('#allowance');
+  if (!offered.includes(String(HEALTHY.seconds))) throw Error('the allowance was not stated in his terms: ' + offered);
+  await page.waitForFunction(() => !document.getElementById('connect').disabled);
   await page.getByRole('button', {name:'Connect', exact:true}).click();
   await page.waitForFunction(() => document.getElementById('status').textContent === 'Listening');
   if (await page.evaluate(() => location.hash)) throw Error('pairing secret remained in location');
@@ -139,11 +192,17 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
     throw Error('an answer already carried was announced again');
   }
 
+  // He cuts in. The platform cancels the turn it was speaking into and tells the
+  // page; the page's part is to say so rather than carry on as if it had not.
+  await page.evaluate(() => window.__interrupt());
+  await page.waitForFunction(() => [...document.querySelectorAll('#activity li')]
+    .some(item => item.textContent.includes('You cut in')));
+
   await page.getByRole('button', {name:'Disconnect', exact:true}).click();
   await page.waitForFunction(() => document.getElementById('status').textContent.startsWith('Disconnected.'));
   if (!await page.evaluate(() => window.__ended)) throw Error('the agent session was not ended');
   if (errors.length) throw Error(JSON.stringify(errors));
   console.log(JSON.stringify({result:'PASS', browser:browser.version(), page_errors:errors,
-    evidence:'pairing, transport polling, a tokened session, silence while the agent has the floor, one marker outstanding at a time across a delayed speaking start, a pause line before a claim not settling that claim, an answer claimed but never spoken not blocking the answers behind it, every published answer carried once in order, a declined answer offered again, retry after an unreachable agent, and session end; stubbed vendor SDK and stand-in bridge, no account or acoustic acceptance'}, null, 2));
+    evidence:'a refusal in words with no session opened against either an allowance too small for one exchange or an account that can bill past its included pool, the remaining conversation stated before the button is offered, pairing, a reload riding the session cookie, transport polling, a tokened session, silence while the agent has the floor, one marker outstanding at a time across a delayed speaking start, a pause line before a claim not settling that claim, an answer claimed but never spoken not blocking the answers behind it, every published answer carried once in order, a declined answer offered again, retry after an unreachable agent, a barge-in reported rather than talked over, and session end; stubbed vendor SDK and stand-in bridge, no account or acoustic acceptance'}, null, 2));
  } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });
