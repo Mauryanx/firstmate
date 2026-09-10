@@ -31,6 +31,13 @@
 # fast-forward advances HEAD only and never moves the shared default branch or
 # any other worktree's checkout. A standalone remote home may instead advance
 # its checked-out default branch under the same guard.
+#
+# Beyond the fast-forward itself, this file owns first_line - the one selector
+# for a remote command's OWN diagnostic line under OpenSSH's banner - and the
+# remote_sync_failure_reason wording built over it. Reporting surfaces that
+# never fast-forward source this library for that selector (bin/fm-fleet-sync.sh
+# takes default_branch and first_line only), so an edit there changes their
+# operator reports too.
 
 SUB_HOME_MARKER="${SUB_HOME_MARKER:-.fm-secondmate-home}"
 # shellcheck source=bin/fm-secondmate-registry-lib.sh
