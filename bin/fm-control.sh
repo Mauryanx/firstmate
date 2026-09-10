@@ -266,8 +266,8 @@ fi
 [ "$MODEL_SET" = 0 ] || [ -n "$NEW_MODEL" ] || die "--model requires a non-empty value"
 [ "$EFFORT_SET" = 0 ] || [ -n "$NEW_EFFORT" ] || die "--effort requires a non-empty value"
 case "$NEW_EFFORT" in
-  ''|default|low|medium|high|xhigh|max) ;;
-  *) die "--effort must be one of default, low, medium, high, xhigh, max" ;;
+  ''|default|low|medium|high|xhigh|max|ultra) ;;
+  *) die "--effort must be one of default, low, medium, high, xhigh, max, ultra" ;;
 esac
 
 # --- exact task-id resolution ----------------------------------------------
@@ -660,9 +660,9 @@ resolve_relaunch_profile() {
     CONFIG_MODEL=$("$SCRIPT_DIR/fm-harness.sh" secondmate-model 2>/dev/null || true)
     CONFIG_EFFORT=$("$SCRIPT_DIR/fm-harness.sh" secondmate-effort 2>/dev/null || true)
     case "$CONFIG_EFFORT" in
-      ''|low|medium|high|xhigh|max) ;;
+      ''|low|medium|high|xhigh|max|ultra) ;;
       *)
-        echo "warning: config/secondmate-harness effort token '$CONFIG_EFFORT' is not one of low, medium, high, xhigh, max; ignoring" >&2
+        echo "warning: config/secondmate-harness effort token '$CONFIG_EFFORT' is not one of low, medium, high, xhigh, max, ultra; ignoring" >&2
         CONFIG_EFFORT=
         ;;
     esac
@@ -704,6 +704,9 @@ resolve_relaunch_profile() {
     TARGET_EFFORT=$PRIOR_EFFORT
   else
     TARGET_EFFORT=default
+  fi
+  if [ "$TARGET_EFFORT" = ultra ]; then
+    "$SCRIPT_DIR/fm-harness.sh" validate-native-effort "$TARGET_HARNESS" "$TARGET_MODEL" "$TARGET_EFFORT" || return 1
   fi
   # The Codex account home is a codex-only axis. An explicit one wins; otherwise
   # a replacement that stays on codex keeps the account it was running on, and

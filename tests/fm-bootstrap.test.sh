@@ -140,28 +140,6 @@ SH
   chmod +x "$fakebin/jq"
 }
 
-mirror_path_without_node() {  # <dir> <search-path>
-  local dir=$1 search=$2 bindir entry name
-  mkdir -p "$dir"
-  while :; do
-    bindir=${search%%:*}
-    if [ -d "$bindir" ]; then
-      for entry in "$bindir"/*; do
-        [ -f "$entry" ] && [ -x "$entry" ] || continue
-        name=${entry##*/}
-        [ "$name" = node ] && continue
-        [ -e "$dir/$name" ] || ln -s "$entry" "$dir/$name" 2>/dev/null
-      done
-    fi
-    case "$search" in
-      *:*) search=${search#*:} ;;
-      *) break ;;
-    esac
-  done
-  ! PATH="$dir" command -v node >/dev/null 2>&1 \
-    || fail "the node-free search path still resolved node"
-}
-
 make_fake_fleet_sync_root() {
   local dir=$1 fake_root
   fake_root="$dir/fake-root"
@@ -917,8 +895,12 @@ test_network_phase_partitions_the_run() {
   # Break the two diagnostics that stand for the two halves: a local tool floor
   # and the network GitHub-auth probe.
   rm -f "$fakebin/node"
-  isolated_path="$case_dir/path-without-node"
-  mirror_path_without_node "$isolated_path" "$fakebin:$BASE_PATH"
+  isolated_path="$fakebin:$(fm_test_base_path_sans "$BASE_PATH" node)"
+  # Assert the search path really lost node rather than trusting it was built
+  # correctly: a helper that silently failed would leave every assertion below
+  # passing against a host node this case is supposed to have hidden.
+  ! PATH="$isolated_path" command -v node >/dev/null 2>&1 \
+    || fail "the node-free search path still resolved node"
   cat > "$fakebin/gh" <<'SH'
 #!/usr/bin/env bash
 exit 1
@@ -1145,6 +1127,12 @@ unverified dispatch harness is flagged^{"rules":[{"when":"anything","use":{"harn
 unsupported codex max effort is flagged^{"rules":[{"when":"big feature","use":{"harness":"codex","model":"gpt-5","effort":"max"}}]}^exact^CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: codex:max
 unsupported grok max effort is flagged^{"rules":[{"when":"deep current work","use":{"harness":"grok","model":"grok-4","effort":"max"}}]}^exact^CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: grok:max
 unsupported grok xhigh effort is flagged^{"rules":[{"when":"deep current work","use":{"harness":"grok","model":"grok-4","effort":"xhigh"}}]}^exact^CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: grok:xhigh
+native pi ultra is accepted^{"rules":[],"default":{"harness":"pi","model":"codex-native/gpt-6-astra","effort":"ultra"}}^empty^
+native signed pi ultra is accepted^{"rules":[{"when":"native reasoning","use":{"harness":"pi-signed","model":"codex-native/gpt-6-astra","effort":"ultra"}}]}^empty^
+ordinary pi ultra is refused^{"default":{"harness":"pi","model":"openai-codex/gpt-6-astra","effort":"ultra"}}^exact^CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: pi:ultra
+missing native model ultra is refused^{"default":{"harness":"pi","effort":"ultra"}}^exact^CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: pi:ultra
+empty native model ultra is refused^{"default":{"harness":"pi","model":"codex-native/","effort":"ultra"}}^exact^CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: pi:ultra
+codex harness ultra is refused^{"default":{"harness":"codex","model":"codex-native/gpt-6-astra","effort":"ultra"}}^exact^CREW_DISPATCH: invalid config/crew-dispatch.json - invalid effort: codex:ultra
 pi max effort is accepted^{"rules":[{"when":"deep coding","use":{"harness":"pi","model":"openai-codex/gpt-5.6-sol","effort":"max"}}]}^empty^
 pi-signed max effort is accepted^{"rules":[{"when":"signed coding","use":{"harness":"pi-signed","model":"openai-codex/gpt-5.6-sol","effort":"max"}}]}^empty^
 muse shared efforts are accepted^{"rules":[{"when":"muse low","use":{"harness":"muse","effort":"low"}},{"when":"muse medium","use":{"harness":"muse","effort":"medium"}},{"when":"muse high","use":{"harness":"muse","effort":"high"}},{"when":"muse xhigh","use":{"harness":"muse","effort":"xhigh"}},{"when":"muse max","use":{"harness":"muse","effort":"max"}}]}^empty^
