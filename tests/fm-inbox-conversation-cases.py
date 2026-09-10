@@ -709,13 +709,27 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
                             sequence=portion, final=portion == 4, speech_text=text))
     worklet = temp / 'libsamplerate.worklet.js'
     worklet.write_text('// stand-in for the operator-supplied resampler worklet\n')
+    # The page does not poll until it has connected, and it spends several
+    # seconds on the allowance refusals before that. A claimer running on a wall
+    # clock therefore takes the first answer before the page has ever looked -
+    # which is exactly what happened: agent-answer-1 was claimed before Connect
+    # and so was never announced at all, while the delay was blamed four times.
+    # Wait for the page's own first poll instead of guessing at its startup.
+    page_is_polling = threading.Event()
+
+    class WatchedBridge(Bridge):
+        def call(self, command, payload=None):
+            if command == 'poll':
+                page_is_polling.set()
+            return super().call(command, payload)
+
     # A short abandon window so four shapes do not cost four fifteen-second
     # waits. This changes how long the page waits, never what it decides: the
     # ordering the lane proves is unaffected by the size of the window, and the
     # production duration is asserted separately below.
-    agent_server = Pilot(0, Bridge(pilot, connection), provider,
+    agent_server = Pilot(0, WatchedBridge(pilot, connection), provider,
                          agent_id='agent-fixture', agent_worklet=worklet,
-                         abandon_after_ms=1200)
+                         abandon_after_ms=3000)
     agent_thread = threading.Thread(target=agent_server.serve_forever, daemon=True)
     agent_thread.start()
     try:
@@ -738,6 +752,8 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
         claimed_by_harness = []
 
         def claim_what_the_page_was_offered():
+            if not page_is_polling.wait(timeout=120):
+                return
             # Only ever the FIRST still-waiting answer, never one further down
             # the queue. The page carries one at a time in order, so the first
             # waiting reply is the one it has actually announced; claiming ahead
@@ -754,15 +770,19 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
                 if pending:
                     rid = min(r['response_id'] for r in pending)
                     first = waited_since.setdefault(rid, time.monotonic())
-                    # Clear of the fixture's abandon window (1.2s) PLUS a poll
-                    # (0.6s), with margin. A declined first offer is abandoned
-                    # and re-offered before any claim lands; claiming inside that
-                    # window takes the reply before the page can offer it again
-                    # and erases the shape instead of exercising it. 1.8s put the
-                    # claim and the re-offer at the same instant, which raced and
-                    # sometimes lost - a margin, not a coincidence, is what makes
-                    # this deterministic.
-                    if time.monotonic() - first >= 3.0:
+                    # Two shapes want opposite things from the abandon window,
+                    # so the delay is per reply rather than one number:
+                    #   - the FIRST answer must survive its decline and be
+                    #     re-offered, which only happens after the page abandons
+                    #     the slot, so its claim must land AFTER one abandon;
+                    #   - every other answer must be claimed while the page still
+                    #     holds the slot, so its claim must land BEFORE abandon.
+                    # A single delay cannot satisfy both, which is why the last
+                    # run announced all four and still overlapped: every claim
+                    # arrived after its slot had already been given up.
+                    abandon_s = 3.0
+                    ready = abandon_s + 0.8 if rid.endswith('-1') else 0.8
+                    if time.monotonic() - first >= ready:
                         try:
                             Bridge(pilot, connection).call(
                                 'deliver', {'response_id': rid, 'generation': 'harness-' + rid})

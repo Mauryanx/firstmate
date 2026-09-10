@@ -181,7 +181,25 @@ const reread = async (page, state) => {
   // answer, and the one claimed but never spoken giving up its slot so the
   // answers behind it are still carried.
   const expected = Number(process.argv[4]);
-  await page.waitForFunction(n => new Set(window.__sent).size === n, expected, {timeout:90000});
+  // On timeout, say WHICH answers never went out rather than only that four did
+  // not. Offers against sent separates the two failures that look identical from
+  // outside: a reply the page never announced at all, and one it announced but
+  // could not settle so the slot behind it never freed.
+  try {
+    await page.waitForFunction(n => new Set(window.__sent).size === n, expected, {timeout:90000});
+  } catch (timeout) {
+    const seen = await page.evaluate(() => ({
+      sent: window.__sent, order: window.__order, offers: window.__offers,
+      carrying: window.__carrying, overlapped: window.__overlapped,
+    }));
+    console.error('lane timed out waiting for ' + expected + ' distinct markers');
+    console.error('  sent      : ' + JSON.stringify(seen.sent));
+    console.error('  order     : ' + JSON.stringify(seen.order));
+    console.error('  offers    : ' + JSON.stringify(seen.offers));
+    console.error('  carrying  : ' + JSON.stringify(seen.carrying));
+    console.error('  overlapped: ' + JSON.stringify(seen.overlapped));
+    throw timeout;
+  }
   const sent = await page.evaluate(() => window.__sent);
   for (const marker of sent) {
     if (!marker.startsWith('[firstmate-reply ') || !marker.endsWith(']')) throw Error('bad marker: ' + marker);
