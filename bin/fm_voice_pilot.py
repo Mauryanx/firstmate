@@ -213,10 +213,13 @@ class Bridge:
 class Pilot(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, port, bridge, provider, ack, intro=None):
+    def __init__(self, port, bridge, provider, ack, intro=None, agent_id=None, agent_sdk=None):
         super().__init__(('127.0.0.1', port), Handler)
         self.origin = 'http://127.0.0.1:' + str(self.server_port)
         self.bridge, self.provider, self.ack, self.intro = bridge, provider, ack, intro
+        # The hosted-agent page and its vendor SDK are served only when the
+        # operator has deliberately supplied both; no vendor bytes live in this repo.
+        self.agent_id, self.agent_sdk = agent_id, agent_sdk
         self.pair_secret = secrets.token_urlsafe(32)
         self.cookie, self.expires = None, 0
         self.auth_lock = threading.Lock()
@@ -254,7 +257,15 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get('Host') != self.server.origin.removeprefix('http://'):
             self.send({'error': 'wrong host'}, 403)
             return
-        names = {'/': ('index.html', 'text/html'), '/app.js': ('app.js', 'text/javascript'), '/style.css': ('style.css', 'text/css')}
+        if self.path == '/elevenlabs.js':
+            if not self.server.agent_sdk:
+                self.send({'error': 'no voice agent SDK is installed for this pilot'}, 404)
+                return
+            self.send(Path(self.server.agent_sdk).read_bytes(), kind='text/javascript')
+            return
+        names = {'/': ('index.html', 'text/html'), '/app.js': ('app.js', 'text/javascript'),
+                 '/style.css': ('style.css', 'text/css'), '/agent': ('agent.html', 'text/html'),
+                 '/agent.js': ('agent.js', 'text/javascript')}
         if self.path not in names:
             self.send({'error': 'not found'}, 404)
             return
@@ -291,6 +302,8 @@ class Handler(BaseHTTPRequestHandler):
                 # Absent artifact is normal: the written framing still names the earlier question.
                 check(self.server.intro is not None, 'no approved introduction artifact is configured')
                 self.send(self.server.intro, kind='audio/mpeg')
+            elif self.path == '/agent-config':
+                self.send({'agent_id': self.server.agent_id})
             elif self.path == '/poll':
                 self.send(self.server.bridge.call('poll'))
             elif self.path in ('/capture', '/playback'):
@@ -331,6 +344,9 @@ def main():
     parser.add_argument('--ack-sha256', required=True)
     parser.add_argument('--intro-file', type=Path)
     parser.add_argument('--intro-sha256')
+    parser.add_argument('--agent-id', help='hosted voice agent to talk to on the /agent page')
+    parser.add_argument('--agent-sdk', type=Path,
+                        help='operator-supplied vendor SDK bundle served to that page')
     parser.add_argument('--port', type=int, default=8765)
     args = parser.parse_args()
     os.umask(0o077)
@@ -347,7 +363,8 @@ def main():
             if os.environ.get(n)}
     check(len(keys) <= 1, 'conflicting ElevenLabs credentials')
     server = Pilot(args.port, Bridge(args.home, binding),
-                   ElevenLabs(next(iter(keys), None), Budget(args.spend_file, args.credit_limit)), ack, intro)
+                   ElevenLabs(next(iter(keys), None), Budget(args.spend_file, args.credit_limit)), ack, intro,
+                   args.agent_id, args.agent_sdk)
     # Verify bound owner before creating browser access, without any provider call.
     server.bridge.call('poll')
     with args.access_file.open('x') as handle:

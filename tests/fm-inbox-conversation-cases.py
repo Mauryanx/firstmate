@@ -556,3 +556,26 @@ finally:
     endpoint_thread.join()
 
 print('bridge: unauthenticated refusal before any effect, verbatim publication, varied acknowledgement')
+
+# The page that tells the agent an answer is ready, against the real transport
+# with the vendor SDK stubbed. No account, agent minute or acoustic claim.
+if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
+    run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer',
+                        speech_text='Synthetic answer for the announcing page.'))
+    agent_server = Pilot(0, Bridge(pilot, connection), provider, b'agent-lane-ack',
+                         agent_id='agent-fixture')
+    agent_thread = threading.Thread(target=agent_server.serve_forever, daemon=True)
+    agent_thread.start()
+    try:
+        subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
+                        agent_server.origin + '/agent#' + agent_server.pair_secret,
+                        'agent-fixture'], check=True, timeout=90)
+        delivery = next(r for r in owning('audit', cid='live')['replies']
+                        if r['response_id'] == 'agent-answer')
+        # The page only announces; the bridge is what actually delivers speech.
+        assert delivery['delivery']['state'] == 'waiting', delivery
+    finally:
+        agent_server.shutdown()
+        agent_server.server_close()
+        agent_thread.join()
+    print('agent page: one announcement per published answer, retried when the agent is unreachable')

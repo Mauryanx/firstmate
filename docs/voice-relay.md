@@ -87,7 +87,20 @@ Funnel publishes on port 443, 8443 or 10000 only; the loopback port it forwards 
 Configure the agent's custom reasoning endpoint as that address with `/v1/chat/completions` appended, and give it the secret as the bearer credential the platform sends in `Authorization`.
 The binding is the same private transport credential the browser pilot uses, and Firstmate still accepts and publishes from its own owning turn.
 
+The platform gives a server no way to make an agent speak, so the `/agent` page carries that one signal.
+It pairs with the pilot exactly as the browser pilot does, watches the transport for replies Firstmate has published, and tells the agent about each one as an ordinary user message naming only its identity.
+The page never reads or speaks the answer itself; the bridge does that, verbatim, when the agent asks it to.
+An answer is announced once, and an agent that cannot be reached leaves it for a later poll rather than losing it.
+
+The vendor SDK is not vendored into this repository.
+The operator supplies the bundle with `--agent-sdk` and the agent to talk to with `--agent-id`, so the page's content policy stays same-origin and the dependency decision stays with the operator.
+Without both, the page says no agent is configured rather than reaching for a third-party origin.
+
+Configure the agent itself for a brain that thinks slowly: its language model set to the bridge's Funnel address, its voice the selected George warm, synthesis on the fast model, interruptions on with the default ignore terms merged so a backchannel is not a correction, and a soft timeout near three seconds with generated and randomised fillers so silence while Firstmate works is never the same sound twice.
+The bridge's own acknowledgement covers the first moment of that wait, and the platform's fillers cover the rest.
+
 `tests/fm-inbox-conversation.test.sh` covers the bridge against the real isolated transport: refusal of absent, empty, wrong, truncated and extended secrets before any request is parsed or recorded, that a refused call changes nothing behind the gate, verbatim single delivery of a published answer, late-answer framing, transcript order across turns, and that consecutive acknowledgements differ.
+It covers the announcing page in the same runner with the vendor SDK stubbed: pairing, polling, one announcement per published answer, retry when the agent is briefly unreachable, and session end.
 It establishes nothing about turn latency, recognition, interruption or voice quality, all of which need the live agent and the captain's ear.
 
 ## Existing audio prototype
