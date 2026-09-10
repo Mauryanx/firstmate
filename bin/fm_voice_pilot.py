@@ -31,7 +31,11 @@ retried automatically. Playback claims precede synthesis and remain unknown on
 failure. No speech or action replay on refresh/reconnect.
 
 --credit-limit explicitly enables consumption of an authorized existing credit
-balance. Default zero refuses metered requests. Supply ELEVENLABS_API_KEY only
+balance. Default zero refuses metered synthesis and transcription requests; it
+does not cover hosted-agent minutes, which are spent by the agent session itself
+and are reserved against no ceiling here. The account-level no-overage checks
+below still gate every provider call, including minting an agent session token,
+so an unbudgeted agent session cannot become an overage. Supply ELEVENLABS_API_KEY only
 in the launching environment, never in a file/argument. Reservations are fsynced
 before network I/O, never refunded automatically, and retained across restart.
 Reserve one credit per TTS character and ten per begun STT second, conservatively
@@ -76,6 +80,18 @@ class PilotError(Exception):
 def check(condition, message):
     if not condition:
         raise PilotError(message)
+
+
+# How long the hosted-agent bridge holds one spoken turn open waiting for
+# Firstmate. It lives here rather than in the bridge because two programs must
+# mean the same number: the bridge holds its turn for exactly this long, and
+# this pilot tells the announcing page how long to stand off before it may claim
+# a reply the bridge is still entitled to.
+HOLD_SECONDS = 7.0
+# Added on top of that window before the page may claim anything. A held turn
+# can still have a transport call in flight when its window closes, so the page
+# waits past the hold rather than up to it.
+ANNOUNCE_SETTLE_SECONDS = 3.0
 
 
 class Budget:
@@ -151,12 +167,16 @@ class ElevenLabs:
             raise PilotError('provider request failed; usage may be uncertain; no automatic retry') from None
 
     def conversation_token(self, agent_id):
-        """Short-lived WebRTC session token for a private agent.
+        """Short-lived WebRTC session token for the configured agent.
 
         Minting a token consumes no credits and reserves nothing; the agent
         minutes are spent by connecting the session, not by asking for the key.
         The overage check still runs, because a session the account cannot
         afford should be refused before the captain is invited to talk into it.
+
+        A failure here is named rather than absorbed. Returning nothing would let
+        the page connect on the bare agent identity, and the captain would then
+        be shown an opaque agent error whose real cause was that minting failed.
         """
         check(bool(self.key), 'ElevenLabs credential is unavailable')
         check(isinstance(agent_id, str) and agent_id.replace('_', '').isalnum(), 'implausible agent identity')
@@ -177,13 +197,11 @@ class ElevenLabs:
                     'https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=' + agent_id,
                     headers={'xi-api-key': self.key}), timeout=20) as response:
                 token = json.load(response).get('token')
-            check(isinstance(token, str) and token, 'provider returned no session token')
-            return token
-        except PilotError:
-            raise
         except Exception:
-            # A public agent needs no token; the page falls back to its identity.
-            return None
+            raise PilotError('could not mint a voice agent session token; '
+                             'no agent session was started') from None
+        check(isinstance(token, str) and token, 'provider returned no session token')
+        return token
 
     def speech(self, text, request_id):
         check(isinstance(text, str) and 0 < len(text) <= MAX_SPEECH_CHARS,
@@ -361,7 +379,10 @@ class Handler(BaseHTTPRequestHandler):
                 check(self.server.intro is not None, 'no approved introduction artifact is configured')
                 self.send(self.server.intro, kind='audio/mpeg')
             elif self.path == '/agent-config':
-                self.send({'agent_id': self.server.agent_id})
+                # The page never restates the bridge's hold; it is told it here,
+                # so exactly one side is ever entitled to claim a given reply.
+                self.send({'agent_id': self.server.agent_id,
+                           'announce_after_ms': round((HOLD_SECONDS + ANNOUNCE_SETTLE_SECONDS) * 1000)})
             elif self.path == '/agent-token':
                 # A private agent needs a short-lived session token. Minting one
                 # spends nothing; connecting the session is what uses minutes.

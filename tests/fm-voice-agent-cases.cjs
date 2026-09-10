@@ -17,8 +17,8 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
     // The first attempt fails, standing in for an agent that is briefly unreachable.
     window.__failNext = true;
     window.ElevenLabsClient = {Conversation: {startSession: async opts => {
-      window.__agentId = opts.agentId;
-      window.__opts = {libsampleratePath: opts.libsampleratePath, connectionType: opts.connectionType};
+      window.__opts = {libsampleratePath: opts.libsampleratePath, connectionType: opts.connectionType,
+                       conversationToken: opts.conversationToken, agentId: opts.agentId};
       return {
         sendUserMessage: async text => {
           window.__attempts++;
@@ -33,16 +33,29 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
   await page.getByRole('button', {name:'Connect', exact:true}).click();
   await page.waitForFunction(() => document.getElementById('status').textContent === 'Listening');
   if (await page.evaluate(() => location.hash)) throw Error('pairing secret remained in location');
-  if (await page.evaluate(() => window.__agentId) !== process.argv[3]) throw Error('page opened the wrong agent');
   const opts = await page.evaluate(() => window.__opts);
+  // Every session is tokened, so a failure to mint one is named rather than
+  // becoming a bare agent identity and an opaque platform error.
+  if (opts.conversationToken !== process.argv[3]) throw Error('the session was not opened with the minted token');
+  if (opts.agentId !== undefined) throw Error('the page fell back to a bare agent identity');
   if (opts.libsampleratePath !== '/libsamplerate.worklet.js') throw Error('resampler would come from a third-party CDN');
   if (opts.connectionType !== 'webrtc') throw Error('unexpected transport: ' + opts.connectionType);
 
-  // Every answer already waiting is announced. The first attempt fails, so it
-  // must be retried by a later poll rather than lost, and no answer may ever be
-  // announced twice however many polls run.
+  // The bridge's held turn is entitled to a reply before this page is, so the
+  // page must stand off for that whole window. Ask the pilot how long that is
+  // rather than restating it, then prove nothing is announced inside it.
+  const standoff = await page.evaluate(async () => (await (await fetch('/agent-config',
+    {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})).json()).announce_after_ms);
+  if (!(standoff > 0)) throw Error('the pilot reported no stand-off window: ' + standoff);
+  await page.waitForTimeout(standoff / 2);
+  const early = await page.evaluate(() => window.__attempts);
+  if (early !== 0) throw Error('an answer was claimed while the bridge could still be holding it: ' + early);
+
+  // Every answer already waiting is then announced. The first attempt fails, so
+  // it must be retried by a later poll rather than lost, and no answer may ever
+  // be announced twice however many polls run.
   const expected = Number(process.argv[4]);
-  await page.waitForFunction(n => window.__sent.length === n, expected, {timeout:20000});
+  await page.waitForFunction(n => window.__sent.length === n, expected, {timeout:standoff + 20000});
   const attempts = await page.evaluate(() => window.__attempts);
   if (attempts !== expected + 1) throw Error('an unreachable agent did not cost exactly one retry: ' + attempts);
   const sent = await page.evaluate(() => window.__sent);
@@ -59,6 +72,6 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
   if (!await page.evaluate(() => window.__ended)) throw Error('the agent session was not ended');
   if (errors.length) throw Error(JSON.stringify(errors));
   console.log(JSON.stringify({result:'PASS', browser:browser.version(), page_errors:errors,
-    evidence:'pairing, transport polling, one announcement per published answer, retry after an unreachable agent, and session end; stubbed vendor SDK, no account or acoustic acceptance'}, null, 2));
+    evidence:'pairing, transport polling, a tokened session, the stand-off that keeps the held turn the only claimant inside its hold, one announcement per published answer, retry after an unreachable agent, and session end; stubbed vendor SDK, no account or acoustic acceptance'}, null, 2));
  } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });

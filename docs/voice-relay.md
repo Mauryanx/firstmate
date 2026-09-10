@@ -109,6 +109,15 @@ It pairs with the pilot exactly as the browser pilot does, watches the transport
 The page never reads or speaks the answer itself; the bridge does that, verbatim, when the agent asks it to.
 An answer is announced once, and an agent that cannot be reached leaves it for a later poll rather than losing it.
 
+Exactly one side may ever claim a published reply, and the held turn is entitled to it first, because delivering inside that turn is the whole point of holding it.
+The page is only the fallback for what the hold did not catch, so it stands off for the bridge's whole hold window before it may announce anything.
+Announcing sooner is not a smaller version of the same thing: a marker sent while the turn is still held either takes the answer out from under it, leaving the stall-then-reply the hold exists to prevent, or interrupts the answer mid-sentence while the transport records it as already spoken.
+The pilot tells the page how long that window is, so the length lives in one place and the page never restates it, and for the same reason the hold is not a startup flag the bridge could be moved off on its own.
+
+The page opens its session with a token minted through the pilot, always.
+A failure to mint one is named where it happened rather than falling back to the bare agent identity, which would have shown the captain an opaque platform error whose real cause was a network blip or a key that had lost its scope.
+Reloading the page is not a dead end: the pairing secret is gone from the URL after the first pairing, but the session cookie it issued is still good for its hour, and the page proves it against the transport exactly as the browser pilot does.
+
 The pairing URL the pilot writes points at whichever page it was started for: a configured agent means the `/agent` route, not the root.
 Handing over a root URL and expecting the route to be edited in is how the captain once spent a whole session reviewing the page this one replaces.
 
@@ -117,14 +126,18 @@ The operator supplies the bundle with `--agent-sdk` and the agent to talk to wit
 Without both, the page says no agent is configured rather than reaching for a third-party origin.
 
 The page gives each conversation an identifier and passes it to the bridge, which keeps that conversation's turn bookkeeping under it.
-The agent must be allowed to send that identifier, or it refuses the session outright.
-Turn bookkeeping cannot be global: a new conversation starts its transcript at one turn again, and a shared counter would read that as a repeat and answer the captain with silence.
+The agent must be allowed to send that identifier: a turn that arrives without one is refused by name, not folded onto a shared counter.
+Turn bookkeeping cannot be global: a new conversation starts its transcript at one turn again, and a shared counter would read that as a repeat and answer the captain with silence, with no error anywhere for anyone to find.
 
 The page's content policy names the vendor's own hosts for its realtime transport.
 Those were read from a live session rather than guessed from the SDK's name: the transport runs on a regional subdomain, and naming the wrong host fails nowhere except at Connect.
 
-Configure the agent itself for a brain that thinks slowly: its language model set to the bridge's Funnel address, its voice the selected George warm, synthesis on the fast model, interruptions on with the default ignore terms merged so a backchannel is not a correction, and a soft timeout near three seconds with generated and randomised fillers so silence while Firstmate works is never the same sound twice.
-The bridge's own acknowledgement covers the first moment of that wait, and the platform's fillers cover the rest.
+Configure the agent itself for a brain that thinks slowly: its language model set to the bridge's Funnel address, its voice the selected George warm, synthesis on the fast model, and interruptions on with the default ignore terms merged so a backchannel is not a correction.
+Leave the platform's generated fillers off.
+Those fillers are unconstrained text the bridge never sees, so nothing holds them to the one rule the bridge does enforce for its own openers: that nothing may claim a finding, a status or a result before Firstmate has answered.
+A generated filler is free to say the work is almost done while the request has not even been accepted, and the bridge cannot refuse a sentence it is not shown.
+Better filler was never what was asked for either; what was asked for is that the opening words be about what the captain actually said, which is the bridge's job and is done in his own words.
+The bridge's opener covers the first moment of the wait, the held turn covers the rest, and silence after that is silence on purpose.
 
 `tests/fm-inbox-conversation.test.sh` covers the bridge against the real isolated transport: refusal of absent, empty, wrong, truncated and extended secrets before any request is parsed or recorded, that a refused call changes nothing behind the gate, verbatim single delivery of a published answer, late-answer framing, transcript order across turns, and that consecutive acknowledgements differ.
 It covers the announcing page in the same runner with the vendor SDK stubbed: pairing, polling, one announcement per published answer, retry when the agent is briefly unreachable, and session end.

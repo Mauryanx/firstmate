@@ -245,6 +245,8 @@ import wave
 import base64
 from unittest.mock import patch
 
+AGENT_TOKEN = 'fixture-conversation-token'
+
 class SpeechFixture:
     def __init__(self):
         self.calls = []
@@ -252,7 +254,7 @@ class SpeechFixture:
         self.calls.append((text, request_id))
         return b'fixture-audio'
     def conversation_token(self, agent_id):
-        return None  # Stands in for a public agent, which is named rather than tokened.
+        return AGENT_TOKEN  # Every agent session is tokened; a mint failure is named, never absorbed.
 
     def transcribe(self, audio, request_id):
         return 'A synthetic spoken follow-up'
@@ -396,6 +398,30 @@ with patch('urllib.request.urlopen', network):
     assert adapter.transcribe(wav.getvalue(), 'stt-contract') == 'No, do not change option B.'
     assert requests[-1].full_url.endswith('/speech-to-text')
     assert b'RIFF' in requests[-1].data and b'scribe_v2' in requests[-1].data
+
+# A hosted-agent session is always tokened, and a failure to mint that token is
+# named rather than absorbed: a transient failure and a working agent must never
+# be indistinguishable to the captain, who would otherwise be shown an opaque
+# platform error whose real cause was here.
+def minting(request, timeout):
+    if request.full_url.endswith('/subscription'):
+        return Response(json.dumps(account).encode())
+    return Response(json.dumps({'token': 'minted-session-token'}).encode())
+
+with patch('urllib.request.urlopen', minting):
+    assert adapter.conversation_token('agent_fixture123') == 'minted-session-token'
+
+def mint_fails(request, timeout):
+    if request.full_url.endswith('/subscription'):
+        return Response(json.dumps(account).encode())
+    raise urllib.error.URLError('a transient minting failure')
+
+with patch('urllib.request.urlopen', mint_fails):
+    try:
+        adapter.conversation_token('agent_fixture123')
+        raise AssertionError('a failed mint was absorbed instead of named')
+    except PilotError as exc:
+        assert 'session token' in str(exc), exc
 print('pilot: exact owner publication, HTTP isolation, single delivery, credit and overage guards passed')
 
 # Opt-in actual browser mechanics share the real isolated transport and current
@@ -579,6 +605,14 @@ try:
     ask('', 400, messages=[{'role': 'system', 'content': 'only a system prompt'}])
     ask('', 400, messages=[])
 
+    # A turn carrying no conversation identity is refused, loudly. Folding it
+    # onto a shared counter would let a fresh conversation's turns be read as
+    # repeats and answered with silence, with no error anywhere to find.
+    unkeyed = len(owning('audit', cid='live')['requests'])
+    ask('', 400, grow=False, extra={'session_id': None},
+        messages=[{'role': 'user', 'content': 'Who is holding this conversation?'}])
+    assert len(owning('audit', cid='live')['requests']) == unkeyed
+
     # A NEW conversation starts its transcript at one turn again. Turn
     # bookkeeping is per conversation, so that must be heard, not read as a
     # repeat of the previous conversation and answered with silence.
@@ -703,7 +737,7 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
                       if r['delivery']['state'] == 'waiting')
         subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
                         agent_server.origin + '/agent#' + agent_server.pair_secret,
-                        'agent-fixture', str(waiting)], check=True, timeout=90)
+                        AGENT_TOKEN, str(waiting)], check=True, timeout=120)
         delivery = next(r for r in owning('audit', cid='live')['replies']
                         if r['response_id'] == 'agent-answer')
         # The page only announces; the bridge is what actually delivers speech.

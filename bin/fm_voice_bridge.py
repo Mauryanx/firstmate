@@ -38,14 +38,16 @@ import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from fm_inbox_conversation import canonical
-from fm_voice_pilot import Bridge, PilotError, check
+from fm_voice_pilot import HOLD_SECONDS, Bridge, PilotError, check
 
 # The browser sends this as an ordinary user message once Firstmate has published
 # a reply, because the platform offers a server no way to make the agent speak.
 ANSWER_MARKER = '[firstmate-reply '
 
 # Spoken while Firstmate reads and thinks. None of these claims a result, reports
-# progress, or promises a time; the platform's own fillers cover later silence.
+# progress, or promises a time, and nothing fills the silence that follows: the
+# platform's generated fillers are left off, because the bridge cannot hold text
+# it never sees to that rule.
 ACKNOWLEDGEMENTS = (
     'On it.',
     'Let me check.',
@@ -59,21 +61,23 @@ ACKNOWLEDGEMENTS = (
 
 MAX_BODY_BYTES = 400000
 
-# How long one spoken turn may stay open waiting for Firstmate, and how often the
-# bridge looks. Holding the turn open is what lets the answer continue the opener
-# as one utterance instead of arriving later as a separate announcement.
+# One spoken turn stays open for HOLD_SECONDS waiting for Firstmate, and the
+# bridge looks every LOOK_INTERVAL. Holding the turn open is what lets the answer
+# continue the opener as one utterance instead of arriving later as a separate
+# announcement. That length is defined in fm_voice_pilot, not here, because the
+# announcing page must stand off for the same window: a held turn is entitled to
+# the reply it is waiting for, and no reply may ever have two claimants.
 #
-# This MUST stay below the agent's own cascade timeout. Measured against the live
+# It MUST stay below the agent's own cascade timeout. Measured against the live
 # platform: a turn still open when that timeout expires ends the whole
 # conversation with an LLM cascade error, which drops the captain mid-call, so a
-# generous hold is worse than a short one. With the cascade timeout at its
-# documented maximum of 15 seconds, 10 leaves a proven margin. Holding does not
-# delay speech: the opener is synthesised and heard about two seconds in either
-# way, and only the platform's own bookkeeping waits for the stream to finish.
-HOLD_SECONDS = 7.0
+# generous hold is worse than a short one. Holding does not delay speech: the
+# opener is synthesised and heard about two seconds in either way, and only the
+# platform's own bookkeeping waits for the stream to finish.
+
 # The agent's own cascade timeout, which the hold must stay clear of. Exceeding it
 # does not time the turn out, it ends the captain's conversation, so the margin is
-# enforced at startup rather than left to whoever edits the flag next.
+# enforced at startup rather than left to whoever moves one of them next.
 #
 # PROVISIONAL: the six second margin is a judgement, not a measurement.
 #
@@ -174,7 +178,7 @@ def require_safe_hold(hold, cascade):
 
     A turn still open when that timeout expires ends the captain's conversation
     rather than merely ending the turn, so this is checked before the socket
-    exists instead of being left to whoever edits the flag next.
+    exists instead of being left to whoever moves one of them next.
     """
     check(hold >= 0, 'hold cannot be negative')
     check(hold <= cascade - CASCADE_MARGIN,
@@ -238,7 +242,12 @@ class Sessions:
 
     def speak(self, messages, extra):
         key = extra.get('session_id')
-        key = key if isinstance(key, str) and 0 < len(key) <= 200 else 'unkeyed'
+        # A turn carrying no conversation identity is refused, loudly, rather
+        # than folded onto a shared counter: that counter reads a fresh
+        # conversation's first turn as a repeat and answers the captain with
+        # silence, with no error anywhere for anyone to find.
+        check(isinstance(key, str) and 0 < len(key) <= 200,
+              'a session identity is required; allow the agent to send session_id')
         return self.for_key(key).speak(messages, extra)
 
 
@@ -314,12 +323,17 @@ class Session:
         """Speak the opener now, then hold this turn open for Firstmate's answer."""
         yield opening + ' '
         deadline = time.time() + self.hold
-        while time.time() < deadline:
+        while True:
             time.sleep(LOOK_INTERVAL)
             try:
                 state = self.bridge.call('poll')
             except PilotError:
                 return  # The answer is still durable; the page will announce it.
+            # This turn's claim ends with its hold window. Past the deadline the
+            # announcing page is the only claimant, so a look that came back late
+            # must not take an answer the page has become entitled to carry.
+            if time.time() >= deadline:
+                return
             reply = next((r for r in state['replies'] if r['request_id'] == request_id and
                           r['delivery']['state'] == 'waiting'), None)
             if reply is not None:
@@ -474,18 +488,19 @@ def main():
     parser.add_argument('--secret-file', required=True, type=Path,
                         help='file holding the shared secret; never passed as an argument')
     parser.add_argument('--port', type=int, default=8770)
-    parser.add_argument('--hold-seconds', type=float, default=HOLD_SECONDS,
-                        help='how long one spoken turn waits for Firstmate before ending')
     parser.add_argument('--cascade-seconds', type=float, default=CASCADE_SECONDS,
                         help="the agent's own cascade timeout, which the hold must stay clear of")
     args = parser.parse_args()
     try:
-        require_safe_hold(args.hold_seconds, args.cascade_seconds)
+        # The hold is not a flag: the announcing page stands off for exactly this
+        # window, so a hold this process could change on its own would put two
+        # claimants on the same reply. Only the operator's cascade timeout, which
+        # is configured in the agent console rather than here, is told to us.
+        require_safe_hold(HOLD_SECONDS, args.cascade_seconds)
         secret = args.secret_file.read_text().strip()
         binding = json.loads(args.binding.read_text())
         check(isinstance(binding, dict) and binding.get('conversation_id'), 'binding is not a conversation')
-        session = Sessions(Bridge(args.home, binding), ShuffleBag(ACKNOWLEDGEMENTS),
-                           hold=args.hold_seconds)
+        session = Sessions(Bridge(args.home, binding), ShuffleBag(ACKNOWLEDGEMENTS))
         endpoint = Endpoint(args.port, session, secret)
     except PilotError as exc:
         # Name the cause. "Startup failed" once sent an operator hunting the
