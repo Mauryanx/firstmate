@@ -105,6 +105,9 @@ It pairs with the pilot exactly as the browser pilot does, watches the transport
 The page never reads or speaks the answer itself; the bridge does that, verbatim, when the agent asks it to.
 An answer is announced once, and an agent that cannot be reached leaves it for a later poll rather than losing it.
 
+The pairing URL the pilot writes points at whichever page it was started for: a configured agent means the `/agent` route, not the root.
+Handing over a root URL and expecting the route to be edited in is how the captain once spent a whole session reviewing the page this one replaces.
+
 The vendor SDK is not vendored into this repository.
 The operator supplies the bundle with `--agent-sdk` and the agent to talk to with `--agent-id`, so the page's content policy stays same-origin and the dependency decision stays with the operator.
 Without both, the page says no agent is configured rather than reaching for a third-party origin.
@@ -112,6 +115,9 @@ Without both, the page says no agent is configured rather than reaching for a th
 The page gives each conversation an identifier and passes it to the bridge, which keeps that conversation's turn bookkeeping under it.
 The agent must be allowed to send that identifier, or it refuses the session outright.
 Turn bookkeeping cannot be global: a new conversation starts its transcript at one turn again, and a shared counter would read that as a repeat and answer the captain with silence.
+
+The page's content policy names the vendor's own hosts for its realtime transport.
+Those were read from a live session rather than guessed from the SDK's name: the transport runs on a regional subdomain, and naming the wrong host fails nowhere except at Connect.
 
 Configure the agent itself for a brain that thinks slowly: its language model set to the bridge's Funnel address, its voice the selected George warm, synthesis on the fast model, interruptions on with the default ignore terms merged so a backchannel is not a correction, and a soft timeout near three seconds with generated and randomised fillers so silence while Firstmate works is never the same sound twice.
 The bridge's own acknowledgement covers the first moment of that wait, and the platform's fillers cover the rest.

@@ -293,7 +293,10 @@ class Handler(BaseHTTPRequestHandler):
         if self.path in self.AGENT_PATHS:
             return ("default-src 'self'; script-src 'self' blob: data:; style-src 'self'; "
                     "media-src 'self' blob:; worker-src 'self' blob:; "
-                    "connect-src 'self' https://api.elevenlabs.io wss://api.elevenlabs.io https://livekit.cloud wss://*.livekit.cloud; "
+                    # The vendor's own hosts, observed rather than guessed: the realtime
+                    # transport lives on a regional subdomain, not the name its SDK is
+                    # built from, and naming the wrong one fails only at Connect.
+                    "connect-src 'self' https://*.elevenlabs.io wss://*.elevenlabs.io; "
                     "frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
         return ("default-src 'self'; script-src 'self'; style-src 'self'; media-src 'self' blob:; "
                 "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
@@ -429,8 +432,13 @@ def main():
                    args.agent_id, args.agent_sdk, args.agent_worklet)
     # Verify bound owner before creating browser access, without any provider call.
     server.bridge.call('poll')
+    # Point the pairing URL at the page this pilot was actually started for.
+    # A configured agent means the hosted-agent page; writing the root URL and
+    # expecting the operator to edit the route in is how the captain came to
+    # spend a whole session reviewing the page we were replacing.
+    page = '/agent#' if args.agent_id else '/#'
     with args.access_file.open('x') as handle:
-        handle.write(server.origin + '/#' + server.pair_secret + '\n')
+        handle.write(server.origin + page + server.pair_secret + '\n')
     print('Private pairing URL written to ' + str(args.access_file), flush=True)
     server.serve_forever()
 
