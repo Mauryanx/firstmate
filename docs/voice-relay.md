@@ -109,10 +109,13 @@ The page is the only thing that carries a published reply to the agent, so a rep
 It carries them one at a time, in the order Firstmate published them, with at most one marker outstanding.
 A marker is an interruption and the agent is configured to treat it as one, so the page sends nothing while the agent has the floor - and nothing in the gap before it takes the floor either.
 That gap is the dangerous one: the bridge claims the answer before the agent has begun to say it, so a page that treated the claim as the end of the matter would send the next marker into the silence and cut the answer in half, with the transport already recording it delivered.
-The outstanding marker is finished only when the agent has been heard speaking and has stopped.
+The outstanding marker is finished when its reply has been claimed and the agent has spoken and stopped since that claim landed.
+Both halves carry weight, because the page is never told whose speech it just heard.
+The claim alone is not enough, for the reason above; and speech alone is not enough either, because the platform speaks a pause line of its own on every turn the bridge answers with silence, and one of those ending before the claim landed would otherwise settle a marker whose answer had not been said yet.
 The transport is the page's only memory of what has been carried: a claimed reply is no longer waiting, so nothing is carried twice, and one still waiting is still owed.
-A marker that produces no speech - the bridge can decline a claim it has no time to finish, and nothing tells the page it did - leaves that reply waiting, so it is offered again after longer than a whole bridge turn can take.
-That wait is what keeps a retry from racing a marker still being worked on, and it is the difference between an answer arriving late and an answer never arriving.
+A marker is given up after longer than a whole bridge turn can take, whatever became of it, which keeps an offer from racing a marker still being worked on.
+A reply still waiting then is offered again - the bridge can decline a claim it has no time to finish, and nothing tells the page it did - so the difference is an answer arriving late rather than never.
+A reply claimed and never spoken is already lost, and the slot is given up for it too: holding it would lose every answer published afterwards as well, which is worse than losing the one.
 
 The bridge will not begin a claim it cannot finish inside the turn's remaining budget.
 The transport writes and fsyncs the claim before its answer gets back, so a call killed after that leaves the reply claimed, unspoken, and no longer waiting for the page - the captain never hears it and nothing reports it.

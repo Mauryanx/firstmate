@@ -691,11 +691,17 @@ print('bridge: a substantive turn is filed and answered with silence, not with f
 if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     # An answer may be published as ordered portions, and every portion is
     # announced: this page is the only thing that claims one, so a portion left
-    # unannounced is an answer the captain never hears.
-    run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer',
-                        sequence=1, final=False, speech_text='The first portion of one answer.'))
-    run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer-rest',
-                        sequence=2, final=True, speech_text='The rest of that same answer.'))
+    # unannounced is an answer the captain never hears. Four of them, because the
+    # stand-in bridge meets each one differently - declined, spoken over by a
+    # pause line, claimed and never spoken, carried - and the last proves the
+    # ones behind a lost answer are still carried.
+    for portion, text in enumerate(('The first portion of one answer.',
+                                    'The second portion of it.',
+                                    'The third portion of it.',
+                                    'The rest of that same answer.'), start=1):
+        run('publish', dict(live_reply, request_id='bridge-2',
+                            response_id='agent-answer-%d' % portion,
+                            sequence=portion, final=portion == 4, speech_text=text))
     worklet = temp / 'libsamplerate.worklet.js'
     worklet.write_text('// stand-in for the operator-supplied resampler worklet\n')
     agent_server = Pilot(0, Bridge(pilot, connection), provider, b'agent-lane-ack',
@@ -705,7 +711,7 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     try:
         waiting = [r for r in owning('audit', cid='live')['replies']
                    if r['delivery']['state'] == 'waiting']
-        assert {'agent-answer', 'agent-answer-rest'} <= {r['response_id'] for r in waiting}, waiting
+        assert {r['response_id'] for r in waiting} == {'agent-answer-%d' % n for n in (1, 2, 3, 4)}, waiting
         subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
                         agent_server.origin + '/agent#' + agent_server.pair_secret,
                         AGENT_TOKEN, str(len(waiting))],

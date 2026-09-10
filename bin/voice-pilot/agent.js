@@ -8,21 +8,27 @@ const MARKER = id => '[firstmate-reply ' + id + ']';
 let secret = location.hash.slice(1);
 history.replaceState(null, '', location.pathname);
 let session = null, cid = null, polling = false, speaking = false;
-// The one marker in flight, if any: {id, sentAt, heard}. At most one is ever
-// outstanding. A marker is an interruption, and the agent starts speaking a
-// moment AFTER it accepts one, so a second marker sent inside that moment cuts
-// the first answer off mid-sentence while the transport has already recorded it
-// as delivered. Nothing else goes out until this one has been spoken and the
-// agent has stopped, or until it is plainly not going to be.
+// When the agent last stopped talking. The page cannot be told which answer a
+// stretch of speech belonged to, so it reads that from the order of events: the
+// bridge claims a reply before its words can be synthesised, so speech that had
+// already ended when the claim landed cannot have been that reply's.
+let stoppedAt = 0;
+// The one marker in flight, if any: {id, sentAt, claimedAt}. At most one is
+// ever outstanding. A marker is an interruption, and the agent starts speaking
+// a moment AFTER the bridge claims the answer, so a second marker sent inside
+// that moment cuts the first answer off mid-sentence while the transport has
+// already recorded it as delivered.
 let outstanding = null;
-// How long to wait before offering the same reply again. The bridge can decline
-// a marker - it refuses a claim it has no time left to finish - and nothing
-// tells this page that happened, so a reply the transport still shows waiting
-// after a whole bridge turn could have run is offered once more rather than
-// lost. Longer than that turn can be: it is bounded by the agent's cascade
-// timeout, whose documented maximum is fifteen seconds, less the bridge's own
-// margin. A retry can therefore never race a marker still being worked on.
-const RETRY_AFTER_MS = 15000;
+// How long a marker may stay outstanding before the slot is given up, whatever
+// became of it. Two things end that way. A reply the transport still shows
+// waiting was declined - the bridge refuses a claim it has no time left to
+// finish, and nothing tells this page so - and it is offered again rather than
+// lost. A reply that was claimed and never spoken is already lost, and holding
+// the slot for it would lose every answer published afterwards too, which is
+// worse. Longer than a whole bridge turn can be, so an offer never races a
+// marker still being worked on: that turn is bounded by the agent's cascade
+// timeout, whose documented maximum is fifteen seconds, less the bridge's margin.
+const ABANDON_AFTER_MS = 15000;
 const status = text => { $('status').textContent = text; };
 function log(text) {
   const li = document.createElement('li');
@@ -40,14 +46,20 @@ async function api(path, data = {}) {
 // has not is still owed to the captain. This page is the only thing that claims
 // a published reply, so a reply it leaves unannounced is an answer he never
 // hears - which is why a marker that produced no speech is offered again.
-function settled(waiting) {
+//
+// The slot frees when this reply has been claimed AND the agent has spoken and
+// stopped since that claim landed. Both halves matter. Without the claim, an
+// answer taken but never voiced holds the slot for good and silently swallows
+// every answer after it. Without ordering the speech against the claim, the
+// platform's own pause line - it speaks one on any turn the bridge answers with
+// silence - would settle a marker whose answer has not been said yet.
+function settled() {
   if (!outstanding) return true;
-  if (outstanding.heard) return !speaking;
-  return Date.now() - outstanding.sentAt >= RETRY_AFTER_MS &&
-         waiting.some(reply => reply.response_id === outstanding.id);
+  if (outstanding.claimedAt && !speaking && stoppedAt > outstanding.claimedAt) return true;
+  return Date.now() - outstanding.sentAt >= ABANDON_AFTER_MS;
 }
 async function announce(reply) {
-  outstanding = {id: reply.response_id, sentAt: Date.now(), heard: false};
+  outstanding = {id: reply.response_id, sentAt: Date.now(), claimedAt: 0};
   try {
     await session.sendUserMessage(MARKER(reply.response_id));
     log('Firstmate answered; asked the agent to say it.');
@@ -67,7 +79,11 @@ async function poll() {
     $('waiting').textContent = waiting
       ? waiting + ' message(s) with Firstmate' : 'Nothing waiting with Firstmate';
     const owed = state.replies.filter(reply => reply.delivery.state === 'waiting');
-    if (settled(owed)) outstanding = null;
+    if (outstanding && !outstanding.claimedAt &&
+        !owed.some(reply => reply.response_id === outstanding.id)) {
+      outstanding.claimedAt = Date.now();
+    }
+    if (settled()) outstanding = null;
     // Replies go out one at a time, in the order Firstmate published them, so
     // the portions of one answer stay in order and never overlap each other.
     if (!speaking && !outstanding && owed.length) await announce(owed[0]);
@@ -105,10 +121,9 @@ async function connect() {
     libsampleratePath: '/libsamplerate.worklet.js',
     onStatusChange: state => status('Agent ' + (state.status || state)),
     onModeChange: state => {
-      speaking = (state.mode || state) === 'speaking';
-      // The agent has begun saying what the outstanding marker asked for, which
-      // is the only proof this page gets that the bridge accepted it.
-      if (speaking && outstanding) outstanding.heard = true;
+      const talking = (state.mode || state) === 'speaking';
+      if (speaking && !talking) stoppedAt = Date.now();
+      speaking = talking;
     },
     onDisconnect: () => { session = null; speaking = false; outstanding = null; status('Disconnected.'); },
     onError: message => status('Agent error: ' + message),
