@@ -59,6 +59,64 @@ ACKNOWLEDGEMENTS = (
 
 MAX_BODY_BYTES = 400000
 
+# How long one spoken turn may stay open waiting for Firstmate, and how often the
+# bridge looks. Holding the turn open is what lets the answer continue the opener
+# as one utterance instead of arriving later as a separate announcement.
+HOLD_SECONDS = 20.0
+LOOK_INTERVAL = 0.5
+
+# An opener may reflect what the captain asked. It may never assert a finding, a
+# status or a result, because nothing has been answered when it is spoken.
+TOPIC_OPENERS = (
+    'Let me look into {topic}.',
+    'Give me a moment on {topic}.',
+    'Let me find out about {topic}.',
+    'Checking on {topic} now.',
+    'Right, {topic}. Let me find out.',
+)
+
+# Phrases that introduce what the captain is asking about.
+TOPIC_LEADS = (' about ', ' regarding ', ' with regard to ', ' on the subject of ')
+TOPIC_IMPERATIVES = ('tell me about', 'find out about', 'look into', 'look up', 'look at',
+                     'pull up', 'check on', 'check', 'review', 'read')
+# A topic carrying a verb is a claim, not a subject. Echoing it would put words
+# about the state of the work into the bridge's mouth before Firstmate answered.
+CLAIM_WORDS = frozenset("""is are was were be been being do does did doing done has have had
+    will would shall should can could may might must broke broken break breaks failed fails
+    fail works worked working went gone goes ran run running said says say think thinks
+    happened happening seems seem looks look""".split())
+MAX_TOPIC_WORDS = 8
+MAX_TOPIC_CHARS = 60
+
+
+def topic_of(said):
+    """The subject the captain named, or None when nothing can be said truthfully.
+
+    Conservative by design: it returns a noun-ish phrase drawn from his own
+    words, and nothing at all when the phrase would carry a claim or read badly.
+    """
+    lowered = said.lower()
+    candidate = None
+    for lead in TOPIC_LEADS:
+        at = lowered.find(lead)
+        if at != -1:
+            candidate = said[at + len(lead):]
+            break
+    if candidate is None:
+        for verb in TOPIC_IMPERATIVES:
+            if lowered.startswith(verb + ' '):
+                candidate = said[len(verb) + 1:]
+                break
+    if candidate is None:
+        return None
+    candidate = candidate.strip().strip('?.!,;:').strip()
+    words = candidate.split()
+    if not words or len(words) > MAX_TOPIC_WORDS or len(candidate) > MAX_TOPIC_CHARS:
+        return None
+    if any(word.strip('?.!,;:').lower() in CLAIM_WORDS for word in words):
+        return None
+    return ' '.join(words)
+
 
 class ShuffleBag:
     """Draws every phrase before repeating one, and never twice in a row."""
@@ -118,8 +176,10 @@ class Sessions:
 
     LIMIT = 64
 
-    def __init__(self, bridge, bag):
+    def __init__(self, bridge, bag, topics=None, hold=HOLD_SECONDS):
         self.bridge, self.bag = bridge, bag
+        self.topics = topics or ShuffleBag(TOPIC_OPENERS)
+        self.hold = hold
         self.sessions = {}
         self.lock = threading.Lock()
 
@@ -128,7 +188,7 @@ class Sessions:
             if key not in self.sessions:
                 if len(self.sessions) >= self.LIMIT:
                     self.sessions.pop(next(iter(self.sessions)))
-                self.sessions[key] = Session(self.bridge, self.bag)
+                self.sessions[key] = Session(self.bridge, self.bag, self.topics, self.hold)
             return self.sessions[key]
 
     def speak(self, messages, extra):
@@ -140,8 +200,10 @@ class Sessions:
 class Session:
     """Maps one platform conversation onto the bound Firstmate conversation."""
 
-    def __init__(self, bridge, bag):
+    def __init__(self, bridge, bag, topics=None, hold=HOLD_SECONDS):
         self.bridge, self.bag = bridge, bag
+        self.topics = topics or ShuffleBag(TOPIC_OPENERS)
+        self.hold = hold
         self.previous_turn = None
         self.handled_turns = 0
         self.lock = threading.Lock()
@@ -177,8 +239,21 @@ class Session:
         requests = self.bridge.call('poll')['requests']
         return requests[-1]['turn_id'] if requests else None
 
+    def opener(self, said):
+        """The first words of the turn, about what he asked wherever that is safe."""
+        topic = topic_of(said)
+        if topic is None:
+            # Nothing specific can be said truthfully from his words alone.
+            return self.bag.draw()
+        return self.topics.draw().format(topic=topic)
+
     def record(self, said, extra):
-        """File the captain's own words, then acknowledge without claiming a result."""
+        """File the captain's own words, then speak while Firstmate reads them.
+
+        The turn is held open afterwards so Firstmate's answer continues this
+        same utterance rather than arriving later as a separate announcement.
+        Capture happens here, eagerly, not inside the generator.
+        """
         request_id = str(extra.get('request_id') or uuid.uuid4())
         turn_id = str(uuid.uuid4())
         previous = self.tail()
@@ -188,7 +263,43 @@ class Session:
                                      'created_at': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())})
         with self.lock:
             self.previous_turn = turn_id
-        return [self.bag.draw()]
+        return self.utterance(self.opener(said), request_id)
+
+    def utterance(self, opening, request_id):
+        """Speak the opener now, then hold this turn open for Firstmate's answer."""
+        yield opening
+        deadline = time.time() + self.hold
+        while time.time() < deadline:
+            time.sleep(LOOK_INTERVAL)
+            try:
+                state = self.bridge.call('poll')
+            except PilotError:
+                return  # The answer is still durable; the page will announce it.
+            reply = next((r for r in state['replies'] if r['request_id'] == request_id and
+                          r['delivery']['state'] == 'waiting'), None)
+            if reply is not None:
+                generation = str(uuid.uuid4())
+                result = self.bridge.call('deliver', {'response_id': reply['response_id'],
+                                                      'generation': generation})
+                if result.get('deliver'):
+                    try:
+                        yield ' ' + result['speech_text']
+                    except GeneratorExit:
+                        # The platform hung up after the answer was claimed but
+                        # before it could be heard. Record that it was not, so
+                        # the claim never reads as an answer the captain got.
+                        self.unheard(reply['response_id'], generation)
+                        raise
+                return
+            # Speaks nothing; keeps the stream alive while Firstmate thinks.
+            yield ''
+
+    def unheard(self, response_id, generation):
+        try:
+            self.bridge.call('playback', {'response_id': response_id, 'generation': generation,
+                                          'state': 'unknown', 'position_ms': 0})
+        except PilotError:
+            pass  # Nothing further can be recorded; the durable claim still stands.
 
     def deliver(self, response_id):
         """Speak Firstmate's published words verbatim, framed if the captain moved on."""
@@ -278,16 +389,24 @@ class Handler(BaseHTTPRequestHandler):
         self.refuse(404, 'unsupported endpoint')
 
     def stream(self, portions):
+        """Write each portion as it is produced, so the first words leave at once.
+
+        A turn may stay open while Firstmate thinks, so nothing is collected
+        first; the platform starts speaking the opener while the rest is pending.
+        """
         self.send_response(200)
         self.send_header('Content-Type', 'text/event-stream')
         self.send_header('Cache-Control', 'no-store')
         self.send_header('Connection', 'close')
+        self.close_connection = True
         self.end_headers()
         identity = 'chatcmpl-' + secrets.token_hex(12)
+        spoke = False
         try:
             for portion in portions:
                 self.event(dict(chunk(portion), id=identity))
-            if not portions:
+                spoke = True
+            if not spoke:
                 # Nothing to say is said by saying nothing, not by inventing filler.
                 self.event(dict(chunk(''), id=identity))
             self.event(dict(chunk(None, finish='stop'), id=identity))
@@ -310,12 +429,15 @@ def main():
     parser.add_argument('--secret-file', required=True, type=Path,
                         help='file holding the shared secret; never passed as an argument')
     parser.add_argument('--port', type=int, default=8770)
+    parser.add_argument('--hold-seconds', type=float, default=HOLD_SECONDS,
+                        help='how long one spoken turn waits for Firstmate before ending')
     args = parser.parse_args()
     try:
         secret = args.secret_file.read_text().strip()
         binding = json.loads(args.binding.read_text())
         check(isinstance(binding, dict) and binding.get('conversation_id'), 'binding is not a conversation')
-        session = Sessions(Bridge(args.home, binding), ShuffleBag(ACKNOWLEDGEMENTS))
+        session = Sessions(Bridge(args.home, binding), ShuffleBag(ACKNOWLEDGEMENTS),
+                           hold=args.hold_seconds)
         endpoint = Endpoint(args.port, session, secret)
     except (PilotError, ValueError, KeyError, TypeError, OSError):
         raise SystemExit('voice bridge startup failed; verify the binding, the shared secret and the port') from None

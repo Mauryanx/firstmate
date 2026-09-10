@@ -430,12 +430,15 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
 # front of the same durable transport. Reachable from the internet through the
 # operator's Funnel, so authentication is proven before any useful behaviour.
 import random
+import time
 
 from fm_voice_bridge import ANSWER_MARKER, Endpoint, Sessions, ShuffleBag
 
 secret = 'x' * 32
 bag_order = random.Random(7)
-bridge_session = Sessions(Bridge(pilot, connection), ShuffleBag(['first ack.', 'second ack.'], bag_order))
+bridge_session = Sessions(Bridge(pilot, connection), ShuffleBag(['first ack.', 'second ack.'], bag_order),
+                          topics=ShuffleBag(['Looking into {topic}.', 'On {topic} now.'], random.Random(11)),
+                          hold=0.6)
 try:
     Endpoint(0, bridge_session, 'too short')
     raise AssertionError('a weak shared secret must refuse to listen')
@@ -499,11 +502,13 @@ try:
     assert len(owning('audit', cid='live')['requests']) == before
 
     # A substantive turn files the captain's own words and acknowledges, varied.
+    # The opening words are about what he actually asked, drawn from his own
+    # words, and they never assert a finding, a status or a result.
     said = 'Tell me what the research found about option B.'
     first = ask(said, extra={'request_id': 'bridge-1'})
-    assert first in ('first ack.', 'second ack.'), first
+    assert first in ('Looking into option B.', 'On option B now.'), first
     second = ask('And what about option A?', extra={'request_id': 'bridge-2'})
-    assert second != first, 'the acknowledgement repeated back to back'
+    assert 'option A' in second, second
     filed = owning('audit', cid='live')['requests']
     assert len(filed) == before + 2
     assert [r['request_id'] for r in filed[-2:]] == ['bridge-1', 'bridge-2']
@@ -550,6 +555,14 @@ try:
     assert ask('And what about option A?') != ''
     assert len(owning('audit', cid='live')['requests']) == settled + 1
 
+    # A question whose subject carries a claim gets a neutral opener instead: the
+    # bridge must not repeat "the build is broken" back as though it knew.
+    neutral = ask('Tell me about why the build is broken.')
+    assert neutral in ('first ack.', 'second ack.'), neutral
+    assert 'broken' not in neutral and 'build' not in neutral
+    again = ask('Why is the deploy failing?')
+    assert again in ('first ack.', 'second ack.') and again != neutral, (neutral, again)
+
     # A transcript carrying no captain turn at all is refused, not guessed at.
     ask('', 400, messages=[{'role': 'system', 'content': 'only a system prompt'}])
     ask('', 400, messages=[])
@@ -582,7 +595,85 @@ finally:
     endpoint.server_close()
     endpoint_thread.join()
 
+# The turn is held open, so an answer published while the captain waits continues
+# the SAME utterance rather than arriving later as a separate announcement.
+holding = Sessions(Bridge(pilot, connection), ShuffleBag(['neutral one.', 'neutral two.'], random.Random(3)),
+                   topics=ShuffleBag(['Looking into {topic}.', 'On {topic} now.'], random.Random(5)),
+                   hold=25.0)
+held = Endpoint(0, holding, secret)
+held_origin = 'http://127.0.0.1:' + str(held.server_port)
+held_thread = threading.Thread(target=held.serve_forever, daemon=True)
+held_thread.start()
+spoken_turn = {}
+
+
+def hold_ask(said, request_id):
+    body = {'model': 'x', 'stream': True, 'elevenlabs_extra_body': {'session_id': 'held', 'request_id': request_id},
+            'messages': [{'role': 'user', 'content': said}]}
+    request = urllib.request.Request(held_origin + '/v1/chat/completions', json.dumps(body).encode(),
+                                     {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + secret})
+    payload = urllib.request.urlopen(request, timeout=30).read().decode()
+    said_parts = [json.loads(line[6:])['choices'][0]['delta'].get('content', '')
+                  for line in payload.splitlines() if line.startswith('data: ') and line != 'data: [DONE]']
+    spoken_turn['text'] = ''.join(said_parts)
+
+
+try:
+    answer = 'Option B took twelve and a half seconds, and nothing was changed.'
+    turn = threading.Thread(target=hold_ask, args=('Tell me what we found about option B.', 'held-1'))
+    turn.start()
+    # Firstmate answers while the captain is still on that turn.
+    for _ in range(40):
+        time.sleep(0.25)
+        if any(r['request_id'] == 'held-1' for r in owning('audit', cid='live')['requests']):
+            break
+    owning('accept', cid='live')
+    while True:
+        accepted = owning('audit', cid='live')['requests']
+        if next(r['state'] for r in accepted if r['request_id'] == 'held-1') == 'accepted':
+            break
+        owning('accept', cid='live')
+    run('publish', dict(live_reply, request_id='held-1', response_id='held-answer', speech_text=answer))
+    turn.join(timeout=30)
+    assert not turn.is_alive(), 'the held turn never finished'
+    heard_turn = spoken_turn['text']
+    # One continuous thought: the opener about his words, then the answer verbatim.
+    assert heard_turn.startswith(('Looking into option B.', 'On option B now.')), heard_turn
+    assert heard_turn.endswith(answer), heard_turn
+    # The answer is spoken once; it is no longer waiting for the announcing page.
+    delivered = next(r for r in owning('audit', cid='live')['replies'] if r['response_id'] == 'held-answer')
+    assert delivered['delivery']['state'] != 'waiting', delivered
+
+    # If the platform hangs up while the turn is held, the turn must end without
+    # consuming anything: the answer stays available for the announcing page
+    # rather than being marked spoken to a listener who had already gone.
+    body = {'model': 'x', 'stream': True,
+            'elevenlabs_extra_body': {'session_id': 'held', 'request_id': 'held-2'},
+            'messages': [{'role': 'user', 'content': 'x'}, {'role': 'user', 'content': 'And about option C?'}]}
+    cut = urllib.request.Request(held_origin + '/v1/chat/completions', json.dumps(body).encode(),
+                                 {'Content-Type': 'application/json', 'Authorization': 'Bearer ' + secret})
+    while any(r['state'] == 'saved' for r in owning('audit', cid='live')['requests']):
+        owning('accept', cid='live')
+    stream = urllib.request.urlopen(cut, timeout=30)
+    stream.read(1)          # Take the opener, then hang up while the turn is held.
+    stream.close()
+    while True:
+        rows = owning('audit', cid='live')['requests']
+        if next((r['state'] for r in rows if r['request_id'] == 'held-2'), None) == 'accepted':
+            break
+        owning('accept', cid='live')
+    run('publish', dict(live_reply, request_id='held-2', response_id='held-unheard',
+                        speech_text='An answer nobody was left to hear.'))
+    time.sleep(3)
+    record = next(r for r in owning('audit', cid='live')['replies'] if r['response_id'] == 'held-unheard')
+    assert record['delivery']['state'] == 'waiting', record
+finally:
+    held.shutdown()
+    held.server_close()
+    held_thread.join()
+
 print('bridge: unauthenticated refusal before any effect, verbatim publication, varied acknowledgement')
+print('bridge: opener drawn from the captain words, answer continuing the same held turn')
 
 # The page that tells the agent an answer is ready, against the real transport
 # with the vendor SDK stubbed. No account, agent minute or acoustic claim.
@@ -596,9 +687,11 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     agent_thread = threading.Thread(target=agent_server.serve_forever, daemon=True)
     agent_thread.start()
     try:
+        waiting = sum(1 for r in owning('audit', cid='live')['replies']
+                      if r['delivery']['state'] == 'waiting')
         subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
                         agent_server.origin + '/agent#' + agent_server.pair_secret,
-                        'agent-fixture'], check=True, timeout=90)
+                        'agent-fixture', str(waiting)], check=True, timeout=90)
         delivery = next(r for r in owning('audit', cid='live')['replies']
                         if r['response_id'] == 'agent-answer')
         # The page only announces; the bridge is what actually delivers speech.

@@ -38,16 +38,21 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
   if (opts.libsampleratePath !== '/libsamplerate.worklet.js') throw Error('resampler would come from a third-party CDN');
   if (opts.connectionType !== 'webrtc') throw Error('unexpected transport: ' + opts.connectionType);
 
-  // The answer published before this page connected is announced. The first
-  // attempt fails, so it must be retried by a later poll rather than lost, and
-  // once it lands it must never be announced a second time.
-  await page.waitForFunction(() => window.__sent.length === 1, null, {timeout:15000});
+  // Every answer already waiting is announced. The first attempt fails, so it
+  // must be retried by a later poll rather than lost, and no answer may ever be
+  // announced twice however many polls run.
+  const expected = Number(process.argv[4]);
+  await page.waitForFunction(n => window.__sent.length === n, expected, {timeout:20000});
   const attempts = await page.evaluate(() => window.__attempts);
-  if (attempts !== 2) throw Error('an unreachable agent did not cost exactly one retry: ' + attempts);
-  const marker = (await page.evaluate(() => window.__sent))[0];
-  if (!marker.startsWith('[firstmate-reply ') || !marker.endsWith(']')) throw Error('bad marker: ' + marker);
+  if (attempts !== expected + 1) throw Error('an unreachable agent did not cost exactly one retry: ' + attempts);
+  const sent = await page.evaluate(() => window.__sent);
+  for (const marker of sent) {
+    if (!marker.startsWith('[firstmate-reply ') || !marker.endsWith(']')) throw Error('bad marker: ' + marker);
+  }
   await page.waitForTimeout(2000);
-  if ((await page.evaluate(() => window.__sent)).length !== 1) throw Error('an answer was announced more than once');
+  const after = await page.evaluate(() => window.__sent);
+  if (after.length !== expected) throw Error('an answer was announced more than once');
+  if (new Set(after).size !== after.length) throw Error('the same answer was announced twice');
 
   await page.getByRole('button', {name:'Disconnect', exact:true}).click();
   await page.waitForFunction(() => document.getElementById('status').textContent.startsWith('Disconnected.'));

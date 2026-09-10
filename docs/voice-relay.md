@@ -57,7 +57,16 @@ The bridge in `bin/fm_voice_bridge.py` replaces that front end with a hosted voi
 The agent owns recognition, turn-taking, interruption and synthesis; the bridge owns what is said and what is recorded; Firstmate stays the brain that answers substantively and does the work.
 
 The bridge implements the agent platform's custom reasoning endpoint: an OpenAI-compatible `POST /v1/chat/completions` that answers as a Server-Sent Event stream.
-On a substantive turn it files the captain's committed transcript through the existing conversation transport, exactly as the browser pilot does, and speaks a short acknowledgement drawn from a fixed set so no two consecutive turns sound alike.
+On a substantive turn it files the captain's committed transcript through the existing conversation transport, exactly as the browser pilot does, and immediately speaks an opener.
+The opener is about what he actually asked: the bridge draws a subject from his own words and speaks a line about looking into it.
+It may reflect the question and may never assert a finding, a status or a result, because nothing has been answered when it is spoken.
+A subject that carries a claim is rejected rather than repeated back, and a neutral line is used instead, which is also what happens when no subject can be drawn safely.
+This is why the opener belongs in the bridge and not in the platform's own timeout filler: that filler fires on a timer, has never seen his words, and so can only ever vary which unrelated thing he hears.
+
+The turn is then held open while Firstmate reads and thinks, so the answer continues that same utterance as one thought rather than arriving later as a separate announcement.
+Nothing is spoken during the wait beyond content-free keepalives that hold the stream.
+If the answer arrives inside the hold it is delivered there; if it does not, the turn ends and the announcing page carries it exactly as before.
+A platform that hangs up mid-hold ends the turn without consuming anything, so the answer stays available rather than being marked spoken to a listener who had gone.
 On an answer marker sent as an ordinary user message it speaks the text Firstmate published, verbatim, framed as belonging to the earlier question when the captain has since moved on.
 It never invents an answer: every word it speaks is either one of those fixed acknowledgements or text Firstmate actually published.
 It holds no fleet data and calls no project tool, so nothing it says is an action or evidence of one, and it files the captain's own words rather than any summary of them.
