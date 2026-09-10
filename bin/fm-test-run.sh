@@ -1405,8 +1405,16 @@ families_for_changed_path() {
     bin/fm-tmux-lib.sh|bin/fm-marker-lib.sh|bin/fm-operational-input.sh|bin/fm-tasks-axi-lib.sh|\
     bin/fm-vendor-auth-probe.sh|\
     bin/fm-primary-scope-lib.sh|bin/fm-project-mode.sh|bin/fm-promote.sh|\
-    bin/fm-ff-lib.sh|bin/fm-gotmp*|bin/*pretool*)
+    bin/fm-gotmp*|bin/*pretool*)
       printf '%s\n' pure-contract-unit
+      ;;
+    bin/fm-ff-lib.sh)
+      # The one fast-forward and remote-diagnostic library. Its reports are
+      # pinned by the secondmate sync/restart suites and by the update and
+      # fleet-sync suites, so an edit here must select those families too.
+      printf '%s\n' pure-contract-unit
+      printf '%s\n' secondmate
+      printf '%s\n' session-bootstrap
       ;;
     .agents/skills/quota-array-dispatch/SKILL.md)
       printf '%s\n' pure-contract-unit

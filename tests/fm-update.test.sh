@@ -172,6 +172,9 @@ while IFS= read -r -d '' a; do rargs+=("$a"); done < <(decode "$argv_b64")
 printf '%s\n' \
   '** WARNING: connection is not using a post-quantum key exchange algorithm.' \
   '** This session may be vulnerable to store now, decrypt later attacks.' >&2
+# A transport that dies after the banner (a signalled remote leg) says nothing
+# of its own, which is exactly ssh's bare 255 with banner-only output.
+[ "${FM_FAKE_SSH_SILENT_FAIL:-}" = 1 ] && exit 255
 rc=0
 env FM_HOME="$remote_home" FM_ROOT_OVERRIDE="$FM_REMOTE_CODE_ROOT" \
   "$FM_TEST_REPO_ROOT/bin/${rargs[0]}" "${rargs[@]:1}" || rc=$?
@@ -340,7 +343,8 @@ EOF
 # The ssh stub crosses the real fm-on -> host-local remote-control boundary and
 # prepends exactly what OpenSSH emits. A failed remote-home sync must surface its
 # error, while the same banner over a successful sync must not hide the synced:
-# line and downgrade the result to a malformed update.
+# line and downgrade the result to a malformed update. A leg that dies leaving
+# only the banner has no diagnostic at all, and must still report a cause.
 test_remote_update_reports_through_ssh_banner() {
   local w out rc
 
@@ -370,6 +374,24 @@ test_remote_update_reports_through_ssh_banner() {
     "the leading OpenSSH banner hid the successful remote update result"
   assert_not_contains "$out" "malformed update result" \
     "the successful line under the banner was classified as malformed"
+
+  # Banner-only output: the remote leg was killed before it could say anything,
+  # so there is no diagnostic to report and the line must still name a cause
+  # rather than trail off after the colon.
+  w=$(new_world t3f-silent)
+  add_remote_update_mate "$w" sm1
+  bump_origin "$w" instr
+
+  export FM_FAKE_SSH_SILENT_FAIL=1
+  out=$(run_update_report "$w"); rc=$?
+  unset FM_FAKE_SSH_SILENT_FAIL
+
+  expect_code 0 "$rc" "an unreachable remote leg is an accounted update outcome"$'\n'"$out"
+  assert_contains "$out" \
+    "remote secondmate sm1: skipped on remote-mac: the remote update failed without a reported reason" \
+    "a banner-only remote failure reported an empty reason"
+  assert_not_contains "$out" 'skipped on remote-mac: ** WARNING:' \
+    "a banner-only remote failure was attributed to OpenSSH's banner"
   pass "T3f remote update reports ignore leading OpenSSH banners on failure and success"
 }
 
