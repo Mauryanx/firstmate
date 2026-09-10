@@ -1349,7 +1349,7 @@ families_for_changed_path() {
     # browser cases that drive them. They share one conversation transport, so a
     # change to any of them is checked by the same two suites.
     bin/fm_voice_bridge.py|bin/fm_voice_pilot.py|bin/voice-pilot/*|\
-    tests/fm-voice-agent-cases.cjs|tests/fm-voice-browser-cases.cjs)
+    tests/fm-voice-agent-cases.cjs)
       printf '%s\n' __script__:fm-voice-relay.test.sh
       printf '%s\n' __script__:fm-inbox-conversation.test.sh
       ;;

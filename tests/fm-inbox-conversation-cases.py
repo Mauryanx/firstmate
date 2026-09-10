@@ -426,33 +426,12 @@ with patch('urllib.request.urlopen', mint_fails):
         assert 'session token' in str(exc), exc
 print('pilot: exact owner publication, HTTP isolation, single delivery, credit and overage guards passed')
 
-# Opt-in actual browser mechanics share the real isolated transport and current
-# owner fixture above. No microphone input or acoustic output is synthesized.
-if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
-    # r2's answer is provably late: the captain asked r3 before the browser
-    # ever connects, so the reply must name the question it belongs to.
-    assert owning('accept', cid='live')['input']['request_id'] == 'r3'
-    run('publish', dict(live_reply, request_id='r2', response_id='late-answer',
-                        speech_text='Synthetic late answer to the earlier question.'))
-    browser_server = Pilot(0, Bridge(pilot, connection), provider)
-    browser_thread = threading.Thread(target=browser_server.serve_forever, daemon=True)
-    browser_thread.start()
-    try:
-        subprocess.run(['node', str(root / 'tests/fm-voice-browser-cases.cjs'),
-                        browser_server.origin + '/#' + browser_server.pair_secret],
-                       check=True, timeout=90)
-        accounting = owning('audit', cid='live')
-        assert len(accounting['requests']) == 5
-        assert [r['state'] for r in accounting['requests']] == [
-            'accepted', 'accepted', 'accepted', 'saved', 'saved']
-        # The fixture provider stands in for ElevenLabs; the late answer is the
-        # only speech the browser lane ever requests.
-        assert len(provider.calls) == 2
-        assert provider.calls[1][0] == 'Synthetic late answer to the earlier question.'
-    finally:
-        browser_server.shutdown()
-        browser_server.server_close()
-        browser_thread.join()
+# The self-driving browser lane that used to live here is retired with the page
+# it drove. Every one of its assertions was about that page - its Connect button,
+# its listen-mode and push-to-talk controls, its introduction artifact and the
+# speech it asked the pilot to synthesize - and all of that went when the hosted
+# agent took over hearing, turn-taking and speaking. The surviving page has its
+# own lane in tests/fm-voice-agent-cases.cjs.
 
 # The public custom-LLM bridge: a hosted voice agent's reasoning endpoint, put in
 # front of the same durable transport. Reachable from the internet through the
@@ -720,7 +699,7 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
                             sequence=portion, final=portion == 4, speech_text=text))
     worklet = temp / 'libsamplerate.worklet.js'
     worklet.write_text('// stand-in for the operator-supplied resampler worklet\n')
-    agent_server = Pilot(0, Bridge(pilot, connection), provider, b'agent-lane-ack',
+    agent_server = Pilot(0, Bridge(pilot, connection), provider,
                          agent_id='agent-fixture', agent_worklet=worklet)
     agent_thread = threading.Thread(target=agent_server.serve_forever, daemon=True)
     agent_thread.start()
@@ -728,10 +707,63 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
         waiting = [r for r in owning('audit', cid='live')['replies']
                    if r['delivery']['state'] == 'waiting']
         assert {r['response_id'] for r in waiting} == {'agent-answer-%d' % n for n in (1, 2, 3, 4)}, waiting
-        subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
-                        agent_server.origin + '/agent#' + agent_server.pair_secret,
-                        AGENT_TOKEN, str(len(waiting))],
-                       check=True, timeout=180)
+
+        # THE PAGE CANNOT CLAIM, AND MUST NOT BE ABLE TO. Nothing in the pilot
+        # claims a reply any more, and no route was added back for this lane: a
+        # claim surface in the product, lab-only or not, is exactly what this
+        # system's honesty property forbids. So the claim arrives the way it does
+        # in production - from outside the page, through the owner transport -
+        # and the page observes genuinely claimed state it did not cause.
+        #
+        # The delay matters. A reply is claimed only after it has sat announced
+        # for longer than the page's own retry interval, so the first offer is
+        # still declined and re-offered before any claim lands. Claiming
+        # immediately would erase that shape instead of exercising it.
+        claimer_stop = threading.Event()
+        claimed_by_harness = []
+
+        def claim_what_the_page_was_offered():
+            # Only ever the FIRST still-waiting answer, never one further down
+            # the queue. The page carries one at a time in order, so the first
+            # waiting reply is the one it has actually announced; claiming ahead
+            # of that would take an answer the page never offered, and it would
+            # then never be announced at all because the page only announces what
+            # is still waiting. That is a fixture claiming on the page's behalf
+            # rather than a claim the page observed, which is the whole thing
+            # this lane is here to avoid.
+            waited_since = {}
+            while not claimer_stop.is_set():
+                pending = [r for r in owning('audit', cid='live')['replies']
+                           if r['response_id'].startswith('agent-answer-')
+                           and r['delivery']['state'] == 'waiting']
+                if pending:
+                    rid = min(r['response_id'] for r in pending)
+                    first = waited_since.setdefault(rid, time.monotonic())
+                    # Long enough that the first offer is declined and re-offered
+                    # before any claim lands, so that shape is exercised rather
+                    # than erased.
+                    if time.monotonic() - first >= 2.0:
+                        try:
+                            Bridge(pilot, connection).call(
+                                'deliver', {'response_id': rid, 'generation': 'harness-' + rid})
+                            claimed_by_harness.append(rid)
+                        except PilotError:
+                            pass  # Already claimed, or the conversation moved on.
+                        waited_since.pop(rid, None)
+                claimer_stop.wait(0.2)
+
+        claimer = threading.Thread(target=claim_what_the_page_was_offered, daemon=True)
+        claimer.start()
+        try:
+            subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
+                            agent_server.origin + '/agent#' + agent_server.pair_secret,
+                            AGENT_TOKEN, str(len(waiting))],
+                           check=True, timeout=180)
+        finally:
+            claimer_stop.set()
+            claimer.join(timeout=10)
+        assert claimed_by_harness, 'no reply was ever claimed through the transport'
+
         # Every answer the page was owed was carried, including the one the
         # stand-in bridge declined the first time it was offered.
         for carried in waiting:

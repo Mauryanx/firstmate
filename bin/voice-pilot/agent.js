@@ -3,6 +3,14 @@
 // agent speak, so when Firstmate publishes an answer this page tells the agent
 // about it as an ordinary user message, and the bridge speaks it verbatim.
 // This page never reads or speaks the answer itself; it carries only its identity.
+//
+// It also says, in words and before he presses anything, how much conversation
+// the account can still pay for, and refuses to open a session that cannot reach
+// the end of one exchange. The account's characters are a single pool that the
+// agent's minutes draw on, so running it out mid-sentence is a real way to be cut
+// off, and being cut off without warning is the thing this page exists to prevent.
+// Nothing said here is a claim about the work: it is arithmetic on the account's
+// own reported numbers, and every word about the work still comes from Firstmate.
 const $ = id => document.getElementById(id);
 const MARKER = id => '[firstmate-reply ' + id + ']';
 let secret = location.hash.slice(1);
@@ -40,6 +48,52 @@ async function api(path, data = {}) {
                                     body:JSON.stringify(data)});
   if (!result.ok) throw Error((await result.json()).error);
   return result.json();
+}
+// How often the allowance is re-read while he is talking. Slow, and off the
+// announcing path: each reading is a live call to the account, and the voice
+// path's job is to add as little as possible around Firstmate rather than to keep
+// a meter warm. Slow enough that the reading is a courtesy, not a countdown.
+const ALLOWANCE_INTERVAL_MS = 60000;
+// Whether a session may be opened at all. Two separate facts refuse one: an
+// allowance too small to finish an exchange, and an account that can bill past
+// its included pool. Both are checked here so the button can never disagree with
+// the sentence printed beside it.
+const usable = state => !state.can_overage && state.enough;
+// What is left to talk with, said in words rather than heard as a silence. The
+// pilot does the arithmetic against the account's own reported numbers; this
+// turns those numbers into the sentence he is owed before he starts. It asserts
+// nothing about the fleet, a task, or any work in flight.
+function describe(state) {
+  if (state.can_overage)
+    return 'This account can run into paid overage, so no session will be started until that is turned off.';
+  const when = state.resets_at
+    ? ' It renews on ' + new Date(state.resets_at * 1000).toLocaleDateString() + '.' : '';
+  if (!state.enough)
+    return 'Not enough allowance left to finish an exchange: about ' + state.seconds
+      + ' seconds of conversation, where at least ' + state.minimum_seconds
+      + ' are needed to ask a question and hear the answer.' + when
+      + ' Connecting is refused rather than cutting you off mid-sentence.';
+  return 'About ' + state.seconds + ' seconds of conversation left on this account.' + when;
+}
+// One reading, one sentence on the page. A failure here is reported as a failure
+// to read rather than as an allowance of zero, because those are different facts
+// and only one of them is about the account.
+async function readAllowance() {
+  const state = await api('/allowance');
+  $('allowance').textContent = describe(state);
+  return state;
+}
+// Re-read while he talks, so the pool running out mid-conversation is still a
+// sentence he can read rather than a silence he sits in. A failed reading is not
+// worth interrupting him over; the previous sentence simply stands.
+async function watchAllowance() {
+  if (!session) return;
+  try {
+    if (!usable(await readAllowance())) {
+      log('The allowance can no longer cover a full exchange.');
+    }
+  } catch (_) { /* Leave the last good reading on the page and try again later. */ }
+  if (session) setTimeout(watchAllowance, ALLOWANCE_INTERVAL_MS);
 }
 // The transport is the only memory of what has been carried: a reply the bridge
 // has claimed is no longer waiting, so it cannot be announced twice, and one it
@@ -95,12 +149,12 @@ async function poll() {
   }
 }
 async function connect() {
-  // A reload has no pairing secret left in the URL, but its session cookie is
-  // still good for the hour it was issued for; poll proves it, so a refresh is
-  // not a dead end that only a restarted pilot could get the captain out of.
-  const paired = secret ? await api('/pair', {secret}) : await api('/poll');
-  secret = null;
-  cid = paired.conversation_id;
+  // Read again at the moment of pressing rather than trusting the reading the
+  // button was enabled on: the page may have been open a while, and the account
+  // is shared with everything else that speaks.
+  if (!usable(await readAllowance())) {
+    throw Error('The account cannot pay for a conversation right now.');
+  }
   const agent = await api('/agent-config');
   if (!agent.agent_id) throw Error('No voice agent is configured for this pilot.');
   if (!window.ElevenLabsClient) throw Error('The voice agent SDK is not installed for this pilot.');
@@ -125,6 +179,11 @@ async function connect() {
       if (speaking && !talking) stoppedAt = Date.now();
       speaking = talking;
     },
+    // He cut in. The platform has already cancelled the turn the bridge was
+    // speaking into, so nothing here has to stop it; this page's part is to say
+    // that it happened and to keep quiet until it is his turn again, which the
+    // mode change above does by closing the gate the poll announces through.
+    onInterruption: () => { log('You cut in; the agent stopped.'); },
     onDisconnect: () => { session = null; speaking = false; outstanding = null; status('Disconnected.'); },
     onError: message => status('Agent error: ' + message),
   });
@@ -132,9 +191,21 @@ async function connect() {
   $('connect').disabled = true;
   status('Listening');
   poll();
+  watchAllowance();
 }
 $('connect').onclick = async () => {
-  try { await connect(); } catch (error) { status(error.message); }
+  // Closed for the whole attempt, so a second press cannot open a second session
+  // against the same allowance while the first is still being opened.
+  $('connect').disabled = true;
+  try {
+    await connect();
+  } catch (error) {
+    status(error.message);
+    // Offer the button again only when something transient stopped us. If the
+    // allowance is what is short, re-enabling it would invite him to press until
+    // it fails, which is the silence this page exists to replace.
+    try { $('connect').disabled = !usable(await readAllowance()); } catch (_) { $('connect').disabled = false; }
+  }
 };
 $('stop').onclick = async () => {
   const ending = session;
@@ -144,3 +215,28 @@ $('stop').onclick = async () => {
   status('Disconnected. Reload this page while the pairing is still valid to talk again.');
 };
 window.addEventListener('pagehide', () => { const ending = session; session = null; if (ending) ending.endSession(); });
+// Pair and read the allowance before the button is offered, so what the account
+// can afford is already on the page when he decides whether to press it. Pairing
+// and reading both spend nothing; connecting the session is what uses minutes.
+//
+// A reload has no pairing secret left in the URL, but its session cookie is still
+// good for the hour it was issued for; poll proves it, so a refresh is not a dead
+// end that only a restarted pilot could get the captain out of.
+(async () => {
+  try {
+    const paired = secret ? await api('/pair', {secret}) : await api('/poll');
+    secret = null;
+    cid = paired.conversation_id;
+    const ready = usable(await readAllowance());
+    $('connect').disabled = !ready;
+    status(ready ? 'Ready. Press Connect and talk.'
+                 : 'Not connecting: the account cannot pay for a conversation.');
+  } catch (error) {
+    // Not knowing what is left is not the same as knowing there is none, and it
+    // is reported as the first rather than assumed to be the second. The button
+    // stays closed either way: this page may not invite him into a conversation
+    // it cannot promise will reach the end of a sentence.
+    $('allowance').textContent = 'Could not read what is left to talk with: ' + error.message;
+    status('Not connecting until the remaining allowance can be read.');
+  }
+})();
