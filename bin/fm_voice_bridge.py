@@ -144,7 +144,6 @@ PLAIN_WORD = re.compile(r"^[a-z0-9][a-z0-9'.&/-]*$")
 # Beyond an optional determiner. Two tokens name a thing; more room than that is
 # room for a subject and a verb, which is a claim.
 MAX_TOPIC_TOKENS = 2
-MAX_TOPIC_CHARS = 60
 
 
 def plain_noun_phrase(words):
@@ -194,7 +193,7 @@ def topic_of(said):
         return None
     candidate = candidate.strip().strip('?.!,;:').strip()
     words = candidate.split()
-    if not words or len(candidate) > MAX_TOPIC_CHARS:
+    if not words:
         return None
     if not plain_noun_phrase(words):
         return None
@@ -395,22 +394,16 @@ class Session:
                         # The platform hung up after the answer was claimed but
                         # before it could be heard. Record that it was not, so
                         # the claim never reads as an answer the captain got.
-                        self.receipt(reply['response_id'], generation, 'unknown')
+                        self.unheard(reply['response_id'], generation)
                         raise
-                    # The whole portion reached the speaker. Until this receipt
-                    # exists a claim only means an answer was taken, and the
-                    # announcing page must not send the next portion on top of
-                    # one that may still be going.
-                    self.receipt(reply['response_id'], generation, 'completed',
-                                 len(result['speech_text']))
                 return
             # Speaks nothing; keeps the stream alive while Firstmate thinks.
             yield ''
 
-    def receipt(self, response_id, generation, state, position_ms=0):
+    def unheard(self, response_id, generation):
         try:
             self.bridge.call('playback', {'response_id': response_id, 'generation': generation,
-                                          'state': state, 'position_ms': position_ms})
+                                          'state': 'unknown', 'position_ms': 0})
         except PilotError:
             pass  # Nothing further can be recorded; the durable claim still stands.
 

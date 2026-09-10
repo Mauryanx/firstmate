@@ -718,11 +718,8 @@ try:
     assert heard_turn.startswith(('Looking into option B.', 'On option B now.')), heard_turn
     assert heard_turn.endswith(answer), heard_turn
     # The answer is spoken once; it is no longer waiting for the announcing page.
-    # A portion the held turn handed over in full is recorded finished, not left
-    # at the bare claim: the announcing page reads that receipt before it dares
-    # send the next portion on top of one that may still be being spoken.
     delivered = next(r for r in owning('audit', cid='live')['replies'] if r['response_id'] == 'held-answer')
-    assert delivered['delivery']['state'] == 'completed', delivered
+    assert delivered['delivery']['state'] != 'waiting', delivered
 
     # If the platform hangs up while the turn is held, the turn must end without
     # consuming anything: the answer stays available for the announcing page
@@ -758,18 +755,17 @@ print('bridge: opener drawn from the captain words, answer continuing the same h
 # The page that tells the agent an answer is ready, against the real transport
 # with the vendor SDK stubbed. No account, agent minute or acoustic claim.
 if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
-    # An answer may be published as ordered portions. Two streams, so that a
-    # portion merely CLAIMED and a portion recorded FINISHED are told apart: a
-    # claim is taken before a word is spoken, and the page may only follow a
-    # portion that is finished. This first stream stands for a held turn still
-    # mid-speech, and its continuation must wait like anything else.
+    # An answer may be published as ordered portions. A continuation waits out the
+    # stand-off exactly like anything else: nothing on either side can know when
+    # the portion before it stopped being heard, so following it early would cut
+    # it off while the transport went on recording it as delivered. Two streams,
+    # one whose first portion is merely claimed and one whose first portion has a
+    # playback receipt, because neither is a licence to speak over what is left.
     run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer',
                         sequence=1, final=False, speech_text='The first portion of one answer.'))
     run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer-rest',
                         sequence=2, final=True, speech_text='The rest of that same answer.'))
     run('deliver', dict(connection, response_id='agent-answer', generation='held-turn-generation'))
-    # The second stream's first portion was handed over in full and recorded so,
-    # which is the only thing that lets its continuation skip the stand-off.
     while any(r['state'] == 'saved' for r in owning('audit', cid='live')['requests']):
         owning('accept', cid='live')
     spoken_tail = run('poll', dict(connection))['requests'][-1]['turn_id']
@@ -792,15 +788,14 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     agent_thread.start()
     try:
         published = owning('audit', cid='live')['replies']
-        finished = {r['request_id'] for r in published if r['delivery']['state'] == 'completed'}
         waiting = [r for r in published if r['delivery']['state'] == 'waiting']
-        continuing = [r for r in waiting if r['request_id'] in finished]
-        # Only the finished stream's continuation may skip the stand-off; the
-        # claimed-but-unfinished one is exactly what must not.
-        assert [r['response_id'] for r in continuing] == ['spoken-rest'], continuing
+        begun = {r['request_id'] for r in published if r['delivery']['state'] != 'waiting'}
+        # Both continuations are in that set, and neither may go out early.
+        assert {'agent-answer-rest', 'spoken-rest'} <= {r['response_id'] for r in waiting
+                                                        if r['request_id'] in begun}, waiting
         subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
                         agent_server.origin + '/agent#' + agent_server.pair_secret,
-                        AGENT_TOKEN, str(len(waiting)), str(len(continuing))],
+                        AGENT_TOKEN, str(len(waiting))],
                        check=True, timeout=120)
         for still in ('agent-answer-rest', 'spoken-rest'):
             delivery = next(r for r in owning('audit', cid='live')['replies']

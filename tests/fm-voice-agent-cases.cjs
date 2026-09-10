@@ -47,14 +47,13 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
 
   // The bridge's held turn is entitled to a reply before this page is, so the
   // page must stand off for that whole window. Ask the pilot how long that is
-  // rather than restating it, then prove what does and does not wait it out:
-  // inside the window only continuation portions of an already-claimed answer
-  // may go, because no held turn is waiting on those, and nothing else may.
+  // rather than restating it, then prove nothing goes out inside it - including
+  // a portion continuing an answer whose earlier portion is already claimed or
+  // already receipted, since neither says the words of it have stopped.
   const standoff = await page.evaluate(async () => (await (await fetch('/agent-config',
     {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})).json()).announce_after_ms);
   if (!(standoff > 0)) throw Error('the pilot reported no stand-off window: ' + standoff);
-  const continuing = Number(process.argv[5]);
-  // Nothing may be sent while the agent has the floor: a marker is an
+  // Nothing may be sent while the agent has the floor either: a marker is an
   // interruption, and interrupting cuts an answer off mid-sentence while the
   // transport keeps the record that it was delivered.
   await page.waitForTimeout(2000);
@@ -63,11 +62,8 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
   await page.evaluate(() => window.__setMode('listening'));
 
   await page.waitForTimeout(standoff / 2);
-  const early = await page.evaluate(() => window.__sent);
-  if (early.length !== continuing) {
-    throw Error('inside the hold window ' + early.length + ' answers were announced, not the '
-                + continuing + ' continuation portion(s) of an answer already spoken in full');
-  }
+  const early = await page.evaluate(() => window.__attempts);
+  if (early !== 0) throw Error('an answer was announced inside the hold window: ' + early);
 
   // Every answer already waiting is then announced. The first attempt fails, so
   // it must be retried by a later poll rather than lost, and no answer may ever
@@ -90,6 +86,6 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
   if (!await page.evaluate(() => window.__ended)) throw Error('the agent session was not ended');
   if (errors.length) throw Error(JSON.stringify(errors));
   console.log(JSON.stringify({result:'PASS', browser:browser.version(), page_errors:errors,
-    evidence:'pairing, transport polling, a tokened session, silence while the agent has the floor, the stand-off that keeps the held turn the only claimant inside its hold while continuation portions of a portion already spoken in full go out at once, one announcement per published answer, retry after an unreachable agent, and session end; stubbed vendor SDK, no account or acoustic acceptance'}, null, 2));
+    evidence:'pairing, transport polling, a tokened session, silence while the agent has the floor, the stand-off that keeps the held turn the only claimant inside its hold and that every portion waits out, including continuations of an answer already begun, one announcement per published answer, retry after an unreachable agent, and session end; stubbed vendor SDK, no account or acoustic acceptance'}, null, 2));
  } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });

@@ -33,24 +33,20 @@ async function api(path, data = {}) {
 // marker sent while the turn is still held either steals the answer or
 // interrupts it mid-sentence, and the transport then reads it as already spoken.
 //
-// That window applies only to a reply a held turn could still be entitled to.
-// An answer may be published as ordered portions, and a held turn speaks one
-// portion and ends, so once a portion is recorded finished its stream is waiting
-// on nothing. Those continuations go out at once: waiting there would put ten
-// seconds of silence in the middle of one answer. Finished, not merely claimed -
-// a claim is taken before a word is spoken, and sending the next portion on top
-// of one still being said cuts the answer off and records it as delivered.
+// Every portion waits, including one continuing an answer already begun. Nothing
+// here can know when the words of the portion before it stopped being heard: the
+// bridge only ever sees text handed to the platform, and the synthesis after
+// that is not observable from either side. The cost is up to one stand-off of
+// silence in the middle of a long answer, and it is paid deliberately, because
+// cutting an answer off and recording it as delivered cannot be undone and
+// waiting can be sat through.
 function pending(replies, now) {
-  const finished = new Set(replies.filter(reply => reply.delivery.state === 'completed')
-                                  .map(reply => reply.request_id));
   const ready = [];
   for (const reply of replies) {
     if (reply.delivery.state !== 'waiting') { firstSeen.delete(reply.response_id); continue; }
     if (announced.has(reply.response_id)) continue;
     if (!firstSeen.has(reply.response_id)) firstSeen.set(reply.response_id, now);
-    if (finished.has(reply.request_id) || now - firstSeen.get(reply.response_id) >= standoff) {
-      ready.push(reply);
-    }
+    if (now - firstSeen.get(reply.response_id) >= standoff) ready.push(reply);
   }
   return ready;
 }
