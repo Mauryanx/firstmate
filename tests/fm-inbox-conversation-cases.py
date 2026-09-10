@@ -422,3 +422,137 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
         browser_server.shutdown()
         browser_server.server_close()
         browser_thread.join()
+
+# The public custom-LLM bridge: a hosted voice agent's reasoning endpoint, put in
+# front of the same durable transport. Reachable from the internet through the
+# operator's Funnel, so authentication is proven before any useful behaviour.
+import random
+
+from fm_voice_bridge import ANSWER_MARKER, Endpoint, Session, ShuffleBag
+
+secret = 'x' * 32
+bag_order = random.Random(7)
+bridge_session = Session(Bridge(pilot, connection), ShuffleBag(['first ack.', 'second ack.'], bag_order))
+try:
+    Endpoint(0, bridge_session, 'too short')
+    raise AssertionError('a weak shared secret must refuse to listen')
+except PilotError:
+    pass
+
+endpoint = Endpoint(0, bridge_session, secret)
+endpoint_origin = 'http://127.0.0.1:' + str(endpoint.server_port)
+endpoint_thread = threading.Thread(target=endpoint.serve_forever, daemon=True)
+endpoint_thread.start()
+
+
+heard_so_far = []
+
+
+def ask(said, expected=200, token=secret, path='/v1/chat/completions', extra=None,
+        grow=True, messages=None):
+    # The platform resends the whole transcript every turn, one longer each time.
+    if messages is None:
+        if grow:
+            heard_so_far.append({'role': 'user', 'content': said})
+        messages = [{'role': 'system', 'content': 'ignored'}] + list(heard_so_far)
+    body = {'model': 'x', 'stream': True, 'messages': messages}
+    if extra is not None:
+        body['elevenlabs_extra_body'] = extra
+    headers = {'Content-Type': 'application/json'}
+    if token is not None:
+        headers['Authorization'] = 'Bearer ' + token
+    request = urllib.request.Request(endpoint_origin + path, json.dumps(body).encode(), headers)
+    try:
+        response = urllib.request.urlopen(request, timeout=10)
+    except urllib.error.HTTPError as error:
+        response = error
+    payload = response.read().decode()
+    assert response.status == expected, (expected, response.status, payload)
+    if response.status != 200:
+        return payload
+    assert payload.endswith('data: [DONE]\n\n'), payload
+    spoken = []
+    for line in payload.splitlines():
+        if line.startswith('data: ') and line != 'data: [DONE]':
+            delta = json.loads(line[6:])['choices'][0]['delta']
+            spoken.append(delta.get('content', ''))
+    return ''.join(spoken)
+
+
+try:
+    # Authentication comes first: nothing useful happens without the shared secret,
+    # and a refusal describes nothing about what lies behind it.
+    before = len(owning('audit', cid='live')['requests'])
+    for token in (None, '', 'wrong', secret[:-1] + 'y', secret + 'z'):
+        assert json.loads(ask('Unauthenticated instruction.', 401, token=token)) == {
+            'error': {'message': 'unauthorized'}}
+    # An unauthenticated caller changes nothing behind the gate.
+    assert len(owning('audit', cid='live')['requests']) == before
+    assert ask('Unauthenticated instruction.', 401, token=None, path='/v1/models') == \
+        '{"error":{"message":"unauthorized"}}'
+
+    # Authenticated but malformed still refuses without touching the transport.
+    ask('', 400)
+    assert len(owning('audit', cid='live')['requests']) == before
+
+    # A substantive turn files the captain's own words and acknowledges, varied.
+    said = 'Tell me what the research found about option B.'
+    first = ask(said, extra={'request_id': 'bridge-1'})
+    assert first in ('first ack.', 'second ack.'), first
+    second = ask('And what about option A?', extra={'request_id': 'bridge-2'})
+    assert second != first, 'the acknowledgement repeated back to back'
+    filed = owning('audit', cid='live')['requests']
+    assert len(filed) == before + 2
+    assert [r['request_id'] for r in filed[-2:]] == ['bridge-1', 'bridge-2']
+    assert filed[-1]['previous_turn_id'] == filed[-2]['turn_id']
+
+    # The captain's exact words are filed, never the bridge's paraphrase of them.
+    # Older saved turns are accepted first, in the order they were spoken.
+    accepted = owning('accept', cid='live')
+    while accepted['input']['request_id'] != 'bridge-1':
+        accepted = owning('accept', cid='live')
+    assert accepted['input']['committed_transcript'] == said
+    assert owning('accept', cid='live')['input']['request_id'] == 'bridge-2'
+
+    # Firstmate publishes; the bridge speaks that text verbatim and only once.
+    answer = 'Option B is slower by 12.5 seconds, and nothing has been changed yet.'
+    run('publish', dict(live_reply, request_id='bridge-1', response_id='bridge-answer',
+                        speech_text=answer))
+    marker = ANSWER_MARKER + 'bridge-answer]'
+    heard = ask(marker)
+    # bridge-2 was asked after bridge-1, so this answer is late and says so.
+    assert heard.endswith(answer) and heard != answer, heard
+    assert 'earlier question' in heard, heard
+    assert ask(marker) == '', 'a published answer was spoken twice'
+    # A marker naming no published reply is refused, and refusing it consumes
+    # nothing, so the platform may retry the same turn.
+    unknown = [{'role': 'system', 'content': 'ignored'}] + heard_so_far + [
+        {'role': 'user', 'content': ANSWER_MARKER + 'no-such-answer]'}]
+    ask('', 400, grow=False, messages=unknown)
+    ask('', 400, grow=False, messages=unknown)
+
+    # The bridge never invents: every word it has spoken is either a fixed
+    # acknowledgement or text Firstmate actually published.
+    assert answer in heard and heard.replace(answer, '').strip() != answer
+
+    # The platform re-invokes the endpoint for its own filler generation and on
+    # retries, resending a transcript that has not grown. Nothing may be filed
+    # again, or one spoken instruction becomes two dispatched requests.
+    settled = len(owning('audit', cid='live')['requests'])
+    for _ in range(3):
+        assert ask('And what about option A?', grow=False) == ''
+    assert len(owning('audit', cid='live')['requests']) == settled
+
+    # A genuine repeat of the same words is a new turn, because the transcript grew.
+    assert ask('And what about option A?') != ''
+    assert len(owning('audit', cid='live')['requests']) == settled + 1
+
+    # A transcript carrying no captain turn at all is refused, not guessed at.
+    ask('', 400, messages=[{'role': 'system', 'content': 'only a system prompt'}])
+    ask('', 400, messages=[])
+finally:
+    endpoint.shutdown()
+    endpoint.server_close()
+    endpoint_thread.join()
+
+print('bridge: unauthenticated refusal before any effect, verbatim publication, varied acknowledgement')

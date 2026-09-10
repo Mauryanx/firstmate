@@ -50,6 +50,46 @@ Device-level latency, recognition fidelity, echo handling and subjective voice q
 Export timing produces bounded, content-free events for the current page session, including failed/uncertain capture and delivery, discarded segments and the number of older events dropped.
 Its playback timestamps describe browser software callbacks, not sound measured at the ear, and a reload begins a new timing session.
 
+## Hosted agent bridge
+
+The browser pilot above hears and speaks for itself, which is why its turns are slow and its acknowledgement is always the same clip.
+The bridge in `bin/fm_voice_bridge.py` replaces that front end with a hosted voice agent, keeping the same durable transport underneath.
+The agent owns recognition, turn-taking, interruption and synthesis; the bridge owns what is said and what is recorded; Firstmate stays the brain that answers substantively and does the work.
+
+The bridge implements the agent platform's custom reasoning endpoint: an OpenAI-compatible `POST /v1/chat/completions` that answers as a Server-Sent Event stream.
+On a substantive turn it files the captain's committed transcript through the existing conversation transport, exactly as the browser pilot does, and speaks a short acknowledgement drawn from a fixed set so no two consecutive turns sound alike.
+On an answer marker sent as an ordinary user message it speaks the text Firstmate published, verbatim, framed as belonging to the earlier question when the captain has since moved on.
+It never invents an answer: every word it speaks is either one of those fixed acknowledgements or text Firstmate actually published.
+It holds no fleet data and calls no project tool, so nothing it says is an action or evidence of one, and it files the captain's own words rather than any summary of them.
+Answering ordinary conversational turns without waking Firstmate needs a metered fast model and is deliberately absent until that spend is authorized.
+
+The bridge listens only on loopback and is published by Tailscale Funnel, which connects outward, terminates TLS, and needs no inbound firewall rule.
+Funnel makes that address genuinely public, so the shared secret is the only thing in front of it.
+Authentication runs before request parsing, routing and transport access, and the endpoint refuses to listen at all with a secret shorter than 32 characters, so there is no moment where it is reachable and unguarded.
+An unauthenticated caller learns only that something refused it, and the secret is never logged nor passed as a command argument.
+Enabling Funnel for a tailnet is a network policy decision for its owner, requiring a node attribute and HTTPS certificates in the admin console; this repository never changes that policy.
+If an implementation ever needs an inbound port opened instead, stop and report it rather than making the change.
+
+Bringing it up, once Funnel is enabled on the tailnet:
+
+```bash
+umask 077
+mkdir -p "$FM_HOME/state/voice-bridge"
+python3 -c 'import secrets;print(secrets.token_urlsafe(48))' > "$FM_HOME/state/voice-bridge/secret.txt"
+python3 bin/fm_voice_bridge.py --home "$FM_HOME" \
+  --binding "$FM_HOME/state/voice-pilot/binding.json" \
+  --secret-file "$FM_HOME/state/voice-bridge/secret.txt" --port 8770
+tailscale funnel --bg --https=443 8770
+```
+
+Funnel publishes on port 443, 8443 or 10000 only; the loopback port it forwards to is free, so the bridge's own `--port` stays an ordinary local choice.
+`tailscale funnel status` prints the public `https://<node>.<tailnet>.ts.net` address, and `tailscale funnel --https=443 off` withdraws it again in one command.
+Configure the agent's custom reasoning endpoint as that address with `/v1/chat/completions` appended, and give it the secret as the bearer credential the platform sends in `Authorization`.
+The binding is the same private transport credential the browser pilot uses, and Firstmate still accepts and publishes from its own owning turn.
+
+`tests/fm-inbox-conversation.test.sh` covers the bridge against the real isolated transport: refusal of absent, empty, wrong, truncated and extended secrets before any request is parsed or recorded, that a refused call changes nothing behind the gate, verbatim single delivery of a published answer, late-answer framing, transcript order across turns, and that consecutive acknowledgements differ.
+It establishes nothing about turn latency, recognition, interruption or voice quality, all of which need the live agent and the captain's ear.
+
 ## Existing audio prototype
 
 Talk to a voice agent that sits in front of the first mate. It answers questions
