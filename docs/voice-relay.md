@@ -114,6 +114,12 @@ The page is only the fallback for what the hold did not catch, so it stands off 
 Announcing sooner is not a smaller version of the same thing: a marker sent while the turn is still held either takes the answer out from under it, leaving the stall-then-reply the hold exists to prevent, or interrupts the answer mid-sentence while the transport records it as already spoken.
 The pilot tells the page how long that window is, so the length lives in one place and the page never restates it, and for the same reason the hold is not a startup flag the bridge could be moved off on its own.
 
+One answer may be published as ordered portions, and a held turn speaks one portion and then ends, so the stand-off would otherwise put ten seconds of silence in the middle of a single answer.
+A continuation is therefore let through early, but only once its stream has a portion recorded finished rather than merely claimed.
+A claim is taken before a word has been spoken; following it immediately would cut the first portion off mid-sentence and leave the transport recording it as delivered, which is worse than the silence the exception exists to remove.
+The bridge posts that finished receipt when it has handed the whole portion to the speaker, and the page falls back to the full stand-off whenever no such receipt exists.
+The page also sends nothing at all while the agent has the floor, because a marker is an interruption and the agent is configured to treat it as one; the stand-off clock keeps running, only the sending waits.
+
 The page opens its session with a token minted through the pilot, always.
 A failure to mint one is named where it happened rather than falling back to the bare agent identity, which would have shown the captain an opaque platform error whose real cause was a network blip or a key that had lost its scope.
 Reloading the page is not a dead end: the pairing secret is gone from the URL after the first pairing, but the session cookie it issued is still good for its hour, and the page proves it against the transport exactly as the browser pilot does.

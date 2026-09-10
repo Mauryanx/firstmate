@@ -19,6 +19,10 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
     window.ElevenLabsClient = {Conversation: {startSession: async opts => {
       window.__opts = {libsampleratePath: opts.libsampleratePath, connectionType: opts.connectionType,
                        conversationToken: opts.conversationToken, agentId: opts.agentId};
+      // A held turn is already mid-answer when this page connects, which is the
+      // state a claim cannot be told apart from a finished portion by itself.
+      window.__setMode = mode => opts.onModeChange({mode});
+      window.__setMode('speaking');
       return {
         sendUserMessage: async text => {
           window.__attempts++;
@@ -50,11 +54,19 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
     {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'})).json()).announce_after_ms);
   if (!(standoff > 0)) throw Error('the pilot reported no stand-off window: ' + standoff);
   const continuing = Number(process.argv[5]);
+  // Nothing may be sent while the agent has the floor: a marker is an
+  // interruption, and interrupting cuts an answer off mid-sentence while the
+  // transport keeps the record that it was delivered.
+  await page.waitForTimeout(2000);
+  const duringSpeech = await page.evaluate(() => window.__attempts);
+  if (duringSpeech !== 0) throw Error('an answer was announced over a speaking agent: ' + duringSpeech);
+  await page.evaluate(() => window.__setMode('listening'));
+
   await page.waitForTimeout(standoff / 2);
   const early = await page.evaluate(() => window.__sent);
   if (early.length !== continuing) {
     throw Error('inside the hold window ' + early.length + ' answers were announced, not the '
-                + continuing + ' continuation portion(s) no held turn was waiting on');
+                + continuing + ' continuation portion(s) of an answer already spoken in full');
   }
 
   // Every answer already waiting is then announced. The first attempt fails, so
@@ -78,6 +90,6 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
   if (!await page.evaluate(() => window.__ended)) throw Error('the agent session was not ended');
   if (errors.length) throw Error(JSON.stringify(errors));
   console.log(JSON.stringify({result:'PASS', browser:browser.version(), page_errors:errors,
-    evidence:'pairing, transport polling, a tokened session, the stand-off that keeps the held turn the only claimant inside its hold while continuation portions of an already-claimed answer go out at once, one announcement per published answer, retry after an unreachable agent, and session end; stubbed vendor SDK, no account or acoustic acceptance'}, null, 2));
+    evidence:'pairing, transport polling, a tokened session, silence while the agent has the floor, the stand-off that keeps the held turn the only claimant inside its hold while continuation portions of a portion already spoken in full go out at once, one announcement per published answer, retry after an unreachable agent, and session end; stubbed vendor SDK, no account or acoustic acceptance'}, null, 2));
  } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exitCode = 1; });

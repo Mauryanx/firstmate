@@ -604,14 +604,29 @@ try:
     # A list of verbs to avoid is always one participle behind, so a subject is
     # spoken only when it can be shown to assert nothing. None of these tells the
     # captain what happened before anything has been looked at.
+    # The words that actually break a list of verbs are the irregular past forms
+    # no ending gives away: found, lost, sent, built, took, made, kept, done,
+    # gone. None of these may be repeated back as though the bridge knew.
     for claiming, claim in (('Tell me about the deploy that crashed last night.', 'crashed'),
                             ('Tell me about the release that shipped without review.', 'shipped'),
-                            ('Tell me about the merge queue being blocked.', 'blocked')):
+                            ('Tell me about the merge queue being blocked.', 'blocked'),
+                            ('Tell me about the outage they found overnight.', 'found'),
+                            ('Tell me about the deploy we lost last night.', 'lost'),
+                            ('Tell me about the numbers he sent.', 'sent'),
+                            ('Tell me about the dashboard they built.', 'built'),
+                            ('Tell me about the hours it took.', 'took'),
+                            ('Tell me about the changes she made.', 'made'),
+                            ('Tell me about the receipts we kept.', 'kept'),
+                            ('Check on the deploy gone bad.', 'gone'),
+                            ('Check the work done overnight.', 'done')):
         refused = ask(claiming).strip()
         assert refused in ('first ack.', 'second ack.'), (claiming, refused)
         assert claim not in refused, (claiming, refused)
-    # A plain subject is still spoken back, or this whole opener is pointless.
+    # A plain subject is still spoken back, or the gate has quietly turned the
+    # opener off rather than made it safe.
     assert 'the overnight simulation' in ask('Check on the overnight simulation.')
+    assert 'the deploy' in ask('Tell me about the deploy.')
+    assert 'the voice bridge' in ask('Look into the voice bridge.')
 
     # A transcript carrying no captain turn at all is refused, not guessed at.
     ask('', 400, messages=[{'role': 'system', 'content': 'only a system prompt'}])
@@ -678,6 +693,10 @@ def hold_ask(said, request_id):
 
 try:
     answer = 'Option B took twelve and a half seconds, and nothing was changed.'
+    # Drain the backlog first: accepting it inside the hold window would spend
+    # the window on bookkeeping rather than on what the turn is waiting for.
+    while any(r['state'] == 'saved' for r in owning('audit', cid='live')['requests']):
+        owning('accept', cid='live')
     turn = threading.Thread(target=hold_ask, args=('Tell me what we found about option B.', 'held-1'))
     turn.start()
     # Firstmate answers while the captain is still on that turn.
@@ -699,8 +718,11 @@ try:
     assert heard_turn.startswith(('Looking into option B.', 'On option B now.')), heard_turn
     assert heard_turn.endswith(answer), heard_turn
     # The answer is spoken once; it is no longer waiting for the announcing page.
+    # A portion the held turn handed over in full is recorded finished, not left
+    # at the bare claim: the announcing page reads that receipt before it dares
+    # send the next portion on top of one that may still be being spoken.
     delivered = next(r for r in owning('audit', cid='live')['replies'] if r['response_id'] == 'held-answer')
-    assert delivered['delivery']['state'] != 'waiting', delivered
+    assert delivered['delivery']['state'] == 'completed', delivered
 
     # If the platform hangs up while the turn is held, the turn must end without
     # consuming anything: the answer stays available for the announcing page
@@ -736,14 +758,32 @@ print('bridge: opener drawn from the captain words, answer continuing the same h
 # The page that tells the agent an answer is ready, against the real transport
 # with the vendor SDK stubbed. No account, agent minute or acoustic claim.
 if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
-    # An answer may be published as ordered portions. A held turn speaks one and
-    # ends, so a portion whose sibling is already claimed is waiting on nothing:
-    # it must not sit out the stand-off, which would be a silence mid-answer.
+    # An answer may be published as ordered portions. Two streams, so that a
+    # portion merely CLAIMED and a portion recorded FINISHED are told apart: a
+    # claim is taken before a word is spoken, and the page may only follow a
+    # portion that is finished. This first stream stands for a held turn still
+    # mid-speech, and its continuation must wait like anything else.
     run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer',
                         sequence=1, final=False, speech_text='The first portion of one answer.'))
     run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer-rest',
                         sequence=2, final=True, speech_text='The rest of that same answer.'))
     run('deliver', dict(connection, response_id='agent-answer', generation='held-turn-generation'))
+    # The second stream's first portion was handed over in full and recorded so,
+    # which is the only thing that lets its continuation skip the stand-off.
+    while any(r['state'] == 'saved' for r in owning('audit', cid='live')['requests']):
+        owning('accept', cid='live')
+    spoken_tail = run('poll', dict(connection))['requests'][-1]['turn_id']
+    run('capture', dict(connection, turn_id='spoken-turn', request_id='spoken-portions',
+                        committed_transcript='Tell me about the long answer.', revision=1,
+                        previous_turn_id=spoken_tail, created_at='2026-09-10T00:00:00Z'))
+    assert owning('accept', cid='live')['input']['request_id'] == 'spoken-portions'
+    run('publish', dict(live_reply, request_id='spoken-portions', response_id='spoken-first',
+                        sequence=1, final=False, speech_text='The first portion, spoken in full.'))
+    run('publish', dict(live_reply, request_id='spoken-portions', response_id='spoken-rest',
+                        sequence=2, final=True, speech_text='The rest of the spoken answer.'))
+    run('deliver', dict(connection, response_id='spoken-first', generation='spoken-generation'))
+    run('playback', dict(connection, response_id='spoken-first', generation='spoken-generation',
+                         state='completed', position_ms=1200))
     worklet = temp / 'libsamplerate.worklet.js'
     worklet.write_text('// stand-in for the operator-supplied resampler worklet\n')
     agent_server = Pilot(0, Bridge(pilot, connection), provider, b'agent-lane-ack',
@@ -752,18 +792,21 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     agent_thread.start()
     try:
         published = owning('audit', cid='live')['replies']
-        claimed = {r['request_id'] for r in published if r['delivery']['state'] != 'waiting'}
+        finished = {r['request_id'] for r in published if r['delivery']['state'] == 'completed'}
         waiting = [r for r in published if r['delivery']['state'] == 'waiting']
-        continuing = [r for r in waiting if r['request_id'] in claimed]
-        assert [r['response_id'] for r in continuing] == ['agent-answer-rest'], continuing
+        continuing = [r for r in waiting if r['request_id'] in finished]
+        # Only the finished stream's continuation may skip the stand-off; the
+        # claimed-but-unfinished one is exactly what must not.
+        assert [r['response_id'] for r in continuing] == ['spoken-rest'], continuing
         subprocess.run(['node', str(root / 'tests/fm-voice-agent-cases.cjs'),
                         agent_server.origin + '/agent#' + agent_server.pair_secret,
                         AGENT_TOKEN, str(len(waiting)), str(len(continuing))],
                        check=True, timeout=120)
-        delivery = next(r for r in owning('audit', cid='live')['replies']
-                        if r['response_id'] == 'agent-answer-rest')
-        # The page only announces; the bridge is what actually delivers speech.
-        assert delivery['delivery']['state'] == 'waiting', delivery
+        for still in ('agent-answer-rest', 'spoken-rest'):
+            delivery = next(r for r in owning('audit', cid='live')['replies']
+                            if r['response_id'] == still)
+            # The page only announces; the bridge is what actually delivers speech.
+            assert delivery['delivery']['state'] == 'waiting', delivery
     finally:
         agent_server.shutdown()
         agent_server.server_close()

@@ -7,7 +7,7 @@ const $ = id => document.getElementById(id);
 const MARKER = id => '[firstmate-reply ' + id + ']';
 let secret = location.hash.slice(1);
 history.replaceState(null, '', location.pathname);
-let session = null, cid = null, standoff = null, polling = false;
+let session = null, cid = null, standoff = null, polling = false, speaking = false;
 const announced = new Set(), firstSeen = new Map();
 const status = text => { $('status').textContent = text; };
 function log(text) {
@@ -35,18 +35,20 @@ async function api(path, data = {}) {
 //
 // That window applies only to a reply a held turn could still be entitled to.
 // An answer may be published as ordered portions, and a held turn speaks one
-// portion and ends, so a portion whose sibling has already been claimed belongs
-// to a stream nothing is holding any more. Those go out at once: waiting there
-// would put ten seconds of silence in the middle of one answer.
+// portion and ends, so once a portion is recorded finished its stream is waiting
+// on nothing. Those continuations go out at once: waiting there would put ten
+// seconds of silence in the middle of one answer. Finished, not merely claimed -
+// a claim is taken before a word is spoken, and sending the next portion on top
+// of one still being said cuts the answer off and records it as delivered.
 function pending(replies, now) {
-  const begun = new Set(replies.filter(reply => reply.delivery.state !== 'waiting')
-                               .map(reply => reply.request_id));
+  const finished = new Set(replies.filter(reply => reply.delivery.state === 'completed')
+                                  .map(reply => reply.request_id));
   const ready = [];
   for (const reply of replies) {
     if (reply.delivery.state !== 'waiting') { firstSeen.delete(reply.response_id); continue; }
     if (announced.has(reply.response_id)) continue;
     if (!firstSeen.has(reply.response_id)) firstSeen.set(reply.response_id, now);
-    if (begun.has(reply.request_id) || now - firstSeen.get(reply.response_id) >= standoff) {
+    if (finished.has(reply.request_id) || now - firstSeen.get(reply.response_id) >= standoff) {
       ready.push(reply);
     }
   }
@@ -72,7 +74,10 @@ async function poll() {
     const waiting = state.requests.filter(r => r.state === 'saved').length;
     $('waiting').textContent = waiting
       ? waiting + ' message(s) with Firstmate' : 'Nothing waiting with Firstmate';
-    for (const reply of pending(state.replies, Date.now())) await announce(reply);
+    const ready = pending(state.replies, Date.now());
+    // A marker is an interruption while the agent has the floor. The stand-off
+    // clock keeps running; only the sending waits until it has stopped talking.
+    if (!speaking) for (const reply of ready) await announce(reply);
   } catch (error) {
     status(error.message);
   } finally {
@@ -108,7 +113,8 @@ async function connect() {
     // Served from this pilot so the page never reaches a third-party CDN.
     libsampleratePath: '/libsamplerate.worklet.js',
     onStatusChange: state => status('Agent ' + (state.status || state)),
-    onDisconnect: () => { session = null; status('Disconnected.'); },
+    onModeChange: state => { speaking = (state.mode || state) === 'speaking'; },
+    onDisconnect: () => { session = null; speaking = false; status('Disconnected.'); },
     onError: message => status('Agent error: ' + message),
   });
   for (const id of ['stop']) $(id).disabled = false;

@@ -125,33 +125,47 @@ TOPIC_IMPERATIVES = ('tell me about', 'find out about', 'look into', 'look up', 
 # crashed" is a claim about the deploy; "the deploy" is a subject.
 CLAUSE_WORDS = frozenset("""that which who whom whose what when where why how if whether
     because since while until unless though although than so but after before""".split())
+# A pronoun is the other way a clause hides inside a phrase: "the deploy WE lost"
+# has a subject and a verb, and no word list is needed to see the pronoun.
+PRONOUNS = frozenset("""i we us our ours you your yours he him his she her hers
+    it its they them their theirs""".split())
 # A word wearing a verb's inflection is a verb until something proves otherwise,
 # and nothing here can prove otherwise, so it is refused.
 VERB_ENDINGS = ('ed', 'ing', 'en')
 # Copulas and bare irregular verbs, which wear no ending to recognise them by.
-CLAIM_WORDS = frozenset("""is are was were be am do does did has have had
+# This list is closed. Irregular past forms it cannot name - found, lost, sent,
+# built, took, made, kept - are refused by the length cap and the pronoun rule
+# instead, because chasing spellings here would never finish.
+CLAIM_WORDS = frozenset("""is are was were be am do does did done has have had gone
     will would shall should can could may might must broke break breaks failed fails
     fail works went goes ran run said says say think thinks seems seem looks look""".split())
+TOPIC_DETERMINERS = frozenset('the a an this that these those my our your their'.split())
 PLAIN_WORD = re.compile(r"^[a-z0-9][a-z0-9'.&/-]*$")
-MAX_TOPIC_WORDS = 8
+# Beyond an optional determiner. Two tokens name a thing; more room than that is
+# room for a subject and a verb, which is a claim.
+MAX_TOPIC_TOKENS = 2
 MAX_TOPIC_CHARS = 60
 
 
 def plain_noun_phrase(words):
-    """True only for words that can be shown to assert nothing.
+    """True only for a phrase short and plain enough to assert nothing.
 
-    The test is positive and the default is refusal: a subject is spoken only
-    when every word in it is an ordinary token wearing no verb's inflection and
-    opening no clause. Plenty of harmless phrases fail this, and that costs the
-    captain a neutral opener. The failure it exists to prevent costs him the
+    A determiner and at most two further tokens, each an ordinary word wearing
+    no verb's inflection, opening no clause and standing for no one. Anything
+    longer has room for a subject and a verb, and a phrase with room for those
+    can say something happened. Plenty of harmless phrases fail this, and that
+    costs the captain a neutral opener. What it exists to prevent costs him the
     bridge asserting, in its own voice, that his deploy crashed, before anything
     has been looked at. Those two are not the same size.
     """
-    for word in words:
-        word = word.strip('?.!,;:"()').lower()
-        if not word or not PLAIN_WORD.match(word):
-            return False
-        if word in CLAUSE_WORDS or word in CLAIM_WORDS:
+    plain = [word.strip('?.!,;:"()').lower() for word in words]
+    if not all(plain) or not all(PLAIN_WORD.match(word) for word in plain):
+        return False
+    body = plain[1:] if plain[0] in TOPIC_DETERMINERS else plain
+    if not body or len(body) > MAX_TOPIC_TOKENS:
+        return False
+    for word in plain:
+        if word in PRONOUNS or word in CLAUSE_WORDS or word in CLAIM_WORDS:
             return False
         if word.endswith(VERB_ENDINGS):
             return False
@@ -180,7 +194,7 @@ def topic_of(said):
         return None
     candidate = candidate.strip().strip('?.!,;:').strip()
     words = candidate.split()
-    if not words or len(words) > MAX_TOPIC_WORDS or len(candidate) > MAX_TOPIC_CHARS:
+    if not words or len(candidate) > MAX_TOPIC_CHARS:
         return None
     if not plain_noun_phrase(words):
         return None
@@ -381,16 +395,22 @@ class Session:
                         # The platform hung up after the answer was claimed but
                         # before it could be heard. Record that it was not, so
                         # the claim never reads as an answer the captain got.
-                        self.unheard(reply['response_id'], generation)
+                        self.receipt(reply['response_id'], generation, 'unknown')
                         raise
+                    # The whole portion reached the speaker. Until this receipt
+                    # exists a claim only means an answer was taken, and the
+                    # announcing page must not send the next portion on top of
+                    # one that may still be going.
+                    self.receipt(reply['response_id'], generation, 'completed',
+                                 len(result['speech_text']))
                 return
             # Speaks nothing; keeps the stream alive while Firstmate thinks.
             yield ''
 
-    def unheard(self, response_id, generation):
+    def receipt(self, response_id, generation, state, position_ms=0):
         try:
             self.bridge.call('playback', {'response_id': response_id, 'generation': generation,
-                                          'state': 'unknown', 'position_ms': 0})
+                                          'state': state, 'position_ms': position_ms})
         except PilotError:
             pass  # Nothing further can be recorded; the durable claim still stands.
 
