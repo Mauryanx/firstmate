@@ -913,13 +913,20 @@ test_failure_diagnostic_selection() {
   [ "$got" = 'error: remote home could not import abc123' ] \
     || fail "an OpenSSH banner masked the remote-sync error: $got"
 
-  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n** This session may be vulnerable to store now, decrypt later attacks.\nremote command exited 1\nfatal: remote inheritance fixture failed')
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n** This session may be vulnerable to store now, decrypt later attacks.\nfatal: remote inheritance fixture failed')
   [ "$got" = 'fatal: remote inheritance fixture failed' ] \
-    || fail "a multi-line OpenSSH banner or fallback masked the fatal diagnostic: $got"
+    || fail "a multi-line OpenSSH banner masked the fatal diagnostic: $got"
+
+  # A wrapper that fails AFTER relaying the nested cause puts its own generic
+  # "error: " line last. The specific cause the operator can act on is the first
+  # line the command itself wrote, so that is what the report must carry.
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\nfirstmate: skipped: dirty working tree\nreread-firstmate: no\nerror: remote code root did not complete a safe origin update')
+  [ "$got" = 'firstmate: skipped: dirty working tree' ] \
+    || fail "a trailing generic wrapper displaced the specific cause: $got"
 
   got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n** This session may be vulnerable to store now, decrypt later attacks.')
-  [ "$got" = 'command failed with no diagnostic' ] \
-    || fail "banner-only output was reported as the command failure: $got"
+  [ -z "$got" ] \
+    || fail "banner-only output invented a diagnostic the command never wrote: $got"
 
   got=$(first_line $'ordinary failure\nadditional context')
   [ "$got" = 'ordinary failure' ] \
@@ -929,17 +936,16 @@ test_failure_diagnostic_selection() {
   [ "$got" = 'error: remote home could not import abc123' ] \
     || fail "a blank line inside the leading banner run ended banner skipping early: $got"
 
-  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\nremote command exited 1\n** not a banner: this is output from the command itself')
-  [ "$got" = 'remote command exited 1' ] \
+  got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\nremote home: skipped: dirty working tree\n** not a banner: this is output from the command itself')
+  [ "$got" = 'remote home: skipped: dirty working tree' ] \
     || fail "a ** line after the command output began changed the selected diagnostic: $got"
 
   got=$(first_line $'** WARNING: connection is not using a post-quantum key exchange algorithm.\n   \n** This session may be vulnerable to store now, decrypt later attacks.')
-  [ "$got" = 'command failed with no diagnostic' ] \
+  [ -z "$got" ] \
     || fail "a whitespace-only line between banner lines was reported as the command failure: $got"
 
   got=$(first_line '')
-  [ "$got" = 'command failed with no diagnostic' ] \
-    || fail "empty output did not report the missing diagnostic: $got"
+  [ -z "$got" ] || fail "empty output invented a diagnostic: $got"
 
   pass "failure reports ignore OpenSSH banners and select the real diagnostic"
 }
