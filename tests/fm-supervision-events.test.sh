@@ -190,18 +190,24 @@ SLEEPER_PID_FILE="$TMP/sleeper.pid"
 # shellcheck disable=SC2329 # Runtime override called by the sourced watcher.
 sleep() {
   local s
+  # Trap first, single-quoted: a tap landing between the fork and the record
+  # below would otherwise kill this wait child under the default disposition
+  # and orphan the sleeper it had just started.
+  # shellcheck disable=SC2016 # Expanded at signal time on purpose: the pid is this call's.
+  trap '[ -z "${s:-}" ] || kill "$s" 2>/dev/null; exit 143' TERM
   command sleep "$@" &
   s=$!
   printf '%s\n' "$s" > "$SLEEPER_PID_FILE"
-  # shellcheck disable=SC2064 # Expanded now on purpose: the pid is this call's.
-  trap "kill '$s' 2>/dev/null; exit 143" TERM
   wait "$s"
 }
 ring_after() { ( command sleep "$1"; kill -USR1 "$2" ) & }
 no_sleeper_left() {  # the sleeper this case started must be gone
   local s i=0
   s=$(cat "$SLEEPER_PID_FILE" 2>/dev/null || true)
-  [ -n "$s" ] || return 1
+  # No pid recorded means no sleeper was ever started - a tap that landed
+  # before the wait forked skips the sleep entirely, which is correct. The file
+  # is removed before each case, so absence is unambiguous.
+  [ -n "$s" ] || return 0
   # It is a grandchild (the stopped wait child forked it), so it is reaped by
   # init a moment after that child exits.
   while [ "$i" -lt 30 ]; do
@@ -267,6 +273,11 @@ wait  # the ringer
 [ -z "$(ls "$STATE_DIR"/.fm-eventwait.* 2>/dev/null || true)" ] || fail "a tapped event wait must remove its scratch record file"
 no_sleeper_left || fail "the tapped event wait left its helper running"
 pass "event_wait_or_sleep: a tap during the native event wait ends it cleanly with the event path intact"
+
+# The sleeper override above is a terminal-wait stand-in only. Drop it before
+# the check case, so the short internal sleeps on that path cannot clobber this
+# file's sleeper pid or rewrite the main shell's TERM disposition.
+unset -f sleep
 
 # A tap is only ever allowed to end the TERMINAL wait. run_check_capture blocks
 # on its own `wait` for the check's process, and a trapped signal returns that

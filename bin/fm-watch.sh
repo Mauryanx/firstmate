@@ -1777,7 +1777,6 @@ event_wait_or_sleep() {
   fm_event_wait_record_cleanup
   case "$FM_WATCH_WAIT_STATUS" in
     tapped) rc=1 ;;
-    ''|*[!0-9]*) rc=2 ;;
     *) rc=$FM_WATCH_WAIT_STATUS ;;
   esac
   case "$rc" in

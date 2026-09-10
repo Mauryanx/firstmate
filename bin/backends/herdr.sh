@@ -3476,23 +3476,24 @@ fm_backend_herdr_wait_transition() {  # <session> <timeout_secs> <state_dir> <pa
   local fifo_dir fifo reader_pid line ws status agent raw record hit rc=1 reader_rc=0
   # The watcher may end this wait early (its tap) by stopping the child this
   # runs in. Leave nothing behind when that TERM lands: the reader is stopped
-  # and the scratch fifo removed by the trap, and the caller's own TERM
-  # disposition is restored on every ordinary return below. Both the saved
-  # disposition and the trap are established BEFORE anything is created, so no
-  # fork or mktemp below is exposed to a TERM with the default disposition; the
-  # body is single-quoted so it reads whatever the reader pid and fifo dir are
-  # at signal time rather than at install time.
-  local saved_term_trap
-  saved_term_trap=$(trap -p TERM)
+  # and the scratch fifo removed by the trap. The trap is installed BEFORE
+  # anything is created or forked, so nothing below is exposed to a TERM with
+  # the default disposition; the body is single-quoted so it reads whatever the
+  # reader pid and fifo dir are at signal time rather than at install time. It
+  # is deliberately never restored: this call owns the process it runs in (the
+  # watcher's background wait child), and exiting 143 is exactly how that child
+  # reports "killed by the tap" to watch_wait_bg. A saved disposition could not
+  # help here anyway - `trap -p` in a subshell reports the PARENT shell's traps,
+  # so restoring it would install the watcher's own handler into this child and
+  # make a tap look like an ordinary non-signal exit.
   reader_pid=
   fifo_dir=
   # shellcheck disable=SC2016 # Expanded at signal time on purpose: these are this call's.
   trap '[ -z "$reader_pid" ] || kill "$reader_pid" 2>/dev/null; exec 9<&- 2>/dev/null; [ -z "$fifo_dir" ] || rm -rf "$fifo_dir" 2>/dev/null; exit 143' TERM
-  fifo_dir=$(mktemp -d "${TMPDIR:-/tmp}/fm-herdr-eventwait.XXXXXX") || { eval "${saved_term_trap:-trap - TERM}"; return 2; }
+  fifo_dir=$(mktemp -d "${TMPDIR:-/tmp}/fm-herdr-eventwait.XXXXXX") || return 2
   fifo="$fifo_dir/events"
   if ! mkfifo "$fifo" 2>/dev/null; then
     rm -rf "$fifo_dir" 2>/dev/null || true
-    eval "${saved_term_trap:-trap - TERM}"
     return 2
   fi
   "${reader[@]}" "$sock" "$timeout" "${pane_ids[@]}" > "$fifo" 2>/dev/null &
@@ -3501,7 +3502,6 @@ fm_backend_herdr_wait_transition() {  # <session> <timeout_secs> <state_dir> <pa
     kill "$reader_pid" 2>/dev/null || true
     wait "$reader_pid" 2>/dev/null || true
     rm -rf "$fifo_dir" 2>/dev/null || true
-    eval "${saved_term_trap:-trap - TERM}"
     return 2
   fi
   if ! IFS= read -r -u 9 line || [ "$line" != "@subscribed" ]; then
@@ -3563,7 +3563,6 @@ fm_backend_herdr_wait_transition() {  # <session> <timeout_secs> <state_dir> <pa
   wait "$reader_pid" 2>/dev/null || reader_rc=$?
   exec 9<&-
   rm -rf "$fifo_dir" 2>/dev/null || true
-  eval "${saved_term_trap:-trap - TERM}"
   [ "$rc" -eq 0 ] && return 0
   [ "$rc" -eq 2 ] && return 2
   [ "$reader_rc" -eq 0 ] && return 1
