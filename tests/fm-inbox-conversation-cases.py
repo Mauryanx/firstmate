@@ -633,12 +633,24 @@ try:
     # and the opener is about what he asked rather than the same filler again.
     for question, subject in (('What did we find on the deploy?', 'the deploy'),
                               ('Give me an update on the migration.', 'the migration'),
-                              ('Look into what happened with the funnel.', 'the funnel'),
                               ('Firstmate, check on the release notes.', 'the release notes'),
                               ('Can you look into the flaky test?', 'the flaky test')):
         assert subject in ask(question), (question, subject)
-    # Widening where the subject is found never widens what may be said: a
-    # subject longer than a determiner and two words still gets the neutral line.
+
+    # Where the subject is looked for decides WHICH subject is spoken, so both
+    # rules that settle it are exercised here. A marker at the front of the
+    # sentence owns it, or a trailing "with the new config" would be read back
+    # as what he asked about. And a bare on or with is followed only into
+    # something a determiner opens, or "on Friday" would make a date the
+    # subject - one short plain word every later rule is happy to speak.
+    for aside in ('What happened on Friday?',
+                  'Can we ship on Monday?',
+                  'Look into the deploy with the new config.',
+                  'Firstmate, check the deploy logs with the new config.',
+                  'Look into what happened with the funnel.'):
+        assert ask(aside).strip() in ('first ack.', 'second ack.'), aside
+    # A subject longer than a determiner and two words still gets the neutral
+    # line: how far the subject is looked for never widens what may be said.
     assert ask('Tell me about the anomaly insertion research.').strip() in (
         'first ack.', 'second ack.')
 

@@ -118,10 +118,10 @@ TOPIC_OPENERS = (
 # making it refuse by default rather than leaving it to be replaced eventually.
 
 # Phrases that introduce what the captain is asking about, anywhere in what he
-# said. The plain ' on ' and ' with ' come last, so the longer phrases that
-# contain them are recognised as themselves first.
-TOPIC_LEADS = (' about ', ' regarding ', ' with regard to ', ' on the subject of ',
-               ' on ', ' with ')
+# said. The bare prepositions are kept apart: they introduce when or how about
+# as often as they introduce what, so they are followed under one more rule.
+ADJUNCT_LEADS = (' on ', ' with ')
+TOPIC_LEADS = (' about ', ' regarding ', ' with regard to ', ' on the subject of ') + ADJUNCT_LEADS
 TOPIC_IMPERATIVES = ('tell me about', 'find out about', 'look into', 'look up', 'look at',
                      'pull up', 'check on', 'check', 'review')
 # Words that open a clause, which is where an assertion lives. "the deploy THAT
@@ -178,28 +178,35 @@ def topic_of(said):
     """The subject the captain named, or None when nothing can be said truthfully.
 
     Conservative by design: it returns a noun phrase drawn from his own words,
-    and nothing at all when that phrase cannot be shown to carry no claim. Where
-    the subject is looked for is generous, because a question can put it
-    anywhere; what may then be spoken is not, because that is the boundary.
+    and nothing at all when that phrase cannot be shown to carry no claim. The
+    subject may sit anywhere in a question, so it is looked for anywhere; which
+    marker owns it, and whether a bare preposition may be followed at all, are
+    decided here rather than by which loop happens to run first.
     """
     lowered = said.lower()
-    candidate = None
+    found = []
     for lead in TOPIC_LEADS:
         at = lowered.find(lead)
         if at != -1:
-            candidate = said[at + len(lead):]
-            break
-    if candidate is None:
-        for verb in TOPIC_IMPERATIVES:
-            at = lowered.find(verb + ' ')
-            if at != -1 and (at == 0 or not lowered[at - 1].isalnum()):
-                candidate = said[at + len(verb) + 1:]
-                break
-    if candidate is None:
+            found.append((at, -len(lead), at + len(lead), lead in ADJUNCT_LEADS))
+    for verb in TOPIC_IMPERATIVES:
+        at = lowered.find(verb + ' ')
+        if at != -1 and (at == 0 or not lowered[at - 1].isalnum()):
+            found.append((at, -len(verb), at + len(verb) + 1, False))
+    if not found:
         return None
-    candidate = candidate.strip().strip('?.!,;:').strip()
+    # Whichever marker comes first owns the subject, and the longest of those
+    # starting together. A trailing "with the new config" must not take the
+    # sentence away from the "look into the deploy" it was hung on.
+    _, _, start, adjunct = min(found)
+    candidate = said[start:].strip().strip('?.!,;:').strip()
     words = candidate.split()
     if not words:
+        return None
+    # A bare on or with introduces a date as readily as a subject, and a date is
+    # one short plain word that every later rule is happy to speak. Follow those
+    # two only into something a determiner opens.
+    if adjunct and words[0].strip('?.!,;:"()').lower() not in TOPIC_DETERMINERS:
         return None
     if not plain_noun_phrase(words):
         return None

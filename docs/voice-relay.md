@@ -61,7 +61,10 @@ On a substantive turn it files the captain's committed transcript through the ex
 The opener is about what he actually asked: the bridge draws a subject from his own words and speaks a line about looking into it.
 It may reflect the question and may never assert a finding, a status or a result, because nothing has been answered when it is spoken.
 A subject that carries a claim is rejected rather than repeated back, and a neutral line is used instead, which is also what happens when no subject can be drawn safely.
-The subject is looked for anywhere in what he said, so an ordinary question and an imperative behind a polite or vocative prefix both find it; what may then be spoken is unchanged by that.
+The subject is looked for anywhere in what he said, so an ordinary question and an imperative behind a polite or vocative prefix both find it.
+Where it is looked for decides which subject is spoken, so two rules settle that: whichever marker comes first in the sentence owns it, and a bare `on` or `with` is followed only into a phrase a determiner opens.
+Without the first, a trailing "with the new config" takes the sentence away from the "look into the deploy" it was hung on; without the second, "what happened on Friday" makes a date the subject, and a date is one short plain word every later rule is happy to speak.
+Both refuse rather than guess, so an aside he did not ask about becomes the neutral opener instead of a confident line about the wrong thing.
 A subject running longer than a determiner and two words falls back to the neutral opener, so a question about the anomaly insertion research gets a neutral line rather than its own subject read back.
 That is deliberate: past that length a phrase has room for a subject and a verb, which is room to say something happened, and nothing here can tell the difference.
 It is a cost of this block being a stand-in, and it goes away with the standing listener, which lets Firstmate's own first sentence be spoken instead of a line assembled from his words.
