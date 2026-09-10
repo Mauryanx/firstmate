@@ -94,6 +94,11 @@ def turn_budget(cascade):
     return cascade - CASCADE_MARGIN
 
 
+# The smallest non-empty thing a turn can end with. Not a claim, not a sentence:
+# the platform requires content, and this asserts nothing while it waits.
+BUFFER = '... '
+
+
 def chunk(text, finish=None):
     """One OpenAI-compatible streaming delta, the shape the platform expects."""
     delta = {'content': text} if text is not None else {}
@@ -325,10 +330,23 @@ class Handler(BaseHTTPRequestHandler):
                 self.event(dict(chunk(portion), id=identity))
                 spoke = True
             if not spoke:
-                # Saying nothing is how a turn with nothing to say ends: the
-                # platform's own line covers the wait, and inventing one here is
-                # what that replaced.
-                self.event(dict(chunk(''), id=identity))
+                # A turn with nothing to say still may not end EMPTY. Measured
+                # against the live platform: three consecutive conversations died
+                # at 9-11 seconds with termination_reason "custom_llm generation
+                # failed" and error 1002 "LLM Cascade Error: Brain returned no
+                # response". An empty completion is not a tolerated no-op here,
+                # it ends the captain's call, and with backup_llm_config disabled
+                # there is nothing behind it. The vendor's documented remedy for a
+                # backend that has nothing to say yet is a buffer word: a first
+                # chunk ending in an ellipsis and a space.
+                #
+                # BUFFER is deliberately not a sentence. The manufactured opener
+                # was removed because a line assembled here can assert something
+                # that has not happened; an ellipsis asserts nothing at all, so
+                # this keeps the turn alive without reopening that decision. The
+                # trailing space is required by the vendor: without it, later
+                # content is appended straight onto the ellipsis and distorts.
+                self.event(dict(chunk(BUFFER), id=identity))
             self.event(dict(chunk(None, finish='stop'), id=identity))
             self.wfile.write(b'data: [DONE]\n\n')
             self.wfile.flush()

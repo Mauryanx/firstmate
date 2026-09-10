@@ -460,8 +460,19 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
 import random
 import time
 
-from fm_voice_bridge import (ANSWER_MARKER, CASCADE_MARGIN, CASCADE_SECONDS, DELIVER_FLOOR,
+from fm_voice_bridge import (ANSWER_MARKER, BUFFER, CASCADE_MARGIN, CASCADE_SECONDS, DELIVER_FLOOR,
                              Endpoint, Session, Sessions, turn_budget)
+
+# NO TURN MAY END EMPTY. Measured against the live platform, not reasoned about:
+# three consecutive conversations died at 9-11 seconds with termination_reason
+# "custom_llm generation failed" and error 1002 "LLM Cascade Error: Brain
+# returned no response". An empty completion is not a tolerated no-op there, it
+# ends the captain's call, and backup_llm_config is deliberately disabled so
+# nothing is behind it. The turns that author nothing of their own therefore
+# assert BUFFER below rather than '', and BUFFER itself must stay non-empty and
+# keep the trailing space the vendor requires so later content is not appended
+# straight onto the ellipsis.
+assert BUFFER and BUFFER.strip() and BUFFER.endswith(' '), repr(BUFFER)
 
 # Every turn must finish inside what the agent's cascade timeout leaves, because
 # a turn still open when that expires ends the captain's conversation rather than
@@ -523,8 +534,9 @@ roomy = StubTransport(replies=waiting)
     [{'role': 'user', 'content': ANSWER_MARKER + 'tail-answer]'}], {}))
 assert 'deliver' in roomy.commands, roomy.commands
 
-# A substantive turn files his words and says nothing of its own: the platform
-# speaks its own line, in the context of what he said, while Firstmate reads it.
+# A substantive turn files his words and authors nothing of its own. The session
+# yields nothing here; the buffer word that keeps the platform's turn alive is
+# added by the HTTP layer, so this asserts the session's own silence.
 quiet = StubTransport()
 assert ''.join(Session(quiet, 5.0).speak(
     [{'role': 'user', 'content': 'Tell me about the deploy.'}], {})) == ''
@@ -594,11 +606,13 @@ try:
     ask('', 400)
     assert len(owning('audit', cid='live')['requests']) == before
 
-    # A substantive turn files the captain's own words and says nothing of its
-    # own: the platform speaks its own line while Firstmate reads them.
+    # A substantive turn files the captain's own words and authors nothing of its
+    # own: the platform speaks its own line while Firstmate reads them. What goes
+    # back on the wire is the buffer word and nothing else - not silence, which
+    # the platform reads as a failed generation and ends the call on.
     said = 'Tell me what the research found about option B.'
-    assert ask(said, extra={'request_id': 'bridge-1'}) == ''
-    assert ask('And what about option A?', extra={'request_id': 'bridge-2'}) == ''
+    assert ask(said, extra={'request_id': 'bridge-1'}) == BUFFER
+    assert ask('And what about option A?', extra={'request_id': 'bridge-2'}) == BUFFER
     filed = owning('audit', cid='live')['requests']
     assert len(filed) == before + 2
     assert [r['request_id'] for r in filed[-2:]] == ['bridge-1', 'bridge-2']
@@ -620,7 +634,7 @@ try:
     # Verbatim and nothing besides, however long ago it was asked: the words
     # spoken are Firstmate's, with nothing of the bridge's own around them.
     assert ask(marker) == answer
-    assert ask(marker) == '', 'a published answer was spoken twice'
+    assert ask(marker) == BUFFER, 'a published answer was spoken twice'
     # A marker naming no published reply is refused, and refusing it consumes
     # nothing, so the platform may retry the same turn.
     unknown = [{'role': 'system', 'content': 'ignored'}] + heard_so_far + [
@@ -686,7 +700,7 @@ finally:
     endpoint_thread.join()
 
 print('bridge: unauthenticated refusal before any effect, verbatim single publication')
-print('bridge: a substantive turn is filed and answered with silence, not with filler')
+print('bridge: a substantive turn is filed, and no turn ever ends with an empty completion')
 
 # The page that tells the agent an answer is ready, against the real transport
 # with the vendor SDK stubbed. No account, agent minute or acoustic claim.
