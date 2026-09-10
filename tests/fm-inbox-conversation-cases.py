@@ -424,6 +424,16 @@ with patch('urllib.request.urlopen', mint_fails):
         raise AssertionError('a failed mint was absorbed instead of named')
     except PilotError as exc:
         assert 'session token' in str(exc), exc
+# The abandon window is served rather than baked into the page, so the DEFAULT
+# has to be asserted here. Without this, someone could shorten it in production
+# and every lane would still pass, because the lanes serve their own value. The
+# lane proves the ORDERING; this proves the DURATION.
+assert Pilot.ABANDON_AFTER_MS == 15000, Pilot.ABANDON_AFTER_MS
+default_server = Pilot(0, Bridge(pilot, connection), provider, agent_id='agent-default')
+try:
+    assert default_server.abandon_after_ms == 15000, default_server.abandon_after_ms
+finally:
+    default_server.server_close()
 print('pilot: exact owner publication, HTTP isolation, single delivery, credit and overage guards passed')
 
 # The self-driving browser lane that used to live here is retired with the page
@@ -699,8 +709,13 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
                             sequence=portion, final=portion == 4, speech_text=text))
     worklet = temp / 'libsamplerate.worklet.js'
     worklet.write_text('// stand-in for the operator-supplied resampler worklet\n')
+    # A short abandon window so four shapes do not cost four fifteen-second
+    # waits. This changes how long the page waits, never what it decides: the
+    # ordering the lane proves is unaffected by the size of the window, and the
+    # production duration is asserted separately below.
     agent_server = Pilot(0, Bridge(pilot, connection), provider,
-                         agent_id='agent-fixture', agent_worklet=worklet)
+                         agent_id='agent-fixture', agent_worklet=worklet,
+                         abandon_after_ms=1200)
     agent_thread = threading.Thread(target=agent_server.serve_forever, daemon=True)
     agent_thread.start()
     try:
@@ -739,10 +754,15 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
                 if pending:
                     rid = min(r['response_id'] for r in pending)
                     first = waited_since.setdefault(rid, time.monotonic())
-                    # Long enough that the first offer is declined and re-offered
-                    # before any claim lands, so that shape is exercised rather
-                    # than erased.
-                    if time.monotonic() - first >= 2.0:
+                    # Clear of the fixture's abandon window (1.2s) PLUS a poll
+                    # (0.6s), with margin. A declined first offer is abandoned
+                    # and re-offered before any claim lands; claiming inside that
+                    # window takes the reply before the page can offer it again
+                    # and erases the shape instead of exercising it. 1.8s put the
+                    # claim and the re-offer at the same instant, which raced and
+                    # sometimes lost - a margin, not a coincidence, is what makes
+                    # this deterministic.
+                    if time.monotonic() - first >= 3.0:
                         try:
                             Bridge(pilot, connection).call(
                                 'deliver', {'response_id': rid, 'generation': 'harness-' + rid})

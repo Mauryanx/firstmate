@@ -36,7 +36,15 @@ let outstanding = null;
 // worse. Longer than a whole bridge turn can be, so an offer never races a
 // marker still being worked on: that turn is bounded by the agent's cascade
 // timeout, whose documented maximum is fifteen seconds, less the bridge's margin.
-const ABANDON_AFTER_MS = 15000;
+const ABANDON_DEFAULT_MS = 15000;
+// Served by the pilot rather than baked in here, so a fixture can shorten the
+// wait without four abandons of dead time. FAILS CLOSED to the default: a
+// missing, malformed, zero or negative value must never shorten this to nothing,
+// because a slot freed instantly is the truncation race this window exists to
+// close, and an unbounded one wedges every answer published afterwards.
+let abandonAfterMs = ABANDON_DEFAULT_MS;
+const abandonWindow = value =>
+  (typeof value === 'number' && Number.isFinite(value) && value > 0) ? value : ABANDON_DEFAULT_MS;
 const status = text => { $('status').textContent = text; };
 function log(text) {
   const li = document.createElement('li');
@@ -110,7 +118,7 @@ async function watchAllowance() {
 function settled() {
   if (!outstanding) return true;
   if (outstanding.claimedAt && !speaking && stoppedAt > outstanding.claimedAt) return true;
-  return Date.now() - outstanding.sentAt >= ABANDON_AFTER_MS;
+  return Date.now() - outstanding.sentAt >= abandonAfterMs;
 }
 async function announce(reply) {
   outstanding = {id: reply.response_id, sentAt: Date.now(), claimedAt: 0};
@@ -157,6 +165,7 @@ async function connect() {
   }
   const agent = await api('/agent-config');
   if (!agent.agent_id) throw Error('No voice agent is configured for this pilot.');
+  abandonAfterMs = abandonWindow(agent.abandon_after_ms);
   if (!window.ElevenLabsClient) throw Error('The voice agent SDK is not installed for this pilot.');
   // The platform SDK owns the microphone, turn-taking, interruption and speech.
   const {Conversation} = window.ElevenLabsClient;

@@ -309,14 +309,20 @@ class Bridge:
 class Pilot(ThreadingHTTPServer):
     daemon_threads = True
 
+    ABANDON_AFTER_MS = 15000
+
     def __init__(self, port, bridge, provider, agent_id=None, agent_sdk=None,
-                 agent_worklet=None):
+                 agent_worklet=None, abandon_after_ms=None):
         super().__init__(('127.0.0.1', port), Handler)
         self.origin = 'http://127.0.0.1:' + str(self.server_port)
         self.bridge, self.provider = bridge, provider
         # The hosted-agent page and its vendor SDK are served only when the
         # operator has deliberately supplied both; no vendor bytes live in this repo.
         self.agent_id, self.agent_sdk, self.agent_worklet = agent_id, agent_sdk, agent_worklet
+        # How long the page holds an announcement slot before giving up on it.
+        # Served rather than baked into the page; the default is the production
+        # value and only a fixture ever passes anything else.
+        self.abandon_after_ms = abandon_after_ms or self.ABANDON_AFTER_MS
         self.pair_secret = secrets.token_urlsafe(32)
         self.cookie, self.expires = None, 0
         self.auth_lock = threading.Lock()
@@ -419,7 +425,8 @@ class Handler(BaseHTTPRequestHandler):
                 # pay is a sentence he reads rather than a silence he sits in.
                 self.send(self.server.provider.allowance())
             elif self.path == '/agent-config':
-                self.send({'agent_id': self.server.agent_id})
+                self.send({'agent_id': self.server.agent_id,
+                           'abandon_after_ms': self.server.abandon_after_ms})
             elif self.path == '/agent-token':
                 # A private agent needs a short-lived session token. Minting one
                 # spends nothing; connecting the session is what uses minutes.
