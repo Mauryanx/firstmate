@@ -65,6 +65,7 @@ This is why the opener belongs in the bridge and not in the platform's own timeo
 
 The turn is then held open while Firstmate reads and thinks, so the answer continues that same utterance as one thought rather than arriving later as a separate announcement.
 The hold must stay below the agent's own cascade timeout: measured against the live platform, a turn still open when that expires ends the whole conversation with a cascade error and drops the captain mid-call, so a generous hold is worse than a short one.
+That coupling is enforced at startup rather than left to be remembered, because the two settings live in different places and only ever meet in a failure the captain feels.
 Holding does not delay what he hears, because the opener is synthesised and audible about two seconds in whether the turn is held or not; only the platform's own bookkeeping waits for the stream to finish.
 The agent's fallback model is disabled deliberately, so a slow or failing bridge can never let a general-purpose model answer him about the work.
 Nothing is spoken during the wait beyond content-free keepalives that hold the stream.

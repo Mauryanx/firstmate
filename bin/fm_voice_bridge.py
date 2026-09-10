@@ -71,6 +71,11 @@ MAX_BODY_BYTES = 400000
 # delay speech: the opener is synthesised and heard about two seconds in either
 # way, and only the platform's own bookkeeping waits for the stream to finish.
 HOLD_SECONDS = 10.0
+# The agent's own cascade timeout, which the hold must stay clear of. Exceeding it
+# does not time the turn out, it ends the captain's conversation, so the margin is
+# enforced at startup rather than left to whoever edits the flag next.
+CASCADE_SECONDS = 15.0
+CASCADE_MARGIN = 2.0
 LOOK_INTERVAL = 0.5
 
 # An opener may reflect what the captain asked. It may never assert a finding, a
@@ -439,16 +444,29 @@ def main():
     parser.add_argument('--port', type=int, default=8770)
     parser.add_argument('--hold-seconds', type=float, default=HOLD_SECONDS,
                         help='how long one spoken turn waits for Firstmate before ending')
+    parser.add_argument('--cascade-seconds', type=float, default=CASCADE_SECONDS,
+                        help="the agent's own cascade timeout, which the hold must stay clear of")
     args = parser.parse_args()
     try:
+        check(args.hold_seconds >= 0, 'hold cannot be negative')
+        check(args.hold_seconds <= args.cascade_seconds - CASCADE_MARGIN,
+              'hold of %gs is not clear of the %gs cascade timeout; a turn still open when that '
+              'expires ends the conversation, so keep at least %gs between them'
+              % (args.hold_seconds, args.cascade_seconds, CASCADE_MARGIN))
         secret = args.secret_file.read_text().strip()
         binding = json.loads(args.binding.read_text())
         check(isinstance(binding, dict) and binding.get('conversation_id'), 'binding is not a conversation')
         session = Sessions(Bridge(args.home, binding), ShuffleBag(ACKNOWLEDGEMENTS),
                            hold=args.hold_seconds)
         endpoint = Endpoint(args.port, session, secret)
-    except (PilotError, ValueError, KeyError, TypeError, OSError):
-        raise SystemExit('voice bridge startup failed; verify the binding, the shared secret and the port') from None
+    except PilotError as exc:
+        # Name the cause. "Startup failed" once sent an operator hunting the
+        # wrong flag for an hour, and this refusal is one an operator will hit.
+        raise SystemExit('voice bridge startup failed: %s' % exc) from None
+    except OSError as exc:
+        raise SystemExit('voice bridge startup failed: %s' % exc) from None
+    except (ValueError, KeyError, TypeError):
+        raise SystemExit('voice bridge startup failed: the binding is not readable JSON') from None
     print('bridge listening on 127.0.0.1:%d; expose it with an outbound tunnel, never an inbound port'
           % endpoint.server_port, file=sys.stderr)
     endpoint.serve_forever()
