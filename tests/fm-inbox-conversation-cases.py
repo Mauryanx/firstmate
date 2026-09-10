@@ -251,6 +251,9 @@ class SpeechFixture:
     def speech(self, text, request_id):
         self.calls.append((text, request_id))
         return b'fixture-audio'
+    def conversation_token(self, agent_id):
+        return None  # Stands in for a public agent, which is named rather than tokened.
+
     def transcribe(self, audio, request_id):
         return 'A synthetic spoken follow-up'
 
@@ -428,11 +431,11 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
 # operator's Funnel, so authentication is proven before any useful behaviour.
 import random
 
-from fm_voice_bridge import ANSWER_MARKER, Endpoint, Session, ShuffleBag
+from fm_voice_bridge import ANSWER_MARKER, Endpoint, Sessions, ShuffleBag
 
 secret = 'x' * 32
 bag_order = random.Random(7)
-bridge_session = Session(Bridge(pilot, connection), ShuffleBag(['first ack.', 'second ack.'], bag_order))
+bridge_session = Sessions(Bridge(pilot, connection), ShuffleBag(['first ack.', 'second ack.'], bag_order))
 try:
     Endpoint(0, bridge_session, 'too short')
     raise AssertionError('a weak shared secret must refuse to listen')
@@ -456,8 +459,8 @@ def ask(said, expected=200, token=secret, path='/v1/chat/completions', extra=Non
             heard_so_far.append({'role': 'user', 'content': said})
         messages = [{'role': 'system', 'content': 'ignored'}] + list(heard_so_far)
     body = {'model': 'x', 'stream': True, 'messages': messages}
-    if extra is not None:
-        body['elevenlabs_extra_body'] = extra
+    body['elevenlabs_extra_body'] = dict(extra or {})
+    body['elevenlabs_extra_body'].setdefault('session_id', 'session-one')
     headers = {'Content-Type': 'application/json'}
     if token is not None:
         headers['Authorization'] = 'Bearer ' + token
@@ -550,6 +553,30 @@ try:
     # A transcript carrying no captain turn at all is refused, not guessed at.
     ask('', 400, messages=[{'role': 'system', 'content': 'only a system prompt'}])
     ask('', 400, messages=[])
+
+    # A NEW conversation starts its transcript at one turn again. Turn
+    # bookkeeping is per conversation, so that must be heard, not read as a
+    # repeat of the previous conversation and answered with silence.
+    opening = [{'role': 'system', 'content': 'ignored'},
+               {'role': 'user', 'content': 'Tell me what the research found about option B.'}]
+    before_new = len(owning('audit', cid='live')['requests'])
+    assert ask('', messages=opening, extra={'session_id': 'session-two'}) != ''
+    assert len(owning('audit', cid='live')['requests']) == before_new + 1
+    # ...and that new conversation keeps its own re-invocation guard.
+    assert ask('', messages=opening, extra={'session_id': 'session-two'}) == ''
+    assert len(owning('audit', cid='live')['requests']) == before_new + 1
+
+    # A refusal answers before the body is read, so the connection must close
+    # rather than leave that body to be parsed as the next request.
+    refused = urllib.request.Request(endpoint_origin + '/v1/chat/completions',
+                                     json.dumps({'messages': [{'role': 'user', 'content': 'x' * 5000}]}).encode(),
+                                     {'Content-Type': 'application/json'})
+    try:
+        urllib.request.urlopen(refused, timeout=10)
+        raise AssertionError('an unauthenticated call was answered')
+    except urllib.error.HTTPError as error:
+        assert error.status == 401
+        assert error.headers.get('Connection') == 'close', dict(error.headers)
 finally:
     endpoint.shutdown()
     endpoint.server_close()
@@ -562,8 +589,10 @@ print('bridge: unauthenticated refusal before any effect, verbatim publication, 
 if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     run('publish', dict(live_reply, request_id='bridge-2', response_id='agent-answer',
                         speech_text='Synthetic answer for the announcing page.'))
+    worklet = temp / 'libsamplerate.worklet.js'
+    worklet.write_text('// stand-in for the operator-supplied resampler worklet\n')
     agent_server = Pilot(0, Bridge(pilot, connection), provider, b'agent-lane-ack',
-                         agent_id='agent-fixture')
+                         agent_id='agent-fixture', agent_worklet=worklet)
     agent_thread = threading.Thread(target=agent_server.serve_forever, daemon=True)
     agent_thread.start()
     try:

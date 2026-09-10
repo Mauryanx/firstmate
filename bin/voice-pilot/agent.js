@@ -59,11 +59,21 @@ async function connect() {
   cid = paired.conversation_id;
   const agent = await api('/agent-config');
   if (!agent.agent_id) throw Error('No voice agent is configured for this pilot.');
+  if (!window.ElevenLabsClient) throw Error('The voice agent SDK is not installed for this pilot.');
   // The platform SDK owns the microphone, turn-taking, interruption and speech.
-  const {Conversation} = window.ElevenLabs;
+  const {Conversation} = window.ElevenLabsClient;
+  // A private agent needs a minted session token; a public one is named directly.
+  const minted = await api('/agent-token').catch(() => ({token:null}));
+  status('Connecting');
+  // The bridge keeps per-conversation turn state under this id, so a fresh
+  // session is never mistaken for a repeat of the previous one.
+  const sessionId = crypto.randomUUID();
   session = await Conversation.startSession({
-    agentId: agent.agent_id,
+    ...(minted.token ? {conversationToken: minted.token} : {agentId: agent.agent_id}),
     connectionType: 'webrtc',
+    customLlmExtraBody: {session_id: sessionId},
+    // Served from this pilot so the page never reaches a third-party CDN.
+    libsampleratePath: '/libsamplerate.worklet.js',
     onStatusChange: state => status('Agent ' + (state.status || state)),
     onDisconnect: () => { session = null; status('Disconnected.'); },
     onError: message => status('Agent error: ' + message),

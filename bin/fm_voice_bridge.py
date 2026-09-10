@@ -108,6 +108,35 @@ def last_user_turn(messages):
     return content.strip()
 
 
+class Sessions:
+    """One Session per platform conversation, keyed by the page's session id.
+
+    Turn bookkeeping cannot be global: a new conversation starts its transcript
+    at one turn again, and a shared counter would read that as a re-invocation
+    and answer the captain with silence.
+    """
+
+    LIMIT = 64
+
+    def __init__(self, bridge, bag):
+        self.bridge, self.bag = bridge, bag
+        self.sessions = {}
+        self.lock = threading.Lock()
+
+    def for_key(self, key):
+        with self.lock:
+            if key not in self.sessions:
+                if len(self.sessions) >= self.LIMIT:
+                    self.sessions.pop(next(iter(self.sessions)))
+                self.sessions[key] = Session(self.bridge, self.bag)
+            return self.sessions[key]
+
+    def speak(self, messages, extra):
+        key = extra.get('session_id')
+        key = key if isinstance(key, str) and 0 < len(key) <= 200 else 'unkeyed'
+        return self.for_key(key).speak(messages, extra)
+
+
 class Session:
     """Maps one platform conversation onto the bound Firstmate conversation."""
 
@@ -207,10 +236,16 @@ class Handler(BaseHTTPRequestHandler):
         return hmac.compare_digest(offered[len(prefix):], self.server.secret)
 
     def refuse(self, status, message):
+        # A refusal answers before the request body is read, so the unread body
+        # would be parsed as the next request on a reused connection. Closing is
+        # the safe end: draining first would let an unauthenticated caller decide
+        # how much this process reads.
         body = canonical({'error': {'message': message}}).encode()
+        self.close_connection = True
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(body)))
+        self.send_header('Connection', 'close')
         self.send_header('Cache-Control', 'no-store')
         self.end_headers()
         self.wfile.write(body)
@@ -280,7 +315,7 @@ def main():
         secret = args.secret_file.read_text().strip()
         binding = json.loads(args.binding.read_text())
         check(isinstance(binding, dict) and binding.get('conversation_id'), 'binding is not a conversation')
-        session = Session(Bridge(args.home, binding), ShuffleBag(ACKNOWLEDGEMENTS))
+        session = Sessions(Bridge(args.home, binding), ShuffleBag(ACKNOWLEDGEMENTS))
         endpoint = Endpoint(args.port, session, secret)
     except (PilotError, ValueError, KeyError, TypeError, OSError):
         raise SystemExit('voice bridge startup failed; verify the binding, the shared secret and the port') from None

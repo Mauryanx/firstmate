@@ -66,6 +66,7 @@ Answering ordinary conversational turns without waking Firstmate needs a metered
 The bridge listens only on loopback and is published by Tailscale Funnel, which connects outward, terminates TLS, and needs no inbound firewall rule.
 Funnel makes that address genuinely public, so the shared secret is the only thing in front of it.
 Authentication runs before request parsing, routing and transport access, and the endpoint refuses to listen at all with a secret shorter than 32 characters, so there is no moment where it is reachable and unguarded.
+A refusal answers before the request body has been read, so it closes the connection rather than leave that body to be parsed as the next request on a reused one; draining instead would let an unauthenticated caller decide how much this process reads.
 An unauthenticated caller learns only that something refused it, and the secret is never logged nor passed as a command argument.
 Enabling Funnel for a tailnet is a network policy decision for its owner, requiring a node attribute and HTTPS certificates in the admin console; this repository never changes that policy.
 If an implementation ever needs an inbound port opened instead, stop and report it rather than making the change.
@@ -95,6 +96,10 @@ An answer is announced once, and an agent that cannot be reached leaves it for a
 The vendor SDK is not vendored into this repository.
 The operator supplies the bundle with `--agent-sdk` and the agent to talk to with `--agent-id`, so the page's content policy stays same-origin and the dependency decision stays with the operator.
 Without both, the page says no agent is configured rather than reaching for a third-party origin.
+
+The page gives each conversation an identifier and passes it to the bridge, which keeps that conversation's turn bookkeeping under it.
+The agent must be allowed to send that identifier, or it refuses the session outright.
+Turn bookkeeping cannot be global: a new conversation starts its transcript at one turn again, and a shared counter would read that as a repeat and answer the captain with silence.
 
 Configure the agent itself for a brain that thinks slowly: its language model set to the bridge's Funnel address, its voice the selected George warm, synthesis on the fast model, interruptions on with the default ignore terms merged so a backchannel is not a correction, and a soft timeout near three seconds with generated and randomised fillers so silence while Firstmate works is never the same sound twice.
 The bridge's own acknowledgement covers the first moment of that wait, and the platform's fillers cover the rest.

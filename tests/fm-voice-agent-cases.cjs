@@ -16,8 +16,9 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
     window.__attempts = 0;
     // The first attempt fails, standing in for an agent that is briefly unreachable.
     window.__failNext = true;
-    window.ElevenLabs = {Conversation: {startSession: async opts => {
+    window.ElevenLabsClient = {Conversation: {startSession: async opts => {
       window.__agentId = opts.agentId;
+      window.__opts = {libsampleratePath: opts.libsampleratePath, connectionType: opts.connectionType};
       return {
         sendUserMessage: async text => {
           window.__attempts++;
@@ -33,6 +34,9 @@ const {chromium} = require(process.env.FM_VOICE_PLAYWRIGHT_MODULE);
   await page.waitForFunction(() => document.getElementById('status').textContent === 'Listening');
   if (await page.evaluate(() => location.hash)) throw Error('pairing secret remained in location');
   if (await page.evaluate(() => window.__agentId) !== process.argv[3]) throw Error('page opened the wrong agent');
+  const opts = await page.evaluate(() => window.__opts);
+  if (opts.libsampleratePath !== '/libsamplerate.worklet.js') throw Error('resampler would come from a third-party CDN');
+  if (opts.connectionType !== 'webrtc') throw Error('unexpected transport: ' + opts.connectionType);
 
   // The answer published before this page connected is announced. The first
   // attempt fails, so it must be retried by a later poll rather than lost, and

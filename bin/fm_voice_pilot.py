@@ -150,6 +150,41 @@ class ElevenLabs:
             self.budget.finish(request_id, failed=True)
             raise PilotError('provider request failed; usage may be uncertain; no automatic retry') from None
 
+    def conversation_token(self, agent_id):
+        """Short-lived WebRTC session token for a private agent.
+
+        Minting a token consumes no credits and reserves nothing; the agent
+        minutes are spent by connecting the session, not by asking for the key.
+        The overage check still runs, because a session the account cannot
+        afford should be refused before the captain is invited to talk into it.
+        """
+        check(bool(self.key), 'ElevenLabs credential is unavailable')
+        check(isinstance(agent_id, str) and agent_id.replace('_', '').isalnum(), 'implausible agent identity')
+        try:
+            with urllib.request.urlopen(urllib.request.Request(
+                    'https://api.elevenlabs.io/v1/user/subscription',
+                    headers={'xi-api-key': self.key}), timeout=20) as response:
+                subscription = json.load(response)
+            check(subscription.get('can_extend_character_limit') is False and
+                  subscription.get('allowed_to_extend_character_limit') is False,
+                  'account can incur overage; owner must disable it before use')
+        except PilotError:
+            raise
+        except Exception:
+            raise PilotError('cannot verify the no-overage account policy') from None
+        try:
+            with urllib.request.urlopen(urllib.request.Request(
+                    'https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=' + agent_id,
+                    headers={'xi-api-key': self.key}), timeout=20) as response:
+                token = json.load(response).get('token')
+            check(isinstance(token, str) and token, 'provider returned no session token')
+            return token
+        except PilotError:
+            raise
+        except Exception:
+            # A public agent needs no token; the page falls back to its identity.
+            return None
+
     def speech(self, text, request_id):
         check(isinstance(text, str) and 0 < len(text) <= MAX_SPEECH_CHARS,
               'speech portion must contain 1-%d characters' % MAX_SPEECH_CHARS)
@@ -213,13 +248,14 @@ class Bridge:
 class Pilot(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, port, bridge, provider, ack, intro=None, agent_id=None, agent_sdk=None):
+    def __init__(self, port, bridge, provider, ack, intro=None, agent_id=None, agent_sdk=None,
+                 agent_worklet=None):
         super().__init__(('127.0.0.1', port), Handler)
         self.origin = 'http://127.0.0.1:' + str(self.server_port)
         self.bridge, self.provider, self.ack, self.intro = bridge, provider, ack, intro
         # The hosted-agent page and its vendor SDK are served only when the
         # operator has deliberately supplied both; no vendor bytes live in this repo.
-        self.agent_id, self.agent_sdk = agent_id, agent_sdk
+        self.agent_id, self.agent_sdk, self.agent_worklet = agent_id, agent_sdk, agent_worklet
         self.pair_secret = secrets.token_urlsafe(32)
         self.cookie, self.expires = None, 0
         self.auth_lock = threading.Lock()
@@ -238,11 +274,29 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Cache-Control', 'no-store')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
-        self.send_header('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+        self.send_header('Content-Security-Policy', self.policy())
         if cookie:
             self.send_header('Set-Cookie', cookie)
         self.end_headers()
         self.wfile.write(data)
+
+    AGENT_PATHS = ('/agent', '/agent.js', '/elevenlabs.js', '/libsamplerate.worklet.js',
+                   '/agent-config', '/agent-token')
+
+    def policy(self):
+        """Same-origin everywhere; the agent page also needs its worklet sources.
+
+        The vendor bundle builds audio worklets from blob: and data: URLs and
+        speaks WebRTC to the platform, so those are widened for that page alone.
+        The browser pilot page keeps the stricter policy it already had.
+        """
+        if self.path in self.AGENT_PATHS:
+            return ("default-src 'self'; script-src 'self' blob: data:; style-src 'self'; "
+                    "media-src 'self' blob:; worker-src 'self' blob:; "
+                    "connect-src 'self' https://api.elevenlabs.io wss://api.elevenlabs.io https://livekit.cloud wss://*.livekit.cloud; "
+                    "frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
+        return ("default-src 'self'; script-src 'self'; style-src 'self'; media-src 'self' blob:; "
+                "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
 
     def authorized(self):
         check(self.headers.get('Host') == self.server.origin.removeprefix('http://'), 'wrong host')
@@ -257,11 +311,12 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get('Host') != self.server.origin.removeprefix('http://'):
             self.send({'error': 'wrong host'}, 403)
             return
-        if self.path == '/elevenlabs.js':
-            if not self.server.agent_sdk:
-                self.send({'error': 'no voice agent SDK is installed for this pilot'}, 404)
+        vendor = {'/elevenlabs.js': self.server.agent_sdk, '/libsamplerate.worklet.js': self.server.agent_worklet}
+        if self.path in vendor:
+            if not vendor[self.path]:
+                self.send({'error': 'that voice agent asset is not installed for this pilot'}, 404)
                 return
-            self.send(Path(self.server.agent_sdk).read_bytes(), kind='text/javascript')
+            self.send(Path(vendor[self.path]).read_bytes(), kind='text/javascript')
             return
         names = {'/': ('index.html', 'text/html'), '/app.js': ('app.js', 'text/javascript'),
                  '/style.css': ('style.css', 'text/css'), '/agent': ('agent.html', 'text/html'),
@@ -304,6 +359,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(self.server.intro, kind='audio/mpeg')
             elif self.path == '/agent-config':
                 self.send({'agent_id': self.server.agent_id})
+            elif self.path == '/agent-token':
+                # A private agent needs a short-lived session token. Minting one
+                # spends nothing; connecting the session is what uses minutes.
+                check(self.server.agent_id is not None, 'no voice agent is configured')
+                self.send({'token': self.server.provider.conversation_token(self.server.agent_id)})
             elif self.path == '/poll':
                 self.send(self.server.bridge.call('poll'))
             elif self.path in ('/capture', '/playback'):
@@ -347,6 +407,8 @@ def main():
     parser.add_argument('--agent-id', help='hosted voice agent to talk to on the /agent page')
     parser.add_argument('--agent-sdk', type=Path,
                         help='operator-supplied vendor SDK bundle served to that page')
+    parser.add_argument('--agent-worklet', type=Path,
+                        help='operator-supplied resampler worklet, served so no CDN is used')
     parser.add_argument('--port', type=int, default=8765)
     args = parser.parse_args()
     os.umask(0o077)
@@ -364,7 +426,7 @@ def main():
     check(len(keys) <= 1, 'conflicting ElevenLabs credentials')
     server = Pilot(args.port, Bridge(args.home, binding),
                    ElevenLabs(next(iter(keys), None), Budget(args.spend_file, args.credit_limit)), ack, intro,
-                   args.agent_id, args.agent_sdk)
+                   args.agent_id, args.agent_sdk, args.agent_worklet)
     # Verify bound owner before creating browser access, without any provider call.
     server.bridge.call('poll')
     with args.access_file.open('x') as handle:
@@ -376,5 +438,13 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (PilotError, OSError, ValueError):
-        raise SystemExit('voice pilot startup failed; verify private binding, acknowledgement, owner and options') from None
+    except FileExistsError as exc:
+        # Exclusive creation protects a live pairing record; say so plainly,
+        # because "startup failed" sends the operator hunting the wrong flag.
+        raise SystemExit('voice pilot startup failed: the access file %s already exists; '
+                         'a pairing record is never overwritten, so name a new one' % exc.filename) from None
+    except OSError as exc:
+        raise SystemExit('voice pilot startup failed: %s' % exc) from None
+    except (PilotError, ValueError) as exc:
+        raise SystemExit('voice pilot startup failed: %s'
+                         % (exc if isinstance(exc, PilotError) else 'binding is not readable JSON')) from None
