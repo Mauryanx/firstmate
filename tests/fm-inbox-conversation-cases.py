@@ -716,11 +716,21 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
     # and so was never announced at all, while the delay was blamed four times.
     # Wait for the page's own first poll instead of guessing at its startup.
     page_is_polling = threading.Event()
+    # Ids the page has ACTUALLY announced, as it announces them. Never inferred
+    # from which reply happens to be waiting: "first still-waiting" is not a
+    # proxy for "announced", and treating it as one is what made every earlier
+    # attempt claim answers the page had not offered yet.
+    announced_ids = []
+    announced_lock = threading.Lock()
 
     class WatchedBridge(Bridge):
         def call(self, command, payload=None):
             if command == 'poll':
                 page_is_polling.set()
+            if command == 'playback' and (payload or {}).get('generation') == 'announce-probe':
+                with announced_lock:
+                    if payload['response_id'] not in announced_ids:
+                        announced_ids.append(payload['response_id'])
             return super().call(command, payload)
 
     # A short abandon window so four shapes do not cost four fifteen-second
@@ -764,32 +774,29 @@ if os.environ.get('FM_VOICE_PLAYWRIGHT_MODULE'):
             # this lane is here to avoid.
             waited_since = {}
             while not claimer_stop.is_set():
-                pending = [r for r in owning('audit', cid='live')['replies']
-                           if r['response_id'].startswith('agent-answer-')
-                           and r['delivery']['state'] == 'waiting']
-                if pending:
-                    rid = min(r['response_id'] for r in pending)
-                    first = waited_since.setdefault(rid, time.monotonic())
-                    # Two shapes want opposite things from the abandon window,
-                    # so the delay is per reply rather than one number:
-                    #   - the FIRST answer must survive its decline and be
-                    #     re-offered, which only happens after the page abandons
-                    #     the slot, so its claim must land AFTER one abandon;
-                    #   - every other answer must be claimed while the page still
-                    #     holds the slot, so its claim must land BEFORE abandon.
-                    # A single delay cannot satisfy both, which is why the last
-                    # run announced all four and still overlapped: every claim
-                    # arrived after its slot had already been given up.
-                    abandon_s = 3.0
-                    ready = abandon_s + 0.8 if rid.endswith('-1') else 0.8
-                    if time.monotonic() - first >= ready:
-                        try:
-                            Bridge(pilot, connection).call(
-                                'deliver', {'response_id': rid, 'generation': 'harness-' + rid})
-                            claimed_by_harness.append(rid)
-                        except PilotError:
-                            pass  # Already claimed, or the conversation moved on.
+                states = {r['response_id']: r['delivery']['state']
+                          for r in owning('audit', cid='live')['replies']}
+                with announced_lock:
+                    offered = list(announced_ids)
+                for rid in offered:
+                    if states.get(rid) != 'waiting':
                         waited_since.pop(rid, None)
+                        continue
+                    first = waited_since.setdefault(rid, time.monotonic())
+                    # The declined first answer must outlive one abandon so the
+                    # page offers it again; the rest are claimed while the page
+                    # still holds the slot. Both are measured from the moment the
+                    # page said it announced this answer, not from thread start.
+                    ready = 3.8 if rid.endswith('-1') else 0.8
+                    if time.monotonic() - first < ready:
+                        continue
+                    try:
+                        Bridge(pilot, connection).call(
+                            'deliver', {'response_id': rid, 'generation': 'harness-' + rid})
+                        claimed_by_harness.append(rid)
+                    except PilotError:
+                        pass  # Already claimed, or the conversation moved on.
+                    waited_since.pop(rid, None)
                 claimer_stop.wait(0.2)
 
         claimer = threading.Thread(target=claim_what_the_page_was_offered, daemon=True)

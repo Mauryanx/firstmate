@@ -121,6 +121,18 @@ const reread = async (page, state) => {
       return {
         sendUserMessage: async text => {
           window.__attempts++;
+          // Tell the harness this answer has actually been ANNOUNCED, rather
+          // than leaving it to infer that from a clock. /playback is an existing
+          // same-origin route and the harness only needs to see the request go
+          // by; it refusing an unclaimed reply is fine and expected. Inferring
+          // "announced" from "first still-waiting" is what made four rounds of
+          // delay-tuning answer the wrong question.
+          try {
+            const announced = text.slice('[firstmate-reply '.length, -1);
+            await fetch('/playback', {method:'POST', headers:{'Content-Type':'application/json'},
+                                      body:JSON.stringify({response_id:announced, generation:'announce-probe',
+                                                           state:'unknown', position_ms:0})});
+          } catch (ignored) { /* the signal is the request, not its answer */ }
           if (window.__failNext) { window.__failNext = false; throw Error('agent unreachable'); }
           if (window.__carrying) window.__overlapped = true;
           window.__carrying = true;
