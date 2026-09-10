@@ -1666,6 +1666,25 @@ fm_wake_clean_field() {
   LC_ALL=C tr '\t\r\n' '   '
 }
 
+# "Is a durable row now in the queue, so this home's watcher is owed a tap?"
+# That question has ONE owner, here, beside the append that answers it:
+# fm_wake_append_locked sets FM_WAKE_ROW_COMMITTED on every path, and the only
+# operation that can take a committed row back out - a caller's rollback, which
+# rewrites the queue under the same held lock - clears it through
+# fm_wake_row_uncommitted. Callers ask fm_wake_tap_if_committed instead of
+# re-deriving durability from their own return codes, so a caller's status
+# vocabulary can change without silently disagreeing with the tap rule.
+FM_WAKE_ROW_COMMITTED=0
+
+fm_wake_row_uncommitted() {
+  FM_WAKE_ROW_COMMITTED=0
+}
+
+fm_wake_tap_if_committed() {
+  [ "${FM_WAKE_ROW_COMMITTED:-0}" -eq 1 ] || return 0
+  fm_wake_tap_watcher
+}
+
 # fm_wake_append <kind> <key> <payload>
 # Appends one durable wake row under the queue lock, then taps this home's
 # sleeping watcher (fm_wake_tap_watcher below) so the cycle that surfaces the
@@ -1677,7 +1696,7 @@ fm_wake_append() {
   fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
   fm_wake_append_locked "$@" || status=$?
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
-  [ "$status" -ne 0 ] || fm_wake_tap_watcher
+  fm_wake_tap_if_committed
   return "$status"
 }
 
@@ -1719,6 +1738,7 @@ fm_wake_tap_watcher() {
 fm_wake_append_locked() {
   local kind=$1 key=$2 payload=$3 clean_key clean_payload epoch seq seq_file status
   local recovery_marker
+  FM_WAKE_ROW_COMMITTED=0
   case "$kind" in
     signal|stale|check|heartbeat) ;;
     *) printf 'fm_wake_append: invalid wake kind: %s\n' "$kind" >&2; return 2 ;;
@@ -1743,6 +1763,7 @@ fm_wake_append_locked() {
   if [ "$status" -eq 0 ]; then
     printf '%s\t%s\t%s\t%s\t%s\n' "$epoch" "$seq" "$kind" "$clean_key" "$clean_payload" >> "$FM_WAKE_QUEUE" || status=$?
   fi
+  [ "$status" -ne 0 ] || FM_WAKE_ROW_COMMITTED=1
   return "$status"
 }
 
