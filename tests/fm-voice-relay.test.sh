@@ -4738,4 +4738,71 @@ for mark in ("tool_use", "first_audio", "reply_end"):
 PY
 pass "a reply that arrives before the end of the clip is named as an unusable clock"
 
+
+# --- The no-overage guard on hosted-agent token minting -----------------------
+#
+# This is the only thing standing between the captain's account and a bill he has
+# forbidden. It survived the removal of the self-driving front end, whose own
+# spend paths were deleted alongside it, so it is now the ONLY provider guard the
+# pilot has left. A simplification pass that quietly dropped it would be worse
+# than the duplication it removed, so this exercises the refusal rather than
+# reading the source: each case drives ElevenLabs.conversation_token against a
+# stubbed subscription response and fails if a token is ever returned.
+
+python3 - <<'PY' || fail "the no-overage guard on agent-token minting did not refuse"
+import importlib.util, io, json, pathlib, sys, urllib.request
+
+# The pilot imports its siblings by bare name, the way it does when run from bin/.
+sys.path.insert(0, str(pathlib.Path("bin").resolve()))
+
+spec = importlib.util.spec_from_file_location(
+    "fm_voice_pilot", pathlib.Path("bin/fm_voice_pilot.py"))
+pilot = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(pilot)
+
+AGENT = "agent_1601m24hck8sfawv1vqfnfsa1d9x"
+
+
+def responder(subscription):
+    """Answer the subscription probe; a token request here is already a failure."""
+    def open_url(request, timeout=None):
+        url = request.full_url if hasattr(request, "full_url") else str(request)
+        if "/v1/user/subscription" in url:
+            return io.BytesIO(json.dumps(subscription).encode())
+        raise AssertionError("minted a session token past the no-overage guard: " + url)
+    return open_url
+
+
+def refuses(subscription, label):
+    original = urllib.request.urlopen
+    urllib.request.urlopen = responder(subscription)
+    try:
+        provider = pilot.ElevenLabs("test-key-not-a-real-credential",
+                                    pilot.Budget("/dev/null", 0))
+        provider.conversation_token(AGENT)
+    except pilot.PilotError as exc:
+        assert "overage" in str(exc), "%s: refused for the wrong reason: %s" % (label, exc)
+        return
+    except AssertionError as exc:
+        sys.exit("%s: %s" % (label, exc))
+    finally:
+        urllib.request.urlopen = original
+    sys.exit("%s: minting was allowed when it must have been refused" % label)
+
+
+# Either flag true means the account can be pushed into overage.
+refuses({"can_extend_character_limit": True,
+         "allowed_to_extend_character_limit": False},
+        "can_extend_character_limit true")
+refuses({"can_extend_character_limit": False,
+         "allowed_to_extend_character_limit": True},
+        "allowed_to_extend_character_limit true")
+refuses({"can_extend_character_limit": True,
+         "allowed_to_extend_character_limit": True},
+        "both extension flags true")
+# A subscription that does not report the flags at all is not proof of safety.
+refuses({}, "subscription response omits both flags")
+PY
+pass "agent-token minting refuses whenever the account could incur overage"
+
 printf 'all voice relay cases passed\n'

@@ -1344,6 +1344,15 @@ families_for_changed_path() {
       printf '%s\n' __script__:fm-inbox-conversation.test.sh
       printf '%s\n' __script__:fm-voice-relay.test.sh
       ;;
+    # The spoken interface: the bridge that fronts firstmate with the hosted
+    # voice agent, the pilot that serves its one page, that page itself, and the
+    # browser cases that drive them. They share one conversation transport, so a
+    # change to any of them is checked by the same two suites.
+    bin/fm_voice_bridge.py|bin/fm_voice_pilot.py|bin/voice-pilot/*|\
+    tests/fm-voice-agent-cases.cjs|tests/fm-voice-browser-cases.cjs)
+      printf '%s\n' __script__:fm-voice-relay.test.sh
+      printf '%s\n' __script__:fm-inbox-conversation.test.sh
+      ;;
     bin/fm-timeout-lib.sh)
       # The shared hard bound: session start's runtime bound, the fleet/bearings
       # snapshots, the vendor auth probe, the stow cascade's per-home step, and
