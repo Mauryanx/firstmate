@@ -58,6 +58,7 @@ OTHER_ROWS=
 HELD_VOICE_KEYS=
 HELD_VOICE_SEQS=
 HELD_VOICE_ROWS=0
+STALE_ACK_REASON=
 
 # --- per-actor consume (docs/watcher-continuity.md "Per-actor acknowledgement") --
 # main (FM_SUPERVISION_ACTOR unset or "main", via fm-lease-lib.sh's fm_lease_actor
@@ -781,14 +782,19 @@ if [ -n "$ACK_THROUGH" ]; then
     # re-presents the same row and invites the same stale acknowledgement).
     # The generation is the marker's current one; only a retired marker cannot
     # be named because the next drain opens a fresh generation for it.
+    if [ "$HELD_VOICE_ROWS" -gt 0 ]; then
+      STALE_ACK_REASON='every presented wake row at or below it is a held voice row'
+    else
+      STALE_ACK_REASON='none of your presented wake rows is at or below it'
+    fi
     case "$RECOVERY_MARKER_TOKEN" in
       pending:*|announced:*)
-        printf 'wake drain: nothing was acknowledged through %s (none of your presented wake rows is at or below it); the current wake is row %s: run bin/fm-wake-drain.sh --ack-through %s --recovery-generation %s after handling it\n' \
-          "$ACK_THROUGH" "$PRESENTED_MAX" "$PRESENTED_MAX" "${RECOVERY_MARKER_TOKEN##*:}" >&2
+        printf 'wake drain: nothing was acknowledged through %s (%s); the current wake is row %s: run bin/fm-wake-drain.sh --ack-through %s --recovery-generation %s after handling it\n' \
+          "$ACK_THROUGH" "$STALE_ACK_REASON" "$PRESENTED_MAX" "$PRESENTED_MAX" "${RECOVERY_MARKER_TOKEN##*:}" >&2
         ;;
       *)
-        printf 'wake drain: nothing was acknowledged through %s (none of your presented wake rows is at or below it); the current wake is row %s: re-run bin/fm-wake-drain.sh and use the WAKE_ACK_REQUIRED command it prints\n' \
-          "$ACK_THROUGH" "$PRESENTED_MAX" >&2
+        printf 'wake drain: nothing was acknowledged through %s (%s); the current wake is row %s: re-run bin/fm-wake-drain.sh and use the WAKE_ACK_REQUIRED command it prints\n' \
+          "$ACK_THROUGH" "$STALE_ACK_REASON" "$PRESENTED_MAX" >&2
         ;;
     esac
   elif [ "$RECOVERY_ACK_MOVED" = true ]; then

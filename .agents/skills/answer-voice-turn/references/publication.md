@@ -68,9 +68,15 @@ A request still `saved` is a question nobody answered, whatever the inbox says.
 Answer it if it is still worth answering, or reject it with the reason.
 The wake drain holds the row of a still-`saved` request through every acknowledgement and presents it again, so such a request keeps resurfacing until it is accepted or rejected.
 
-One `saved` request can never be accepted: one whose `previous_turn_id` names a turn this conversation never captured, which `audit` shows as a `previous_turn_id` matching no `turn_id` in its list.
+Three `saved` states can never be accepted, and each needs the same route out.
+
+The first is a request whose `previous_turn_id` names a turn this conversation never captured, which `audit` shows as a `previous_turn_id` matching no `turn_id` in its list.
 Capture admits such a turn, but `accept` waits for the predecessor and returns `dispatch: false` while the predecessor can no longer arrive, and `publish` needs an accepted request.
-The only route the transport allows is to reject it with that reason and then publish a `kind: question` or `kind: error` portion against it, so the caller hears that the earlier turn was lost and can repeat it instead of hearing nothing:
+
+The second is a correction whose `correction_of` names a request that is not `accepted`, and the third is a `question_binding` that is stale or unknown: it names no open question, or a question a previously accepted turn already consumed, which happens when the caller answers the same question twice.
+In these two states `accept` does not skip the request: it refuses for the whole conversation, exiting 2 with `correction target not accepted here` or `stale or unknown question binding`, and because it takes turns oldest first, every later spoken turn sits `saved` behind that request until it is rejected.
+
+The only route the transport allows in all three states is to reject the request with its reason and then publish a `kind: question` or `kind: error` portion against it, so the caller hears what went wrong and can say it again instead of hearing nothing; once it is rejected, `accept` moves on to the turns behind it:
 
 ```sh
 FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation reject <<<'{"conversation_id":"<cid>","request_id":"<rid>","reason":"previous turn <turn> was never captured"}'
@@ -91,5 +97,6 @@ An `interrupted` or `unknown` receipt is left visible on purpose and is never re
 Refusals are the transport declining to do something unsafe, not transient errors to retry around:
 
 - an ownership refusal means this process does not hold this home's session lock, whether because `FM_HOME` is not explicit, the lock names another live session, or this is a Pi supervision branch; it never means the conversation belongs to an earlier session, because ownership follows the lock and the session holding it takes over every conversation in the home, including requests a restarted session left `saved`;
+- a `correction target not accepted here` or `stale or unknown question binding` refusal from `accept` means the oldest `saved` request is one that can never be accepted, and it blocks every turn behind it until it is rejected; take the reject-then-question route in the reconcile section above;
 - a sequence or closed-stream refusal means the portion you are publishing does not follow the one already published;
 - an identity refusal means a `request_id` or `response_id` is being reused with different content, and the durable record wins.
