@@ -17,6 +17,8 @@ DRAIN="$ROOT/bin/fm-wake-drain.sh"
 
 TMP_ROOT=$(fm_test_tmproot fm-wake-drain-voice-first-tests)
 
+# The vc- row is appended directly with fm_wake_append because the producer
+# (the fm_inbox_conversation.py capture command) is not on main.
 VOICE_ID='vc-9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08'
 VOICE_KEY="inbox:$VOICE_ID"
 TYPED_KEY='inbox:1757000000-typed1'

@@ -49,6 +49,12 @@ PRESENTATION_LOCK_TIMEOUT=${FM_STATUS_PRESENTATION_LOCK_TIMEOUT:-10}
 case "$PRESENTATION_LOCK_TIMEOUT" in ''|*[!0-9]*|0) PRESENTATION_LOCK_TIMEOUT=10 ;; esac
 # The wake key the voice conversation transport writes for a spoken note
 # (header "Captain voice notes come first"); a typed note's key has no prefix.
+# The producer is the fm_inbox_conversation.py capture command, currently on the
+# voice branch fm/firstmate-voice-implement, not on main.
+# fm-inbox.sh note is the typed-note path: it mints <epoch>-<suffix> ids with no
+# voice marker, and no reply can be published against such a note.
+# Only the transport capture writes vc-<sha256> ids, and a spoken reply can be
+# published only against such a capture.
 VOICE_KEY_PATTERN='^inbox:vc-'
 VOICE_ROWS=0
 
