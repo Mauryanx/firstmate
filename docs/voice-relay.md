@@ -33,6 +33,7 @@ the owner of that format and is the only file both machines run.
 The relay reads records and queues work. It never changes a project, and the
 queueing half is `bin/fm-inbox.sh note`, the same surface the captain's own
 out-of-band capture already uses, rather than a second queue.
+A note whose id carries the `vc-` prefix is a spoken turn, and `bin/fm-wake-drain.sh` presents it to the first mate ahead of every other queued wake so it is answered before other work ([watcher-continuity.md](watcher-continuity.md#per-actor-acknowledgement)).
 
 ## What it costs in time
 
