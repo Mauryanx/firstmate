@@ -1,0 +1,321 @@
+
+==================== SETUP: pilot home, owning session = this codex process pid 373372 ====================
+session lock: 373372
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation pilot-init <<< '{"publication_policy":"owner-authored-elevenlabs-v1"}'
+  stdout: {"destination":"elevenlabs","pilot":true}
+  exit: 0
+CHECK ok   - pilot-init enables live publication for the lock holder
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation bind <<< '{"conversation_id":"captain-voice-2026-09-11","authenticated_principal":"captain"}'
+  stdout: {"conversation_id":"captain-voice-2026-09-11","credential":"RYkB3HNyE18XdqeBQbjLJljy7R_jJbMaKDpS14oLwf4"}
+  exit: 0
+CHECK ok   - bind returns a transport credential
+
+==================== S1: an ordinary typed note is queued first, then the bridge captures a spoken turn ====================
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh note "remember to rotate the logs"
+  queued 1789170524-H5i3VC
+    remember to rotate the logs
+    firstmate will pick this up at its next check.
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation capture <<< '{"conversation_id":"captain-voice-2026-09-11","credential":"RYkB3HNyE18XdqeBQbjLJljy7R_jJbMaKDpS14oLwf4","turn_id":"t1","request_id":"r1","committed_transcript":"Is the deploy on the migration branch green?","revision":1,"previous_turn_id":null,"created_at":"2026-09-11T23:00:00Z"}'
+  stdout: {"request_id":"r1","state":"saved"}
+  exit: 0
+CHECK ok   - capture lands the turn as a saved request
+  state/inbox pending: 1789170524-H5i3VC.note vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe.note 
+  state/inbox/handled: 
+  wake queue:
+    1789170524	1	check	inbox:1789170524-H5i3VC	check: captain inbox note 1789170524-H5i3VC - remember to rotate the logs
+    1789170525	2	check	inbox:vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe	check: conversation inbox note vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe; use fm-inbox.sh conversation accept
+CHECK ok   - a pending vc- note exists beside the request
+CHECK ok   - one check wake keyed inbox:vc-* was appended, carrying IDs only
+$ sed -n '/^--$/,$p' "$FM_HOME/state/inbox/vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe.note" | tail -n +2   (skill step 1)
+  {"authenticated_principal":"captain","committed_transcript":"Is the deploy on the migration branch green?","conversation_id":"captain-voice-2026-09-11","correction_of":null,"created_at":"2026-09-11T23:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"r1","revision":1,"turn_id":"t1"}
+CHECK ok   - the note body carries conversation_id, request_id and committed_transcript
+
+==================== S2: the drain presents the spoken turn FIRST under VOICE, ahead of the earlier typed note ====================
+$ FM_STATE_OVERRIDE=/tmp/nm-voice-drive/home/state bin/fm-wake-drain.sh
+  stdout: VOICE: the captain spoke - 1 voice note(s) below; answer every one before any other wake (transcript in state/inbox/<id>.note; load the answer-voice-turn skill, because the ordinary drain acknowledgement refuses a vc- id and answers nobody):
+  stdout: 1789170525	2	check	inbox:vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe	check: conversation inbox note vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe; use fm-inbox.sh conversation accept
+  stdout: OTHER WAKES (handle only after every voice note above):
+  stdout: 1789170524	1	check	inbox:1789170524-H5i3VC	check: captain inbox note 1789170524-H5i3VC - remember to rotate the logs
+  stderr: WAKE_ACK_REQUIRED: after handling completes run bin/fm-wake-drain.sh --ack-through 2 --recovery-generation 373999.1789170524.afDeTz
+  exit: 0
+  line numbers: VOICE heading=1 voice row=2 OTHER WAKES=3 typed row=4
+CHECK ok   - VOICE heading, then the voice row, then OTHER WAKES, then the typed row
+CHECK ok   - the voice row keeps its later sequence number 2 - presentation only
+
+==================== S3: the generic inbox drain cannot retire a spoken turn ====================
+$ bin/fm-inbox.sh drain --ack vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe
+  stderr: fm-inbox: conversation notes require conversation accept
+  exit: 1
+CHECK ok   - drain --ack refuses a vc- id
+$ bin/fm-inbox.sh list
+  1789170524-H5i3VC
+      remember to rotate the logs
+CHECK ok   - list shows the typed note but never the vc- note
+
+==================== S4 (adversarial): acknowledge the whole drain WITHOUT answering - the instruction slip that lost the 2026-09-10 call ====================
+$ bin/fm-wake-drain.sh --ack-through 2 --recovery-generation 373999.1789170524.afDeTz
+  stderr: wake drain: held 1 voice wake row(s) through 2 instead of acknowledging: the conversation request behind each is still saved, so nobody has answered the captain yet; accept and publish (or reject) it through answer-voice-turn, and the next drain presents it again
+  exit: 0
+CHECK ok   - the acknowledgement reports it held 1 voice row
+  wake queue:
+    1789170525	2	check	inbox:vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe	check: conversation inbox note vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe; use fm-inbox.sh conversation accept
+  state/inbox pending: 1789170524-H5i3VC.note vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe.note 
+  state/inbox/handled: 
+CHECK ok   - the voice row is still queued, the typed row is gone, the note is still pending
+
+-- next drain presents the held row again under VOICE --
+$ FM_STATE_OVERRIDE=/tmp/nm-voice-drive/home/state bin/fm-wake-drain.sh
+  stdout: VOICE: the captain spoke - 1 voice note(s) below; answer every one before any other wake (transcript in state/inbox/<id>.note; load the answer-voice-turn skill, because the ordinary drain acknowledgement refuses a vc- id and answers nobody):
+  stdout: 1789170525	2	check	inbox:vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe	check: conversation inbox note vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe; use fm-inbox.sh conversation accept
+  stderr: WAKE_ACK_REQUIRED: after handling completes run bin/fm-wake-drain.sh --ack-through 2 --recovery-generation 373999.1789170524.afDeTz
+  exit: 0
+CHECK ok   - the held voice row is presented again under VOICE
+
+==================== S9: a second spoken turn arrives; the earlier stale acknowledgement now names the held row honestly ====================
+$ FM_STATE_OVERRIDE=/tmp/nm-voice-drive/home/state bin/fm-wake-drain.sh
+  stdout: VOICE: the captain spoke - 2 voice note(s) below; answer every one before any other wake (transcript in state/inbox/<id>.note; load the answer-voice-turn skill, because the ordinary drain acknowledgement refuses a vc- id and answers nobody):
+  stdout: 1789170525	2	check	inbox:vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe	check: conversation inbox note vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe; use fm-inbox.sh conversation accept
+  stdout: 1789170529	3	check	inbox:vc-7e2fab49f78a206e09296fd3a32b0ee652fe86308c025d6fe70d42619fee48ed	check: conversation inbox note vc-7e2fab49f78a206e09296fd3a32b0ee652fe86308c025d6fe70d42619fee48ed; use fm-inbox.sh conversation accept
+  stderr: WAKE_ACK_REQUIRED: after handling completes run bin/fm-wake-drain.sh --ack-through 3 --recovery-generation 373999.1789170524.afDeTz
+  exit: 0
+CHECK ok   - both voice rows are presented, no OTHER WAKES label when nothing else is queued
+
+-- run the acknowledgement through row 2 only, while row 3 is the current presented wake --
+$ bin/fm-wake-drain.sh --ack-through 2 --recovery-generation 373999.1789170524.afDeTz
+  stderr: wake drain: held 1 voice wake row(s) through 2 instead of acknowledging: the conversation request behind each is still saved, so nobody has answered the captain yet; accept and publish (or reject) it through answer-voice-turn, and the next drain presents it again
+  stderr: wake drain: nothing was acknowledged through 2 (every presented wake row at or below it is a held voice row); the current wake is row 3: run bin/fm-wake-drain.sh --ack-through 3 --recovery-generation 373999.1789170524.afDeTz after handling it
+  exit: 0
+CHECK ok   - stale ack says every row at or below it is a held voice row (not 'none presented')
+CHECK ok   - and it still points at row 3 as the current wake
+
+==================== S5: the skill's operating sequence - accept, progress portion, final answer, bridge poll and speak ====================
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Is the deploy on the migration branch green?","conversation_id":"captain-voice-2026-09-11","correction_of":null,"created_at":"2026-09-11T23:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"r1","revision":1,"turn_id":"t1"},"playback_context":[]}
+  exit: 0
+CHECK ok   - accept dispatches r1 with its committed transcript
+  state/inbox pending: 1789170524-H5i3VC.note vc-7e2fab49f78a206e09296fd3a32b0ee652fe86308c025d6fe70d42619fee48ed.note 
+  state/inbox/handled: vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe.note 
+CHECK ok   - acceptance moved the note to state/inbox/handled/ (skill step 1 reconcile pointer)
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r1","response_id":"r1-p1","sequence":1,"kind":"progress","final":false,"destination":"elevenlabs","speech_text":"Still reading the records on that one."}'
+  stdout: {"published":true,"response_id":"r1-p1"}
+  exit: 0
+CHECK ok   - progress portion published first (final false)
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r1","response_id":"r1-x","sequence":1,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"Out of order."}'
+  stderr: fm-inbox conversation: reply stream closed or sequence is not next
+  exit: 2
+CHECK ok   - a portion that does not follow the stream is refused
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r1","response_id":"r1-p2","sequence":2,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"Yes. The migration branch is green and waiting on your review."}'
+  stdout: {"published":true,"response_id":"r1-p2"}
+  exit: 0
+CHECK ok   - final answer published as sequence 2
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r1","response_id":"r1-p2","sequence":2,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"Yes. The migration branch is green and waiting on your review."}'
+  stdout: {"published":true,"response_id":"r1-p2"}
+  exit: 0
+CHECK ok   - identical republish is a safe retry
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r1","response_id":"r1-p2","sequence":2,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"Different words."}'
+  stderr: fm-inbox conversation: response ID reused with different publication
+  exit: 2
+CHECK ok   - same response_id with different text is refused
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r1","response_id":"r1-p3","sequence":3,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"After the close."}'
+  stderr: fm-inbox conversation: reply stream closed or sequence is not next
+  exit: 2
+CHECK ok   - nothing publishes after the closing portion
+
+-- the bridge polls with its credential --
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation poll <<< '{"conversation_id":"captain-voice-2026-09-11","credential":"RYkB3HNyE18XdqeBQbjLJljy7R_jJbMaKDpS14oLwf4"}'
+  stdout: {"conversation_id":"captain-voice-2026-09-11","replies":[{"delivery":{"state":"waiting"},"final":false,"kind":"progress","question_binding":null,"question_open":false,"request_id":"r1","response_id":"r1-p1","sequence":1},{"delivery":{"state":"waiting"},"final":true,"kind":"answer","question_binding":null,"question_open":false,"request_id":"r1","response_id":"r1-p2","sequence":2}],"requests":[{"previous_turn_id":null,"request_id":"r1","state":"accepted","turn_id":"t1"},{"previous_turn_id":"t1","request_id":"r2","state":"saved","turn_id":"t2"}]}
+  exit: 0
+CHECK ok   - poll shows r1 accepted and both portions waiting, in order, with no speech text
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation deliver <<< '{"conversation_id":"captain-voice-2026-09-11","credential":"RYkB3HNyE18XdqeBQbjLJljy7R_jJbMaKDpS14oLwf4","response_id":"r1-p1","generation":"g1"}'
+  stdout: {"deliver":true,"disclosure":{"author":"linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100","destination":"elevenlabs","digest":"f892b879d80cf331ac36a310fcd1ec164df4f867a49ea3d3516823ffac22e7c8","policy":"owner-authored-elevenlabs-v1","published_at":1789170533},"generation":"g1","response_id":"r1-p1","speech_text":"Still reading the records on that one."}
+  exit: 0
+CHECK ok   - deliver claims the progress portion and returns the speech text
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation deliver <<< '{"conversation_id":"captain-voice-2026-09-11","credential":"RYkB3HNyE18XdqeBQbjLJljy7R_jJbMaKDpS14oLwf4","response_id":"r1-p1","generation":"g2"}'
+  stdout: {"deliver":false,"response_id":"r1-p1","state":"unknown"}
+  exit: 0
+CHECK ok   - a second claim yields no audio (claimed exactly once)
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation playback <<< '{"conversation_id":"captain-voice-2026-09-11","credential":"RYkB3HNyE18XdqeBQbjLJljy7R_jJbMaKDpS14oLwf4","response_id":"r1-p1","generation":"g1","state":"completed","position_ms":2100}'
+  stdout: {"generation":"g1","position_ms":2100,"state":"completed"}
+  exit: 0
+CHECK ok   - playback receipt recorded
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation deliver <<< '{"conversation_id":"captain-voice-2026-09-11","credential":"RYkB3HNyE18XdqeBQbjLJljy7R_jJbMaKDpS14oLwf4","response_id":"r1-p2","generation":"g3"}'
+  stdout: {"deliver":true,"disclosure":{"author":"linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100","destination":"elevenlabs","digest":"a1a63367b69c519d010492c903da2dded13ae70286f2a2be6c39555628d307fc","policy":"owner-authored-elevenlabs-v1","published_at":1789170534},"generation":"g3","response_id":"r1-p2","speech_text":"Yes. The migration branch is green and waiting on your review."}
+  exit: 0
+CHECK ok   - the final answer is claimed and spoken
+
+-- keep accepting until dispatch false (skill step 2) --
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"And is anything blocked behind it?","conversation_id":"captain-voice-2026-09-11","correction_of":null,"created_at":"2026-09-11T23:00:20Z","previous_turn_id":"t1","question_binding":null,"request_id":"r2","revision":1,"turn_id":"t2"},"playback_context":[{"delivery":{"generation":"g3","position_ms":0,"state":"unknown"},"response_id":"r1-p2"},{"delivery":{"generation":"g1","position_ms":2100,"state":"completed"},"response_id":"r1-p1"}]}
+  exit: 0
+CHECK ok   - accept dispatches r2 next
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r2","response_id":"r2-p1","sequence":1,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"Nothing else is blocked behind it."}'
+  stdout: {"published":true,"response_id":"r2-p1"}
+  exit: 0
+CHECK ok   - r2 answered
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stdout: {"dispatch":false}
+  exit: 0
+CHECK ok   - accept reports nothing waiting
+
+==================== S6: once the requests have left saved, the ordinary acknowledgement retires the voice rows ====================
+$ FM_STATE_OVERRIDE=/tmp/nm-voice-drive/home/state bin/fm-wake-drain.sh
+  stdout: VOICE: the captain spoke - 2 voice note(s) below; answer every one before any other wake (transcript in state/inbox/<id>.note; load the answer-voice-turn skill, because the ordinary drain acknowledgement refuses a vc- id and answers nobody):
+  stdout: 1789170525	2	check	inbox:vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe	check: conversation inbox note vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe; use fm-inbox.sh conversation accept
+  stdout: 1789170529	3	check	inbox:vc-7e2fab49f78a206e09296fd3a32b0ee652fe86308c025d6fe70d42619fee48ed	check: conversation inbox note vc-7e2fab49f78a206e09296fd3a32b0ee652fe86308c025d6fe70d42619fee48ed; use fm-inbox.sh conversation accept
+  stderr: WAKE_ACK_REQUIRED: after handling completes run bin/fm-wake-drain.sh --ack-through 3 --recovery-generation 373999.1789170524.afDeTz
+  exit: 0
+$ bin/fm-wake-drain.sh --ack-through 3 --recovery-generation 373999.1789170524.afDeTz
+  exit: 0
+  wake queue:
+    (empty)
+CHECK ok   - no hold reported and the queue is empty
+
+==================== S7: session restart is a non-event - the new lock holder answers what the old session left saved ====================
+journal owner before restart: linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100 ; policy enabled_by: linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100
+$ codex successor.sh   (a fresh harness process, no policy.json touched by hand)
+  successor session pid 377979 takes the lock
+  {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Did the nightly run finish?","conversation_id":"captain-voice-2026-09-11","correction_of":null,"created_at":"2026-09-11T23:01:00Z","previous_turn_id":"t2","question_binding":null,"request_id":"r3","revision":1,"turn_id":"t3"},"playback_context":[{"delivery":{"generation":"g3","position_ms":0,"state":"unknown"},"response_id":"r1-p2"},{"delivery":{"generation":"g1","position_ms":2100,"state":"completed"},"response_id":"r1-p1"},{"delivery":null,"response_id":"r2-p1"}]}
+  {"published":true,"response_id":"r3-p1"}
+  {"destination":"elevenlabs","pilot":true}
+  exit: 0
+journal owner after restart:  linux-starttime=304122428 cmdline-hex=2f746d702f6e6d2d766f6963652d64726976652f636f646578002f746d702f6e6d2d766f6963652d64726976652f737563636573736f722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e412f62696e2f666d2d696e626f782e7368006361707461696e2d766f6963652d323032362d30392d313100 ; policy enabled_by: linux-starttime=304122428 cmdline-hex=2f746d702f6e6d2d766f6963652d64726976652f636f646578002f746d702f6e6d2d766f6963652d64726976652f737563636573736f722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e412f62696e2f666d2d696e626f782e7368006361707461696e2d766f6963652d323032362d30392d313100
+CHECK ok   - successor accepted r3, published, and re-ran pilot-init without refusal
+CHECK ok   - ownership and enabled_by now name the successor, not the first session
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation poll <<< '{"conversation_id":"captain-voice-2026-09-11","credential":"RYkB3HNyE18XdqeBQbjLJljy7R_jJbMaKDpS14oLwf4"}'
+  stdout: {"conversation_id":"captain-voice-2026-09-11","replies":[{"delivery":{"generation":"g1","position_ms":2100,"state":"completed"},"final":false,"kind":"progress","question_binding":null,"question_open":false,"request_id":"r1","response_id":"r1-p1","sequence":1},{"delivery":{"generation":"g3","position_ms":0,"state":"unknown"},"final":true,"kind":"answer","question_binding":null,"question_open":false,"request_id":"r1","response_id":"r1-p2","sequence":2},{"delivery":{"state":"waiting"},"final":true,"kind":"answer","question_binding":null,"question_open":false,"request_id":"r2","response_id":"r2-p1","sequence":1},{"delivery":{"state":"waiting"},"final":true,"kind":"answer","question_binding":null,"question_open":false,"request_id":"r3","response_id":"r3-p1","sequence":1}],"requests":[{"previous_turn_id":null,"request_id":"r1","state":"accepted","turn_id":"t1"},{"previous_turn_id":"t1","request_id":"r2","state":"accepted","turn_id":"t2"},{"previous_turn_id":"t2","request_id":"r3","state":"accepted","turn_id":"t3"}]}
+  exit: 0
+CHECK ok   - the bridge, still on its old credential, sees the successor's answer waiting
+
+==================== S7b (adversarial): every guard still refuses ====================
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stderr: fm-inbox: conversation owner must hold this home's session lock
+  exit: 1
+CHECK ok   - a caller not holding the lock is refused
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation pilot-init <<< '{"publication_policy":"owner-authored-elevenlabs-v1"}'
+  stderr: fm-inbox: conversation owner must hold this home's session lock
+  exit: 1
+CHECK ok   - pilot-init from a non-holder is refused
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11","credential":"RYkB3HNyE18XdqeBQbjLJljy7R_jJbMaKDpS14oLwf4"}'
+  stderr: fm-inbox: conversation owner must hold this home's session lock
+  exit: 1
+CHECK ok   - a transport credential grants no owner authority to accept
+$ FM_SUPERVISION_ACTOR=branch bin/fm-inbox.sh conversation accept
+  stderr: error: voice conversation ownership refused - the supervision branch never performs this action; report the outcome and leave it to main (role partition: docs/pi-supervision-branch.md)
+  exit: 6
+CHECK ok   - a Pi supervision branch actor is refused
+$ env -u FM_HOME bin/fm-inbox.sh conversation accept
+  stderr: fm-inbox: conversation requires an explicit FM_HOME
+  exit: 1
+CHECK ok   - a caller without an explicit FM_HOME is refused
+$ FM_STATE_OVERRIDE=... bin/fm-inbox.sh conversation accept
+  stderr: fm-inbox: conversation refuses directory and wake overrides
+  exit: 1
+CHECK ok   - a directory override is refused
+$ bin/fm-inbox.sh conversation capture   (wrong credential)
+  stderr: fm-inbox conversation: wrong transport credential
+  exit: 2
+CHECK ok   - a wrong transport credential cannot file a turn
+
+==================== S8: reconcile the three permanently unacceptable states per references/publication.md ====================
+
+-- (a) missing predecessor --
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stdout: {"dispatch":false}
+  exit: 0
+CHECK ok   - accept waits (dispatch false) on a request whose predecessor never arrived
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation audit <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stdout: {"conversation_id":"captain-voice-2026-09-11","replies":[{"delivery":{"generation":"g3","position_ms":0,"state":"unknown"},"disclosure":{"author":"linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100","destination":"elevenlabs","digest":"a1a63367b69c519d010492c903da2dded13ae70286f2a2be6c39555628d307fc","policy":"owner-authored-elevenlabs-v1","published_at":1789170534},"final":true,"request_id":"r1","response_id":"r1-p2"},{"delivery":{"state":"waiting"},"disclosure":{"author":"linux-starttime=304122428 cmdline-hex=2f746d702f6e6d2d766f6963652d64726976652f636f646578002f746d702f6e6d2d766f6963652d64726976652f737563636573736f722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e412f62696e2f666d2d696e626f782e7368006361707461696e2d766f6963652d323032362d30392d313100","destination":"elevenlabs","digest":"f11033a3718e3ceb72ff98879cbe697349b9d6f5e308e25e0a9fdf558c6551fb","policy":"owner-authored-elevenlabs-v1","published_at":1789170543},"final":true,"request_id":"r3","response_id":"r3-p1"},{"delivery":{"generation":"g1","position_ms":2100,"state":"completed"},"disclosure":{"author":"linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100","destination":"elevenlabs","digest":"f892b879d80cf331ac36a310fcd1ec164df4f867a49ea3d3516823ffac22e7c8","policy":"owner-authored-elevenlabs-v1","published_at":1789170533},"final":false,"request_id":"r1","response_id":"r1-p1"},{"delivery":{"state":"waiting"},"disclosure":{"author":"linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100","destination":"elevenlabs","digest":"9dc729743f8f20d5f524943c54e646addf807e29f0698cea4ef445ebe249dc6e","policy":"owner-authored-elevenlabs-v1","published_at":1789170538},"final":true,"request_id":"r2","response_id":"r2-p1"}],"requests":[{"correction_of":null,"note_id":"vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"accepted","turn_id":"t1"},{"correction_of":null,"note_id":"vc-7e2fab49f78a206e09296fd3a32b0ee652fe86308c025d6fe70d42619fee48ed","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"accepted","turn_id":"t2"},{"correction_of":null,"note_id":"vc-aeaea950120aa1b4e294494f224ffde17dbd1eeb0261a96bd922869b564f68d1","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"accepted","turn_id":"t3"},{"correction_of":null,"note_id":"vc-2af60e4069e6cfe19da1f148748b7326fee75a2d97c574008ab9756f3ab8b1d9","previous_turn_id":"t-never-captured","question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+  exit: 0
+CHECK ok   - audit shows r4 saved with a previous_turn_id matching no turn
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r4","response_id":"r4-bad","sequence":1,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"x"}'
+  stderr: fm-inbox conversation: request has not been accepted or explicitly rejected here
+  exit: 2
+CHECK ok   - publish against the saved r4 is refused
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation reject <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r4","reason":"previous turn t-never-captured was never captured"}'
+  stdout: {"request_id":"r4","state":"rejected"}
+  exit: 0
+CHECK ok   - reject r4 with its reason
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r4","response_id":"r4-q","sequence":1,"kind":"question","final":false,"question_binding":"q-r4","destination":"elevenlabs","speech_text":"I lost the turn before this one. Could you say it again?"}'
+  stdout: {"published":true,"response_id":"r4-q"}
+  exit: 0
+CHECK ok   - a question portion publishes against the rejected r4
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r4","response_id":"r4-a","sequence":2,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"Done."}'
+  stderr: fm-inbox conversation: request has not been accepted or explicitly rejected here
+  exit: 2
+CHECK ok   - an answer against a rejected request is refused
+  state/inbox pending: 1789170524-H5i3VC.note 
+  state/inbox/handled: vc-2af60e4069e6cfe19da1f148748b7326fee75a2d97c574008ab9756f3ab8b1d9.note vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe.note vc-7e2fab49f78a206e09296fd3a32b0ee652fe86308c025d6fe70d42619fee48ed.note vc-aeaea950120aa1b4e294494f224ffde17dbd1eeb0261a96bd922869b564f68d1.note 
+CHECK ok   - the rejected note moved to handled/
+
+-- (b) stale question binding blocks the whole conversation until rejected --
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Rotate the logs on the staging box.","conversation_id":"captain-voice-2026-09-11","correction_of":null,"created_at":"2026-09-11T23:04:00Z","previous_turn_id":"t4","question_binding":"q-r4","request_id":"r5","revision":1,"turn_id":"t5"},"playback_context":[{"delivery":{"generation":"g3","position_ms":0,"state":"unknown"},"response_id":"r1-p2"},{"delivery":null,"response_id":"r3-p1"},{"delivery":{"generation":"g1","position_ms":2100,"state":"completed"},"response_id":"r1-p1"},{"delivery":null,"response_id":"r4-q"},{"delivery":null,"response_id":"r2-p1"}]}
+  exit: 0
+CHECK ok   - the bound answer r5 is accepted and consumes the question
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stderr: fm-inbox conversation: stale or unknown question binding
+  exit: 2
+CHECK ok   - accept refuses for the whole conversation: exit 2 'stale or unknown question binding'
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation audit <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stdout: {"conversation_id":"captain-voice-2026-09-11","replies":[{"delivery":{"generation":"g3","position_ms":0,"state":"unknown"},"disclosure":{"author":"linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100","destination":"elevenlabs","digest":"a1a63367b69c519d010492c903da2dded13ae70286f2a2be6c39555628d307fc","policy":"owner-authored-elevenlabs-v1","published_at":1789170534},"final":true,"request_id":"r1","response_id":"r1-p2"},{"delivery":{"state":"waiting"},"disclosure":{"author":"linux-starttime=304122428 cmdline-hex=2f746d702f6e6d2d766f6963652d64726976652f636f646578002f746d702f6e6d2d766f6963652d64726976652f737563636573736f722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e412f62696e2f666d2d696e626f782e7368006361707461696e2d766f6963652d323032362d30392d313100","destination":"elevenlabs","digest":"f11033a3718e3ceb72ff98879cbe697349b9d6f5e308e25e0a9fdf558c6551fb","policy":"owner-authored-elevenlabs-v1","published_at":1789170543},"final":true,"request_id":"r3","response_id":"r3-p1"},{"delivery":{"generation":"g1","position_ms":2100,"state":"completed"},"disclosure":{"author":"linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100","destination":"elevenlabs","digest":"f892b879d80cf331ac36a310fcd1ec164df4f867a49ea3d3516823ffac22e7c8","policy":"owner-authored-elevenlabs-v1","published_at":1789170533},"final":false,"request_id":"r1","response_id":"r1-p1"},{"delivery":{"state":"waiting"},"disclosure":{"author":"linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100","destination":"elevenlabs","digest":"a2ef268613e886690f3efd657f5ce9d652e77921af8c46e3d2647001c798d2ed","policy":"owner-authored-elevenlabs-v1","published_at":1789170548},"final":false,"request_id":"r4","response_id":"r4-q"},{"delivery":{"state":"waiting"},"disclosure":{"author":"linux-starttime=304120547 cmdline-hex=2e2f636f646578002e2f6472697665722e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d323939354b315345545257473059323644505135464e41002f746d702f6e6d2d766f6963652d6472697665002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f65766964656e63652f30314d323939354b315345545257473059323644505135464e4100","destination":"elevenlabs","digest":"9dc729743f8f20d5f524943c54e646addf807e29f0698cea4ef445ebe249dc6e","policy":"owner-authored-elevenlabs-v1","published_at":1789170538},"final":true,"request_id":"r2","response_id":"r2-p1"}],"requests":[{"correction_of":null,"note_id":"vc-551305e706f69eb62c63ec05027d3d96282d18ce445796d13c78ccace0f30fbe","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"accepted","turn_id":"t1"},{"correction_of":null,"note_id":"vc-7e2fab49f78a206e09296fd3a32b0ee652fe86308c025d6fe70d42619fee48ed","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"accepted","turn_id":"t2"},{"correction_of":null,"note_id":"vc-aeaea950120aa1b4e294494f224ffde17dbd1eeb0261a96bd922869b564f68d1","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"accepted","turn_id":"t3"},{"correction_of":null,"note_id":"vc-2af60e4069e6cfe19da1f148748b7326fee75a2d97c574008ab9756f3ab8b1d9","previous_turn_id":"t-never-captured","question_binding":null,"reason":"previous turn t-never-captured was never captured","request_id":"r4","state":"rejected","turn_id":"t4"},{"correction_of":null,"note_id":"vc-57f333824a97780e664e77c44ff1864bfac1bf8f8603eef5da3ee89cf374b757","previous_turn_id":"t4","question_binding":"q-r4","reason":null,"request_id":"r5","state":"accepted","turn_id":"t5"},{"correction_of":null,"note_id":"vc-4f6defe6b28d404f035348971e7ffacad79e6f7c458a00ac647757e86fce2837","previous_turn_id":"t5","question_binding":"q-r4","reason":null,"request_id":"r6","state":"saved","turn_id":"t6"},{"correction_of":null,"note_id":"vc-1336614925412ee43452691f446af0475da36e6f5967d057e7a6d72497892325","previous_turn_id":"t6","question_binding":null,"reason":null,"request_id":"r7","state":"saved","turn_id":"t7"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+  exit: 0
+CHECK ok   - r7 sits saved behind r6
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation reject <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r6","reason":"that question was already answered"}'
+  stdout: {"request_id":"r6","state":"rejected"}
+  exit: 0
+CHECK ok   - reject r6
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation publish <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r6","response_id":"r6-e","sequence":1,"kind":"error","final":true,"destination":"elevenlabs","speech_text":"I already have your answer on that one. Say the new instruction again."}'
+  stdout: {"published":true,"response_id":"r6-e"}
+  exit: 0
+CHECK ok   - error portion publishes against rejected r6
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Also, what time is the standup?","conversation_id":"captain-voice-2026-09-11","correction_of":null,"created_at":"2026-09-11T23:06:00Z","previous_turn_id":"t6","question_binding":null,"request_id":"r7","revision":1,"turn_id":"t7"},"playback_context":[{"delivery":{"generation":"g3","position_ms":0,"state":"unknown"},"response_id":"r1-p2"},{"delivery":null,"response_id":"r3-p1"},{"delivery":{"generation":"g1","position_ms":2100,"state":"completed"},"response_id":"r1-p1"},{"delivery":null,"response_id":"r4-q"},{"delivery":null,"response_id":"r2-p1"},{"delivery":null,"response_id":"r6-e"}]}
+  exit: 0
+CHECK ok   - accept moves on to r7 once r6 is rejected
+
+-- (c) correction whose target is not accepted --
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stderr: fm-inbox conversation: correction target not accepted here
+  exit: 2
+CHECK ok   - accept exits 2 'correction target not accepted here'
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation reject <<< '{"conversation_id":"captain-voice-2026-09-11","request_id":"r8","reason":"correction targets a rejected request"}'
+  stdout: {"request_id":"r8","state":"rejected"}
+  exit: 0
+CHECK ok   - reject r8
+$ FM_HOME=$FM_HOME bin/fm-inbox.sh conversation accept <<< '{"conversation_id":"captain-voice-2026-09-11"}'
+  stdout: {"dispatch":false}
+  exit: 0
+CHECK ok   - accept reports nothing waiting after the reject
+
+-- the wake drain after all that: rejected/accepted rows are retired by the ordinary acknowledgement --
+$ FM_STATE_OVERRIDE=/tmp/nm-voice-drive/home/state bin/fm-wake-drain.sh
+  stdout: VOICE: the captain spoke - 6 voice note(s) below; answer every one before any other wake (transcript in state/inbox/<id>.note; load the answer-voice-turn skill, because the ordinary drain acknowledgement refuses a vc- id and answers nobody):
+  stdout: 1789170541	4	check	inbox:vc-aeaea950120aa1b4e294494f224ffde17dbd1eeb0261a96bd922869b564f68d1	check: conversation inbox note vc-aeaea950120aa1b4e294494f224ffde17dbd1eeb0261a96bd922869b564f68d1; use fm-inbox.sh conversation accept
+  stdout: 1789170545	5	check	inbox:vc-2af60e4069e6cfe19da1f148748b7326fee75a2d97c574008ab9756f3ab8b1d9	check: conversation inbox note vc-2af60e4069e6cfe19da1f148748b7326fee75a2d97c574008ab9756f3ab8b1d9; use fm-inbox.sh conversation accept
+  stdout: 1789170549	6	check	inbox:vc-57f333824a97780e664e77c44ff1864bfac1bf8f8603eef5da3ee89cf374b757	check: conversation inbox note vc-57f333824a97780e664e77c44ff1864bfac1bf8f8603eef5da3ee89cf374b757; use fm-inbox.sh conversation accept
+  stdout: 1789170550	7	check	inbox:vc-4f6defe6b28d404f035348971e7ffacad79e6f7c458a00ac647757e86fce2837	check: conversation inbox note vc-4f6defe6b28d404f035348971e7ffacad79e6f7c458a00ac647757e86fce2837; use fm-inbox.sh conversation accept
+  stdout: 1789170551	8	check	inbox:vc-1336614925412ee43452691f446af0475da36e6f5967d057e7a6d72497892325	check: conversation inbox note vc-1336614925412ee43452691f446af0475da36e6f5967d057e7a6d72497892325; use fm-inbox.sh conversation accept
+  stdout: 1789170554	9	check	inbox:vc-71c4d9a1ea33c4264b0b10bd72ded87db44771076e47146a679494e070ff3284	check: conversation inbox note vc-71c4d9a1ea33c4264b0b10bd72ded87db44771076e47146a679494e070ff3284; use fm-inbox.sh conversation accept
+  stderr: WAKE_ACK_REQUIRED: after handling completes run bin/fm-wake-drain.sh --ack-through 9 --recovery-generation 377938.1789170542.ufumFg
+  exit: 0
+$ bin/fm-wake-drain.sh --ack-through 9 --recovery-generation 377938.1789170542.ufumFg
+  exit: 0
+  wake queue:
+    (empty)
+CHECK ok   - no voice row is held once every request left saved
+
+==================== S10: skill packaging ====================
+  resolved through .claude/skills symlink: .agents/skills/answer-voice-turn/SKILL.md
+  frontmatter: {'name': 'answer-voice-turn', 'description': 'Agent-only procedure for answering a spoken turn a voice conversation ...', 'user-invocable': False, 'metadata': {'internal': True}}
+  reference resolves: references/speaking.md
+  reference resolves: references/publication.md
+  reference resolves: references/publication.md
+  reference resolves: references/speaking.md
+  same frontmatter keys as the existing fmx-respond skill: ['description', 'metadata', 'name', 'user-invocable']
+CHECK ok   - SKILL.md frontmatter parses, is internal/non-invocable like sibling skills, references resolve
+$ bin/fm-inbox.sh conversation --help | head -3
+  Session-bound conversation contract, composed by fm-inbox.sh conversation.
+  
+  This first-stage lab makes no network/model/media call. lab-init requires a new
+
+==================== RESULT: checks passed=61 failed=0 ====================
