@@ -1,5 +1,27 @@
 # The spoken interface
 
+## Conversation transport
+
+The voice interface keeps the first mate responsible for the conversation and uses voice only to carry input and deliver replies the first mate explicitly published.
+`bin/fm-inbox.sh conversation --help` is the owner of its commands, event schema, recovery boundaries and publication restrictions.
+Its regression is `bin/fm-test-run.sh tests/fm-inbox-conversation.test.sh`, which drives the transport through that public CLI with no client, browser or speech provider taking part.
+
+A captured turn lands as `state/inbox/vc-<hash>.note` and appends one ordinary `check` wake, so the first mate finds it in the same drain as everything else.
+From there it is not an ordinary note.
+A request stays `saved` until the owning session accepts it, and it becomes speech only when that session publishes a reply against its `request_id`; moving the note to `handled/` answers nothing, which is why `bin/fm-inbox.sh drain --ack` refuses a `vc-` id.
+The `answer-voice-turn` skill owns what the first mate does with such a wake.
+
+Acceptance is a durable single dispatch claim, not proof that work happened.
+An interrupted claim or a missing playback receipt stays visible for reconciliation instead of automatically repeating an action or a spoken line.
+The regression covers concurrent duplicate capture, out-of-order transcript completion, session ownership, explicit question and correction routing, ordered reply portions, and crashes on both sides of the return path.
+Device-level latency, recognition fidelity and voice quality need a live client and are established nowhere in this transport.
+
+Publication is accountable speech.
+Each published portion records its exact content digest, author identity, destination and turn, and live publication stays refused until the owner has explicitly enabled it for this home under the captain's disclosure authorization.
+That is accountability for deliberate speech, not an automated claim that any scan makes arbitrary private content safe to say out loud.
+
+## Existing audio prototype
+
 Talk to a voice agent that sits in front of the first mate. It answers questions
 about what is happening from the first mate's own records, and when you ask for
 real work it says so out loud and queues the request rather than pretending to

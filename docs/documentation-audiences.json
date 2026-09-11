@@ -117,6 +117,18 @@
       "audience": "agent-runtime"
     },
     {
+      "path": ".agents/skills/answer-voice-turn/SKILL.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/answer-voice-turn/references/publication.md",
+      "audience": "agent-runtime"
+    },
+    {
+      "path": ".agents/skills/answer-voice-turn/references/speaking.md",
+      "audience": "agent-runtime"
+    },
+    {
       "path": ".agents/skills/ask-user-authority/SKILL.md",
       "audience": "agent-runtime"
     },
