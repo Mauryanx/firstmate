@@ -1,0 +1,18 @@
+# Scenario: wake-handling turn drains the same queue (text note seq 1, voice seq 2 and 3, signal seq 4)
+# stdout:
+VOICE: the captain spoke - 2 voice note(s) below; answer every one before any other wake (the note is state/inbox/<id>.note; bin/fm-inbox.sh drain --ack <id> retires it once answered):
+1789095091	2	check	inbox:vc-9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08	check: captain inbox note vc-9f86d081... - I hear you
+1789095092	3	check	inbox:vc-2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae	check: captain inbox note vc-2c26b46b... - Speaking
+OTHER WAKES (handle only after every voice note above):
+1789095091	1	check	inbox:1757545200-typed1	check: captain inbox note 1757545200-typed1 - text message from the captain
+1789095092	4	signal	task.status	signal: /tmp/fmvoice-home/state/task.status
+wake annotation: latest wake-EVENT observed at drain, not current state: task.status: working: under way
+# exit=0
+# stderr (acknowledgement contract):
+WAKE_ACK_REQUIRED: after handling completes run bin/fm-wake-drain.sh --ack-through 4 --recovery-generation 2239464.1789095091.lju8Ti
+# queue still durable after presentation (rows):
+4
+# ack: fm-wake-drain.sh --ack-through 4 --recovery-generation 2239464.1789095091.lju8Ti
+# ack exit=0
+# queue rows after ack:
+0

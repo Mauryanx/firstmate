@@ -1,0 +1,11 @@
+# Regression: queue with NO voice row (two typed notes + a signal). Drain from base 4768e98 vs target a9b59d9.
+# base exit=0 target exit=0
+# stdout diff (empty = byte-identical):
+IDENTICAL stdout
+# stderr diff ignoring the per-run recovery generation token:
+IDENTICAL stderr
+# target stdout:
+1789095163	1	check	inbox:1757545200-typed1	check: captain inbox note 1757545200-typed1 - typed
+1789095164	2	signal	task.status	signal: /tmp/fmvoice-reg-state/task.status
+1789095164	3	check	inbox:1757545300-typed2	check: captain inbox note 1757545300-typed2 - typed again
+wake annotation: latest wake-EVENT observed at drain, not current state: task.status: working: under way

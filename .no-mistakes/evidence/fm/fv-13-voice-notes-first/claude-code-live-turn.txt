@@ -1,0 +1,16 @@
+# Real Claude Code captain-message turn in a primary-shaped home with the tracked UserPromptSubmit hook (only that hook wired).
+# queue before the turn:
+1789095187	1	check	inbox:1757545200-typed1	check: captain inbox note 1757545200-typed1 - text message from the captain
+1789095187	2	check	inbox:vc-9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08	check: captain inbox note vc-9f86d081... - I hear you
+# command: printf '<prompt>' | claude -p --output-format json --max-turns 1
+# exit=0
+# stderr:
+# model reply (.result):
+HOOK_CONTEXT: VOICE: the captain spoke - 1 voice note(s) below; answer every one before any other wake (the note is state/inbox/<id>.note; bin/fm-inbox.sh drain --ack <id> retires it once answered):
+1789095187	2	check	inbox:vc-9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08	check: captain inbox note vc-9f86d081... - I hear you
+# queue after the turn (must be unchanged):
+UNCHANGED
+# state/ listing after:
+.wake-queue
+.wake-queue.seq
+.watcher-down

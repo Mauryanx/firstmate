@@ -1,0 +1,9 @@
+# Scenario: captain types a text message while two voice notes are queued behind an earlier text note
+# Hook command from .claude/settings.json: [ -z "${GROK_AGENT:-}${GROK_HOOK_EVENT:-}" ] || exit 0; exec "$CLAUDE_PROJECT_DIR"/bin/fm-voice-pending.sh
+# stdin payload: Claude UserPromptSubmit
+VOICE: the captain spoke - 2 voice note(s) below; answer every one before any other wake (the note is state/inbox/<id>.note; bin/fm-inbox.sh drain --ack <id> retires it once answered):
+1789095091	2	check	inbox:vc-9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08	check: captain inbox note vc-9f86d081... - I hear you
+1789095092	3	check	inbox:vc-2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae	check: captain inbox note vc-2c26b46b... - Speaking
+# exit=0
+# state/ manifest before vs after (must be identical, no lock, no claim, no marker):
+IDENTICAL: ./.wake-queue 4aea74078b858aad ./.wake-queue.seq 7de1555df0c27003 ./.watcher-down 75813cb95d3e6983 ./task.status 7876f96d39d26a6b 

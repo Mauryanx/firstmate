@@ -1,0 +1,24 @@
+## A. vc- key on a SIGNAL row (not a check) must not be presented as voice; a malformed 3-field row is ignored
+# queue:
+1789095143	1	signal	inbox:vc-deadbeef	signal: not a captain note
+garbage	line	here
+# hook stdout:
+# exit=0
+
+## B. same vc- key appended twice: presented once, latest payload wins, queue order kept
+# hook stdout:
+VOICE: the captain spoke - 2 voice note(s) below; answer every one before any other wake (the note is state/inbox/<id>.note; bin/fm-inbox.sh drain --ack <id> retires it once answered):
+1789095145	4	check	inbox:vc-aaaa1111	check: captain inbox note vc-aaaa1111 - What? (re-sent)
+1789095144	3	check	inbox:vc-bbbb2222	check: captain inbox note vc-bbbb2222 - Hello?
+# exit=0
+
+## C. same queue under a Grok-hosted process (GROK_HOOK_EVENT set): tracked entry must stay inert
+# exit=0
+## C2. legacy GROK_AGENT marker:
+# exit=0
+
+## D. queue present but unreadable: hook exits 0 silently, never blocks the captain turn
+# exit=0
+
+## E. hook launched from a LINKED WORKTREE checkout (this gate worktree) stays inert with the same voice queue
+# exit=0
