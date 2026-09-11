@@ -25,23 +25,36 @@
 # the queue bounds the cost.
 #
 # Every failure path exits 0 silently: this hook must never block or fail a
-# captain turn. Only the Claude primary has a turn-start hook point wired here;
-# other primary harnesses present voice notes at session start and at
-# wake-handling turns through the drain.
+# captain turn. The silent-exit gates, in order: the checkout is not a primary
+# home, this session does not own the home's fleet lock, or the wake queue is
+# missing or unreadable. The hook never reads its stdin payload; nothing here
+# depends on it.
+#
+# The tracked entry is deliberately UNGUARDED on Grok and Cursor, unlike the
+# SessionStart, PreToolUse Bash, and Stop entries in .claude/settings.json.
+# Neither host registers a counterpart for this event (.grok/hooks/ and
+# .cursor/hooks.json cover session start, pre-tool, and stop only), so a guard
+# here would remove the turn-start voice check on that host entirely instead
+# of deduplicating it - the same reasoning that leaves
+# bin/fm-subagent-pretool-check.sh unguarded. The wedge rationale behind
+# guarding the Stop entries does not apply: this hook is read-only and has no
+# asyncRewake, so a host that fires it synchronously gets one bounded awk pass
+# and nothing else. A primary on either host that loads this repo's
+# Claude-shaped settings therefore also gets the presenter; primaries whose
+# hosts never fire this event present voice notes through the drain at
+# session start and at wake-handling turns.
 #
 # Ships as a TRACKED hook target, so it is checked out into every worktree of
 # this repo. It scopes itself to a genuine primary checkout - the main home or
 # a marked secondmate home - through bin/fm-primary-scope-lib.sh and stays a
-# silent no-op in child crew and scout worktrees, it stands down on a
-# Cursor-delivered payload through bin/fm-hook-host-lib.sh because Cursor loads
-# this repo's .claude/settings.json beside its own registration, and it stands
-# down unless this session owns the home's fleet lock, through
-# bin/fm-session-lock-lib.sh's fm_session_lock_owned_by_self, the same
-# predicate bin/fm-claude-stop-autoarm.sh and bin/fm-sessionstart-run.sh use.
-# A second Claude session opened in the same home (the read-only session
-# bin/fm-lock.sh refuses) would otherwise be told to answer the very note the
-# lock-owning session is handling: a duplicate spoken reply, or a note retired
-# under the owner. A missing or malformed lock fails closed the same way.
+# silent no-op in child crew and scout worktrees, and it stands down unless
+# this session owns the home's fleet lock, through bin/fm-session-lock-lib.sh's
+# fm_session_lock_owned_by_self, the same predicate
+# bin/fm-claude-stop-autoarm.sh and bin/fm-sessionstart-run.sh use. A second
+# Claude session opened in the same home (the read-only session bin/fm-lock.sh
+# refuses) would otherwise be told to answer the very note the lock-owning
+# session is handling: a duplicate spoken reply, or a note retired under the
+# owner. A missing or malformed lock fails closed the same way.
 set -u
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -51,15 +64,9 @@ STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
 
 # shellcheck source=bin/fm-primary-scope-lib.sh
 . "$SCRIPT_DIR/fm-primary-scope-lib.sh"
-# shellcheck source=bin/fm-hook-host-lib.sh
-. "$SCRIPT_DIR/fm-hook-host-lib.sh"
 # shellcheck source=bin/fm-session-lock-lib.sh
 . "$SCRIPT_DIR/fm-session-lock-lib.sh"
 
-PAYLOAD=$(cat 2>/dev/null || true)
-if fm_hook_payload_is_foreign_host "$PAYLOAD"; then
-  exit 0
-fi
 fm_primary_scope_matches "$FM_ROOT" "$STATE" || exit 0
 fm_session_lock_owned_by_self "$STATE" || exit 0
 

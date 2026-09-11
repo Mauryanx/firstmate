@@ -29,7 +29,6 @@ VOICE_ID='vc-9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08'
 VOICE_KEY="inbox:$VOICE_ID"
 TYPED_KEY='inbox:1757000000-typed1'
 CLAUDE_PAYLOAD='{"session_id":"sess-claude","hook_event_name":"UserPromptSubmit","prompt":"what is the status?"}'
-CURSOR_PAYLOAD='{"session_id":"sess-cursor","hook_event_name":"UserPromptSubmit","prompt":"what is the status?","cursor_version":"2026.08.11-e8db854"}'
 
 command -v jq >/dev/null 2>&1 || fail "test host must provide jq"
 
@@ -38,7 +37,7 @@ command -v jq >/dev/null 2>&1 || fail "test host must provide jq"
 install_presenter() {  # <dir>
   local script
   mkdir -p "$1/bin"
-  for script in fm-voice-pending.sh fm-primary-scope-lib.sh fm-hook-host-lib.sh \
+  for script in fm-voice-pending.sh fm-primary-scope-lib.sh \
       fm-session-lock-lib.sh fm-cursor-lib.sh fm-wake-lib.sh; do
     cp "$ROOT/bin/$script" "$1/bin/$script"
   done
@@ -157,20 +156,6 @@ test_ordinary_wake_alone_prints_nothing() {
   pass "an ordinary wake alone prints nothing"
 }
 
-test_cursor_payload_stands_down() {
-  local dir state out err status
-  dir="$TMP_ROOT/primary-cursor"
-  make_primary_dir "$dir"
-  state="$TMP_ROOT/primary-cursor-state"
-  mkdir -p "$state"
-  out="$dir/hook.out"; err="$dir/hook.err"
-  append_wake "$state" check "$VOICE_KEY" "check: captain inbox note $VOICE_ID - Speaking" \
-    || fail "voice check wake append failed"
-  run_hook "$dir" "$state" "$CURSOR_PAYLOAD" "$out" "$err"; status=$?
-  assert_silent primary-cursor "$status" "$out" "$err"
-  pass "a Cursor-delivered payload stands down even with a voice note pending"
-}
-
 test_crewmate_worktree_stays_inert() {
   local base dir state out err status
   base="$TMP_ROOT/crew-base"
@@ -228,7 +213,6 @@ test_missing_queue_is_silent() {
 
 test_voice_note_behind_ordinary_wake_is_presented_alone_and_read_only
 test_ordinary_wake_alone_prints_nothing
-test_cursor_payload_stands_down
 test_crewmate_worktree_stays_inert
 test_lock_owned_by_another_live_session_prints_nothing
 test_missing_queue_is_silent
