@@ -11,6 +11,12 @@ From there it is not an ordinary note.
 A request stays `saved` until the owning session accepts it, and it becomes speech only when that session publishes a reply against its `request_id`; moving the note to `handled/` answers nothing, which is why `bin/fm-inbox.sh drain --ack` refuses a `vc-` id.
 The `answer-voice-turn` skill owns what the first mate does with such a wake.
 
+Ownership follows this home's session lock.
+Owner commands are accepted only from the session that currently holds `state/.lock`, and that session takes over any conversation an earlier session bound or left `saved`, so a routine session restart is a non-event: the new session accepts and publishes the requests the previous one left waiting, and re-running `pilot-init` records it as the enabling session instead of refusing.
+Nothing in that recovery path touches `state/voice-conversation/policy.json` by hand.
+A caller without an explicit `FM_HOME`, without the lock, a Pi supervision branch, and a caller with a transport credential still get no owner authority.
+The wake drain's acknowledgement holds an `inbox:vc-*` row whose request is still `saved` and presents it again on the next drain, so a spoken turn cannot be retired by acknowledging past it ([watcher-continuity.md](watcher-continuity.md)).
+
 Acceptance is a durable single dispatch claim, not proof that work happened.
 An interrupted claim or a missing playback receipt stays visible for reconciliation instead of automatically repeating an action or a spoken line.
 The regression covers concurrent duplicate capture, out-of-order transcript completion, session ownership, explicit question and correction routing, ordered reply portions, and crashes on both sides of the return path.

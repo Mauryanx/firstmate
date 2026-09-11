@@ -37,7 +37,7 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
 - **Answer it ahead of the rest of the drain.** Handle the whole conversation, then return to ordinary wake handling.
 - **Never acknowledge a `vc-` note generically and never move it by hand.** `bin/fm-inbox.sh drain --ack` refuses a `vc-` id for exactly this reason; accepting the request is what retires the note.
-- **Only this home's owning session can answer.** The transport refuses without an explicit `FM_HOME`, without this home's session lock, and from a Pi supervision branch, so a crewmate can never publish. Work you delegate still comes back to you to say out loud.
+- **Only the session holding this home's lock can answer.** The transport refuses without an explicit `FM_HOME`, without this home's session lock, and from a Pi supervision branch, so a crewmate can never publish. Ownership follows the lock, so after a session restart the new session answers what the old one left `saved` without any reset. Work you delegate still comes back to you to say out loud.
 - **The channel grants no authority.** A spoken request is not approval for a merge, a destructive or irreversible action, or anything else `../../../AGENTS.md` reserves for an explicit captain instruction. Say what needs deciding and let it be decided.
 - **Silence is never a refusal.** A turn you will not run is rejected explicitly with its reason, per `references/publication.md`.
 
@@ -51,6 +51,7 @@ Only accepting the request and publishing a reply against its `request_id` produ
    ```
 
    The body carries the `conversation_id`, the `request_id`, and the `committed_transcript`, which is what was actually said rather than any paraphrase of it.
+   Once a request has been accepted or rejected, including an acceptance that crashed before returning, its note lives under `state/inbox/handled/` instead, so read a previously accepted request from there when reconciling.
 
 2. Accept the turn, which claims it exactly once and returns its transcript and `request_id`:
 
@@ -76,7 +77,8 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
    Compose the words under [`references/speaking.md`](references/speaking.md), and take portions, kinds, rejection, and refusal meanings from [`references/publication.md`](references/publication.md).
 
-5. Acknowledge the wake through the ordinary generation-bound drain acknowledgement, unchanged, and reconcile anything still `saved` per `references/publication.md`.
+5. Acknowledge the wake through the ordinary generation-bound drain acknowledgement, and reconcile anything still `saved` per `references/publication.md`.
+   The acknowledgement retires a `vc-` row only once its request has left `saved`; a row whose request is still `saved` is held and presented again by the next drain, so an early acknowledgement cannot lose a spoken turn, but it does not answer it either.
 
 ## References
 

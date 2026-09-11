@@ -417,13 +417,13 @@ case "${1:-}" in
       *) unset FM_VOICE_OWNER ;;
     esac
     if [ ! -f "$FM_HOME/.voice-conversation-lab" ] && [ "${1:-}" != lab-init ]; then
-      # A transport process is not the owner, but must stop when its owner is replaced.
+      # A transport process is not the owner, but must stop when no live
+      # session holds this home's lock: nobody could answer what it files.
       # shellcheck source=bin/fm-wake-lib.sh
       . "$SELF_DIR/fm-wake-lib.sh"
       _voice_current_pid=$(cat "$STATE/.lock" 2>/dev/null) || die "no conversation session lock"
-      FM_VOICE_CURRENT_OWNER=$(fm_pid_identity "$_voice_current_pid") || die "conversation owner is gone"
+      fm_pid_identity "$_voice_current_pid" >/dev/null || die "conversation owner is gone"
       [ "$(cat "$STATE/.lock")" = "$_voice_current_pid" ] || die "conversation session lock changed"
-      export FM_VOICE_CURRENT_OWNER
     fi
     export FM_HOME
     exec python3 "$SELF_DIR/fm_inbox_conversation.py" "$@"

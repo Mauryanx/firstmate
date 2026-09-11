@@ -66,6 +66,21 @@ FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation audit <<<'{"conversation_id":"<c
 
 A request still `saved` is a question nobody answered, whatever the inbox says.
 Answer it if it is still worth answering, or reject it with the reason.
+The wake drain holds the row of a still-`saved` request through every acknowledgement and presents it again, so such a request keeps resurfacing until it is accepted or rejected.
+
+One `saved` request can never be accepted: one whose `previous_turn_id` names a turn this conversation never captured, which `audit` shows as a `previous_turn_id` matching no `turn_id` in its list.
+Capture admits such a turn, but `accept` waits for the predecessor and returns `dispatch: false` while the predecessor can no longer arrive, and `publish` needs an accepted request.
+The only route the transport allows is to reject it with that reason and then publish a `kind: question` or `kind: error` portion against it, so the caller hears that the earlier turn was lost and can repeat it instead of hearing nothing:
+
+```sh
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation reject <<<'{"conversation_id":"<cid>","request_id":"<rid>","reason":"previous turn <turn> was never captured"}'
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation publish <<'JSON'
+{"conversation_id":"<cid>","request_id":"<rid>","response_id":"<unique>",
+ "sequence":1,"kind":"question","final":false,"question_binding":"<unique>",
+ "destination":"elevenlabs","speech_text":"I lost the turn before this one. Could you say it again?"}
+JSON
+```
+
 Late answers still land, because the conversation names the earlier question a reply belongs to before speaking it; write the answer so it makes sense after that framing rather than assuming the question is still fresh.
 
 A published reply whose delivery state is `waiting` has not been spoken yet.
@@ -75,6 +90,6 @@ An `interrupted` or `unknown` receipt is left visible on purpose and is never re
 
 Refusals are the transport declining to do something unsafe, not transient errors to retry around:
 
-- an ownership refusal means this process is not the session that owns the conversation, so nothing about the reply is wrong - the wrong actor is asking;
+- an ownership refusal means this process does not hold this home's session lock, whether because `FM_HOME` is not explicit, the lock names another live session, or this is a Pi supervision branch; it never means the conversation belongs to an earlier session, because ownership follows the lock and the session holding it takes over every conversation in the home, including requests a restarted session left `saved`;
 - a sequence or closed-stream refusal means the portion you are publishing does not follow the one already published;
 - an identity refusal means a `request_id` or `response_id` is being reused with different content, and the durable record wins.

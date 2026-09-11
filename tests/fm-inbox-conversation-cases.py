@@ -186,15 +186,19 @@ assert owning('accept')['dispatch'] is False
 owning('publish', publication(9, 'bad-receipt', kind='receipt', speech_key='ack'), code=2)
 owning('publish', publication(9, 'clarification', kind='question', speech_key='question',
                               question_binding='fresh-choice'))
-# A new owner identity cannot adopt or publish into a previous conversation.
-# Exercise identity mismatch independently of ancestry rejection above.
+# Ownership follows the session lock: a later session holding it re-binds the
+# same principal idempotently, while a different principal still cannot adopt
+# the conversation.
 foreign = temp / 'foreign-driver.sh'
 foreign.write_text('echo "$$" > "$FM_HOME/state/.lock"\n'
                    'printf \'%s\' \'{"conversation_id":"c","authenticated_principal":"captain"}\' | '
+                   '"$1" conversation bind || exit 3\n'
+                   'printf \'%s\' \'{"conversation_id":"c","authenticated_principal":"administrator"}\' | '
                    '"$1" conversation bind\n')
 result = subprocess.run([str(temp / 'codex'), str(foreign), str(cli)], env=env,
                         capture_output=True, text=True, timeout=30)
-assert result.returncode == 2 and 'already bound' in result.stderr
+assert result.returncode == 2 and 'already bound' in result.stderr, result
+assert json.loads(result.stdout) == connection
 (home / 'state/.lock').write_text(old_lock)
 # ID-only transport logs: no synthetic transcript or reply in wakes.
 wakes = (home / 'state/.wake-queue').read_text()
@@ -254,3 +258,43 @@ waiting = [r for r in run('poll', dict(connection))['replies']
 assert [(r['response_id'], r['kind'], r['final']) for r in waiting] == [
     ('live-progress', 'progress', False), ('live-answer-2', 'answer', True)], waiting
 print('PASS: live publication is owner-authored, digest-bound, and ordered; portions surface as waiting speech')
+
+# A routine session restart is a non-event. The next session holding this
+# home's lock accepts and publishes what the previous session left saved, the
+# bridge keeps polling with the credential it already holds, and re-running
+# pilot-init records the new session without anyone touching policy.json.
+run('capture', dict(connection, **capture(3, 't2')))
+assert owning('audit', cid='live')['requests'][-1]['state'] == 'saved'
+policy_path = pilot / 'state/voice-conversation/policy.json'
+first_policy = json.loads(policy_path.read_text())
+assert first_policy['enabled_by'] == proof['author']
+successor = temp / 'successor-session.sh'
+successor.write_text(
+    'set -e\n'
+    'echo "$$" > "$FM_HOME/state/.lock"\n'
+    'printf \'%s\' \'{"conversation_id":"live"}\' | "$1" conversation accept\n'
+    'printf \'%s\' \'{"conversation_id":"live","request_id":"r3","response_id":"after-restart",'
+    '"sequence":1,"kind":"answer","final":true,"destination":"elevenlabs",'
+    '"speech_text":"Yes, the deploy is green."}\' | "$1" conversation publish\n'
+    'printf \'%s\' "$2" | "$1" conversation poll\n'
+    'printf \'%s\' \'{"publication_policy":"owner-authored-elevenlabs-v1"}\' | "$1" conversation pilot-init\n')
+result = subprocess.run([str(temp / 'codex'), str(successor), str(cli), json.dumps(connection)],
+                        env=env, capture_output=True, text=True, timeout=30)
+assert result.returncode == 0, result
+accepted, published, polled, enabled = [json.loads(line) for line in result.stdout.splitlines()]
+assert accepted['input']['request_id'] == 'r3' and published['published'] and enabled['pilot']
+assert any(r['response_id'] == 'after-restart' and r['delivery']['state'] == 'waiting' for r in polled['replies'])
+live_journal = json.loads((pilot / 'state/voice-conversation/journal.json').read_text())
+successor_owner = live_journal['conversations']['live']['owner']
+assert successor_owner != proof['author']
+assert next(r for r in live_journal['replies'].values()
+            if r['event']['response_id'] == 'after-restart')['disclosure']['author'] == successor_owner
+assert json.loads(policy_path.read_text()) == dict(first_policy, enabled_by=successor_owner)
+# A caller that does not hold this home's lock is still refused, whoever it is.
+(pilot / 'state/.lock').write_text('1\n')
+owning('accept', cid='live', code=1)
+run('pilot-init', {'publication_policy': 'owner-authored-elevenlabs-v1'}, code=1)
+assert json.loads(policy_path.read_text())['enabled_by'] == successor_owner
+(pilot / 'state/.lock').write_text(owner + '\n')
+assert owning('audit', cid='live')['requests'][-1]['state'] == 'accepted'
+print('PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused')

@@ -20,15 +20,21 @@ pilot-init (owner): {publication_policy: "owner-authored-elevenlabs-v1"}.
     authorization; credentials must never be published. Other providers are not
     authorized by this policy. The author is accountable as for written replies.
     Authorization of speech content does not grant action/merge/spend authority.
-    Session replacement fails closed; it never adopts a prior conversation.
+    Ownership follows this home's session lock, not the process that first
+    enabled the pilot: a later session holding the lock may re-run pilot-init,
+    which records it as enabled_by, and it answers every conversation in the
+    home, including requests a previous session left saved. A session restart
+    therefore needs no reset of state/voice-conversation/policy.json.
 
 bind (owner): {conversation_id, authenticated_principal}. Returns a random
-    transport credential bound to this owner process identity and conversation.
-    Repeat bind is idempotent; another owner cannot adopt the conversation.
+    transport credential bound to this conversation and its authenticated principal.
+    Repeat bind by the session holding the lock is idempotent; a different
+    principal cannot adopt the conversation.
     A voice client exchanges its own pairing secret for this transport
     credential and keeps it server-side; this module never sees that exchange.
 All remaining commands require conversation_id. Transport commands also require
-    credential. Owner commands accept only the currently bound session owner.
+    credential. Owner commands accept only the session holding this home's lock,
+    which takes over a conversation an earlier session bound or left saved.
 capture (transport): {turn_id, request_id, committed_transcript, revision,
     previous_turn_id, created_at, correction_of?, question_binding?}.
     Principal comes from pairing, not input. revision is a positive integer.
@@ -178,9 +184,7 @@ def pilot_init(home, payload):
     root.mkdir(mode=0o700, exist_ok=True)
     policy = dict(payload, enabled_by=os.environ['FM_VOICE_OWNER'])
     target = root / 'policy.json'
-    if target.exists():
-        require(json.loads(target.read_text()) == policy, 'publication policy already belongs to another owner')
-    else:
+    if not target.exists() or json.loads(target.read_text()) != policy:
         write(target, canonical(policy))
     (home / 'state/inbox/handled').mkdir(mode=0o700, parents=True, exist_ok=True)
     return {'pilot': True, 'destination': 'elevenlabs'}
@@ -201,7 +205,6 @@ class Conversation:
             policy = json.loads((self.root / 'policy.json').read_text())
             require(policy.get('publication_policy') == 'owner-authored-elevenlabs-v1',
                     'live publication has not been explicitly enabled by the owner')
-            self.policy_owner = policy['enabled_by']
         self.path = self.root / 'journal.json'
         self.lock = (self.root / 'lock').open('a')
         fcntl.flock(self.lock, fcntl.LOCK_EX)
@@ -213,10 +216,8 @@ class Conversation:
         self.c = self.j['conversations'].get(self.cid)
         if command != 'bind':
             require(self.c is not None, 'unknown conversation')
-            if not self.lab:
-                require(self.c['owner'] == os.environ.get('FM_VOICE_CURRENT_OWNER'), 'owning session changed or ended')
             if command in ('accept', 'reject', 'publish', 'audit'):
-                require(self.c['owner'] == os.environ.get('FM_VOICE_OWNER'), 'wrong owning session')
+                self.own()
             else:
                 require(secrets.compare_digest(str(payload.get('credential', '')), self.c['credential']),
                         'wrong transport credential')
@@ -224,6 +225,15 @@ class Conversation:
 
     def save(self):
         write(self.path, canonical(self.j))
+
+    def own(self):
+        """The session holding this home's lock owns every conversation in it."""
+        owner = os.environ.get('FM_VOICE_OWNER')
+        require(string(owner), 'owning session required')
+        if self.c['owner'] != owner:
+            self.c['owner'] = owner
+            self.save()
+        return owner
 
     def note_path(self, key):
         pending = self.inbox / (key + '.note')
@@ -272,10 +282,9 @@ class Conversation:
         owner = os.environ.get('FM_VOICE_OWNER')
         principal = self.p.get('authenticated_principal')
         require(string(owner) and identifier(principal), 'owner and authenticated principal are required')
-        if not self.lab:
-            require(owner == self.policy_owner, 'publication policy belongs to another owning session')
         if self.c:
-            require(self.c['owner'] == owner and self.c['principal'] == principal, 'conversation already bound')
+            require(self.c['principal'] == principal, 'conversation already bound')
+            self.own()
         else:
             self.c = {'owner': owner, 'principal': principal, 'credential': secrets.token_urlsafe(32)}
             self.j['conversations'][self.cid] = self.c

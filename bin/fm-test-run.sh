@@ -279,6 +279,7 @@ family_for_basename() {
     fm-session-lock-ancestry.test.sh|fm-cursor-primary.test.sh|\
     fm-supervision-events.test.sh|fm-turnend-guard.test.sh|fm-wake-daemon-lifecycle-e2e.test.sh|\
     fm-wake-drain-unread-status.test.sh|fm-wake-drain-voice-first.test.sh|\
+    fm-wake-drain-voice-hold.test.sh|\
     fm-tool-update-check.test.sh|\
     fm-mail.test.sh|fm-mail-check.test.sh|\
     fm-wake-queue.test.sh|fm-watch-arm.test.sh|fm-watch-checkpoint.test.sh|fm-watch-recovery-loop.test.sh|\
@@ -1344,6 +1345,7 @@ families_for_changed_path() {
       ;;
     bin/fm-inbox.sh|bin/fm_inbox_conversation.py|tests/fm-inbox-conversation-cases.py)
       printf '%s\n' __script__:fm-inbox-conversation.test.sh
+      printf '%s\n' __script__:fm-wake-drain-voice-hold.test.sh
       ;;
     bin/fm-timeout-lib.sh)
       # The shared hard bound: session start's runtime bound, the fleet/bearings

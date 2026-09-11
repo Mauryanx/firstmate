@@ -1883,6 +1883,22 @@ fm_wake_voice_rows() {  # <queue-file>
   ' "$1"
 }
 
+# Print the key of every voice check row of <queue-file> whose conversation
+# request is still saved, one per line, in queue order. The transport keeps
+# state/inbox/vc-<id>.note pending until the request is accepted or rejected
+# and only then moves it to <inbox-dir>/handled/ (its recovery completes an
+# interrupted move), so a pending note is the durable "still saved" signal.
+# A row with no note anywhere is not still saved and is not reported.
+fm_wake_voice_keys_still_saved() {  # <queue-file> <inbox-dir>
+  local key
+  awk -F '\t' -v voice="$FM_WAKE_VOICE_KEY_PATTERN" '
+    NF >= 5 && $3 == "check" && $4 ~ voice && !seen[$4]++ { print $4 }
+  ' "$1" | while IFS= read -r key; do
+    [ -f "$2/${key#inbox:}.note" ] || continue
+    printf '%s\n' "$key"
+  done
+}
+
 # Print the heading placed above <count> presented voice rows.
 fm_wake_voice_heading() {  # <count>
   printf 'VOICE: the captain spoke - %s voice note(s) below; answer every one before any other wake (transcript in state/inbox/<id>.note; load the answer-voice-turn skill, because the ordinary drain acknowledgement refuses a vc- id and answers nobody):\n' "$1"
