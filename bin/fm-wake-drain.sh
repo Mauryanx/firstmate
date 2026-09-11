@@ -6,12 +6,14 @@
 # newer branch outcome, OPEN DECISIONS, and captain-call record divergence,
 # then assert liveness.
 #
-# Captain voice notes come first. A spoken turn the voice conversation hands
-# to firstmate arrives as a `check` row keyed `inbox:vc-<id>` beside its
-# durable record state/inbox/vc-<id>.note; this script presents every such
-# row ahead of every other row, under a VOICE heading, so it cannot be read
-# past. Presentation order only: sequence numbers, claims, deduplication, and
-# the acknowledgement cutoff are exactly what they would be without it.
+# Captain voice notes come first. A spoken turn arrives as a `check` row keyed
+# by fm-wake-lib.sh's FM_WAKE_VOICE_KEY_PATTERN (that library's "captain voice
+# notes" section owns the key, the producer, and the VOICE heading); this
+# script presents every such row ahead of every other row, under that heading,
+# so it cannot be read past. Presentation order only: sequence numbers, claims,
+# deduplication, and the acknowledgement cutoff are exactly what they would be
+# without it. bin/fm-voice-pending.sh presents the same rows read-only at the
+# start of a Claude captain-message turn, which never runs this drain.
 #
 # Keep sequence-bound row consumption independent from generation-bound episode
 # retirement; docs/watcher-continuity.md owns the recovery contract.
@@ -47,15 +49,7 @@ ACK_FINGERPRINTS=
 ACK_NOTICE_FINGERPRINTS=
 PRESENTATION_LOCK_TIMEOUT=${FM_STATUS_PRESENTATION_LOCK_TIMEOUT:-10}
 case "$PRESENTATION_LOCK_TIMEOUT" in ''|*[!0-9]*|0) PRESENTATION_LOCK_TIMEOUT=10 ;; esac
-# The wake key the voice conversation transport writes for a spoken note
-# (header "Captain voice notes come first"); a typed note's key has no prefix.
-# The producer is the fm_inbox_conversation.py capture command, currently on the
-# voice branch fm/firstmate-voice-implement, not on main.
-# fm-inbox.sh note is the typed-note path: it mints <epoch>-<suffix> ids with no
-# voice marker, and no reply can be published against such a note.
-# Only the transport capture writes vc-<sha256> ids, and a spoken reply can be
-# published only against such a capture.
-VOICE_KEY_PATTERN='^inbox:vc-'
+VOICE_VIEW=
 VOICE_ROWS=0
 
 # --- per-actor consume (docs/watcher-continuity.md "Per-actor acknowledgement") --
@@ -855,6 +849,7 @@ awk -F '\t' -v seqs="$ACTOR_ROWS_FILE" '
   NF >= 5 && ($2 in keep)
 ' "$FM_WAKE_QUEUE" > "$DRAIN_VIEW_TMP" || exit 1
 RAW_ROWS=$(fm_wake_print_deduped "$DRAIN_VIEW_TMP") || exit "$?"
+VOICE_VIEW=$(fm_wake_voice_rows "$DRAIN_VIEW_TMP") || exit 1
 rm -f -- "$DRAIN_VIEW_TMP" || exit 1
 DRAIN_VIEW_TMP=
 # Voice first (header). The 2026-09-10 incident: eleven spoken turns were
@@ -862,16 +857,14 @@ DRAIN_VIEW_TMP=
 # were answered. Reordering the presented view is the whole mechanism: the
 # voice rows move to the top in their own queue order, every other row keeps
 # its order behind them, and nothing about the rows themselves changes.
-RAW_ROWS=$(printf '%s\n' "$RAW_ROWS" | awk -F '\t' -v voice="$VOICE_KEY_PATTERN" '
-  $3 == "check" && $4 ~ voice { first[++v] = $0; next }
-  { rest[++o] = $0 }
-  END {
-    for (i = 1; i <= v; i++) print first[i]
-    for (i = 1; i <= o; i++) print rest[i]
-  }
-') || exit 1
-VOICE_ROWS=$(printf '%s\n' "$RAW_ROWS" | awk -F '\t' -v voice="$VOICE_KEY_PATTERN" \
-  '$3 == "check" && $4 ~ voice { n++ } END { print n + 0 }') || exit 1
+if [ -n "$VOICE_VIEW" ]; then
+  VOICE_ROWS=$(printf '%s\n' "$VOICE_VIEW" | awk 'END { print NR }') || exit 1
+  RAW_ROWS=$(
+    printf '%s\n' "$VOICE_VIEW"
+    printf '%s\n' "$RAW_ROWS" | awk -F '\t' -v voice="$FM_WAKE_VOICE_KEY_PATTERN" \
+      '!($3 == "check" && $4 ~ voice)'
+  ) || exit 1
+fi
 ACK_THROUGH=$(printf '%s\n' "$RAW_ROWS" | awk -F '\t' '$2 ~ /^[0-9]+$/ && $2 > max { max=$2 } END { print max + 0 }') || exit 1
 case "${FM_WAKE_DRAIN_TEST_DELAY_BEFORE_COMMIT:-0}" in
   0) ;;
@@ -879,9 +872,8 @@ case "${FM_WAKE_DRAIN_TEST_DELAY_BEFORE_COMMIT:-0}" in
   *) sleep "$FM_WAKE_DRAIN_TEST_DELAY_BEFORE_COMMIT" ;;
 esac
 if [ "$VOICE_ROWS" -gt 0 ]; then
-  printf 'VOICE: the captain spoke - %s voice note(s) below; answer every one before any other wake (the note is state/inbox/<id>.note; bin/fm-inbox.sh drain --ack <id> retires it once answered):\n' \
-    "$VOICE_ROWS" || exit "$?"
-  printf '%s\n' "$RAW_ROWS" | awk -v n="$VOICE_ROWS" 'NR <= n' || exit "$?"
+  fm_wake_voice_heading "$VOICE_ROWS" || exit "$?"
+  printf '%s\n' "$VOICE_VIEW" || exit "$?"
   if [ "$(printf '%s\n' "$RAW_ROWS" | awk 'END { print NR }')" -gt "$VOICE_ROWS" ]; then
     printf 'OTHER WAKES (handle only after every voice note above):\n' || exit "$?"
     printf '%s\n' "$RAW_ROWS" | awk -v n="$VOICE_ROWS" 'NR > n' || exit "$?"
