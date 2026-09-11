@@ -74,7 +74,7 @@ playback (transport): {response_id, generation, position_ms,
 audit (owner): returns durable input/reply/delivery accounting, no credentials.
 
 state/inbox/vc-<sha256>.note is the sole request record, using the existing inbox
-header and a JSON body; handled/ retains accepted notes. The serialized transport
+header and a JSON body; handled/ retains accepted and rejected notes. The transport
 journal state/voice-conversation/journal.json holds identity hashes, acceptance,
 reply publication and playback receipts, not a task backlog. A durable note
 precedes its mapping; every command recovers orphan notes before proceeding.
