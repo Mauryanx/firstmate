@@ -51,6 +51,7 @@ PRESENTATION_LOCK_TIMEOUT=${FM_STATUS_PRESENTATION_LOCK_TIMEOUT:-10}
 case "$PRESENTATION_LOCK_TIMEOUT" in ''|*[!0-9]*|0) PRESENTATION_LOCK_TIMEOUT=10 ;; esac
 VOICE_VIEW=
 VOICE_ROWS=0
+OTHER_ROWS=
 
 # --- per-actor consume (docs/watcher-continuity.md "Per-actor acknowledgement") --
 # main (FM_SUPERVISION_ACTOR unset or "main", via fm-lease-lib.sh's fm_lease_actor
@@ -859,10 +860,11 @@ DRAIN_VIEW_TMP=
 # its order behind them, and nothing about the rows themselves changes.
 if [ -n "$VOICE_VIEW" ]; then
   VOICE_ROWS=$(printf '%s\n' "$VOICE_VIEW" | awk 'END { print NR }') || exit 1
+  OTHER_ROWS=$(printf '%s\n' "$RAW_ROWS" | awk -F '\t' -v voice="$FM_WAKE_VOICE_KEY_PATTERN" \
+    '!($3 == "check" && $4 ~ voice)') || exit 1
   RAW_ROWS=$(
     printf '%s\n' "$VOICE_VIEW"
-    printf '%s\n' "$RAW_ROWS" | awk -F '\t' -v voice="$FM_WAKE_VOICE_KEY_PATTERN" \
-      '!($3 == "check" && $4 ~ voice)'
+    [ -z "$OTHER_ROWS" ] || printf '%s\n' "$OTHER_ROWS"
   ) || exit 1
 fi
 ACK_THROUGH=$(printf '%s\n' "$RAW_ROWS" | awk -F '\t' '$2 ~ /^[0-9]+$/ && $2 > max { max=$2 } END { print max + 0 }') || exit 1
@@ -874,9 +876,9 @@ esac
 if [ "$VOICE_ROWS" -gt 0 ]; then
   fm_wake_voice_heading "$VOICE_ROWS" || exit "$?"
   printf '%s\n' "$VOICE_VIEW" || exit "$?"
-  if [ "$(printf '%s\n' "$RAW_ROWS" | awk 'END { print NR }')" -gt "$VOICE_ROWS" ]; then
+  if [ -n "$OTHER_ROWS" ]; then
     printf 'OTHER WAKES (handle only after every voice note above):\n' || exit "$?"
-    printf '%s\n' "$RAW_ROWS" | awk -v n="$VOICE_ROWS" 'NR > n' || exit "$?"
+    printf '%s\n' "$OTHER_ROWS" || exit "$?"
   fi
 elif [ -n "$RAW_ROWS" ]; then
   printf '%s\n' "$RAW_ROWS" || exit "$?"

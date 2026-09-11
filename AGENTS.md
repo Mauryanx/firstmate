@@ -417,7 +417,7 @@ For every actionable wake, follow the ordinary-wake continuation in the emitted 
 No turn ends blind while work is under way, including turns described as holding or waiting.
 
 At the start of every wake-handling turn, drain the durable wake queue before peeking, reading beyond the reason line, steering, or starting work.
-A pending voice note is answered first at the start of any turn, wake-handling or captain-message, before any other wake or work: the drain presents it under a `VOICE` heading, and on a captain-message turn the Claude primary's turn-start hook presents the same rows.
+A pending voice note is answered first at the start of any turn, wake-handling or captain-message, before any other wake or work: the drain presents it under a `VOICE` heading, and on a captain-message turn the Claude primary's turn-start hook presents the same rows, after which that turn runs the drain, handles the presented rows, and runs its exact `WAKE_ACK_REQUIRED` command like a wake-handling turn.
 Session start is the only exception because its one-shot digest already presented the queue while locked or deliberately left it untouched in lock-refused read-only mode.
 Treat any `OPEN DECISIONS` section from the drain as actionable reconciliation input even when no wake record was queued.
 Treat any `UNREAD STATUS` section as newly surfaced status that must be read this turn; those lines are not re-printed after this presentation.
