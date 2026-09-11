@@ -1342,6 +1342,9 @@ families_for_changed_path() {
       printf '%s\n' __script__:fm-procevent-when.test.sh
       printf '%s\n' __script__:fm-remote-reply.test.sh
       ;;
+    bin/fm-inbox.sh|bin/fm_inbox_conversation.py|tests/fm-inbox-conversation-cases.py)
+      printf '%s\n' __script__:fm-inbox-conversation.test.sh
+      ;;
     bin/fm-timeout-lib.sh)
       # The shared hard bound: session start's runtime bound, the fleet/bearings
       # snapshots, the vendor auth probe, the stow cascade's per-home step, and

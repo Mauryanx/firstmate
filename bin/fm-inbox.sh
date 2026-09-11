@@ -25,6 +25,11 @@
 #   fm-inbox.sh ask  <question>...
 #   fm-inbox.sh list
 #   fm-inbox.sh drain [--ack <id>...]
+#   fm-inbox.sh conversation <command>  (conversation lab/pilot; --help for schema)
+#
+# Conversation transport is owned by fm_inbox_conversation.py and is restricted
+# to an empty lab or an explicitly owner-enabled pilot. Its vc- notes require session-bound
+# acceptance and must never be dispatched or acknowledged by the ordinary drain.
 #
 # Configuration. A region, a model id and an AWS profile name somebody's account
 # and somebody's choices, so this file carries no default for any of them. Each is
@@ -76,6 +81,7 @@ export PATH
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FM_ROOT="$(cd "$SELF_DIR/.." && pwd)"
+FM_INBOX_HOME_EXPLICIT=${FM_HOME:+yes}
 FM_HOME="${FM_HOME:-$FM_ROOT}"
 STATE="${FM_STATE_OVERRIDE:-$FM_HOME/state}"
 DATA="${FM_DATA_OVERRIDE:-$FM_HOME/data}"
@@ -350,6 +356,7 @@ cmd_list() {
   local any=0
   for f in "$INBOX"/*.note; do
     [ -e "$f" ] || break
+    case "$(basename "$f")" in vc-*) continue ;; esac
     any=1
     printf '%s\n' "$(basename "$f" .note)"
     sed -n '/^--$/,$p' "$f" | tail -n +2 | sed 's/^/    /'
@@ -364,6 +371,7 @@ cmd_drain() {
     mkdir -p "$INBOX/handled"
     local id
     for id in "$@"; do
+      case "$id" in vc-*) die "conversation notes require conversation accept" ;; esac
       if [ -f "$INBOX/$id.note" ]; then
         mv "$INBOX/$id.note" "$INBOX/handled/$id.note"
         printf 'acked %s\n' "$id"
@@ -380,6 +388,46 @@ cmd_drain() {
 # ---------------------------------------------------------------- dispatch
 
 case "${1:-}" in
+  conversation)
+    shift
+    case "${1:-}" in
+      ''|-h|--help|help) exec python3 "$SELF_DIR/fm_inbox_conversation.py" --help ;;
+    esac
+    [ "$FM_INBOX_HOME_EXPLICIT" = yes ] \
+      || die "conversation requires an explicit FM_HOME"
+    [ -z "${FM_STATE_OVERRIDE:-}${FM_DATA_OVERRIDE:-}${FM_CONFIG_OVERRIDE:-}${FM_WAKE_QUEUE:-}${FM_WAKE_QUEUE_LOCK:-}" ] \
+      || die "conversation refuses directory and wake overrides"
+    case "${1:-}" in
+      pilot-init|bind|accept|reject|publish|audit)
+        # Pi's supervision conversation shares main's PID, but not its dialogue.
+        # shellcheck source=bin/fm-lease-lib.sh
+        . "$SELF_DIR/fm-lease-lib.sh"
+        fm_lease_forbid_branch "voice conversation ownership"
+        # shellcheck source=bin/fm-session-lock-lib.sh
+        . "$SELF_DIR/fm-session-lock-lib.sh"
+        _voice_lock_pid=$(cat "$STATE/.lock" 2>/dev/null) || die "no conversation session lock"
+        fm_session_lock_owned_by_self "$STATE" || die "conversation owner must hold this home's session lock"
+        # shellcheck source=bin/fm-wake-lib.sh
+        . "$SELF_DIR/fm-wake-lib.sh"
+        FM_VOICE_OWNER=$(fm_pid_identity "$_voice_lock_pid") \
+          || die "cannot identify conversation owner"
+        [ "$(cat "$STATE/.lock")" = "$_voice_lock_pid" ] || die "conversation session lock changed"
+        export FM_VOICE_OWNER
+        ;;
+      *) unset FM_VOICE_OWNER ;;
+    esac
+    if [ ! -f "$FM_HOME/.voice-conversation-lab" ] && [ "${1:-}" != lab-init ]; then
+      # A transport process is not the owner, but must stop when its owner is replaced.
+      # shellcheck source=bin/fm-wake-lib.sh
+      . "$SELF_DIR/fm-wake-lib.sh"
+      _voice_current_pid=$(cat "$STATE/.lock" 2>/dev/null) || die "no conversation session lock"
+      FM_VOICE_CURRENT_OWNER=$(fm_pid_identity "$_voice_current_pid") || die "conversation owner is gone"
+      [ "$(cat "$STATE/.lock")" = "$_voice_current_pid" ] || die "conversation session lock changed"
+      export FM_VOICE_CURRENT_OWNER
+    fi
+    export FM_HOME
+    exec python3 "$SELF_DIR/fm_inbox_conversation.py" "$@"
+    ;;
   note)   shift; cmd_note "$@" ;;
   say)    shift; cmd_say "$@" ;;
   status) shift; cmd_status ;;
