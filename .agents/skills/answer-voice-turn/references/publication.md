@@ -16,7 +16,7 @@ Acceptance is committed before the command returns, so the same turn is never di
 `dispatch: false` means nothing is waiting.
 
 Repeat the call until `dispatch: false`.
-One call claims one turn, and turns are returned oldest first, so an earlier question from the same call is answered before a later one.
+One call claims one turn, and turns are returned oldest first, so an earlier question from the same call is answered before a later one - and so a turn an earlier call left behind is answered before the live one, which is what the supersession below prevents.
 
 ## Publish
 
@@ -55,6 +55,27 @@ FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation reject <<<'{"conversation_id":"<
 ```
 
 A rejected request may still be answered with `kind: error` or `kind: question`, and never with a receipt, progress, or answer that would imply its work was accepted.
+
+## A new call supersedes what the last one left saved
+
+One `conversation_id` carries every call, so the turns of a call that ended are still in the conversation, and `accept` takes the oldest `saved` request first.
+Left alone, a question from a call that is long over is dispatched ahead of the person waiting on the line right now.
+`audit` reports each request's `call_id` beside its state:
+
+```sh
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation audit <<<'{"conversation_id":"<cid>"}'
+```
+
+On the first turn of a `call_id` that no accepted or rejected request carries, and before accepting anything, reject every still-`saved` request whose `call_id` is different, and every one carrying no `call_id` at all:
+
+```sh
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation reject <<<'{"conversation_id":"<cid>","request_id":"<rid>","reason":"prior call ended; superseded"}'
+```
+
+A request with no `call_id` predates the field rather than belonging to the live call, so it is superseded on the same terms.
+
+Publish nothing against a superseded request.
+The reject-then-question route below exists so someone still on the line hears what went wrong; nobody is on the line of a call that ended, and the reason on the record is what `audit` reports afterwards.
 
 ## Reconcile a call that went quiet
 

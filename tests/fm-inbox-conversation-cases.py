@@ -213,6 +213,56 @@ assert owning('audit', cid='other')['requests'] == []
 print('PASS: 9 inputs accounted for; 8 single dispatch claims, 1 stale bound input explicitly rejected; 6 replies retained')
 print('PASS: capture/accept/publication/playback crash windows, duplicate races and wrong-session refusals')
 
+# One conversation carries every call, so turns an earlier call left saved are
+# older than the live question and would be dispatched in front of it. The
+# transport records the call each turn was spoken on; the owner's supersession
+# step is exercised against it here.
+scoped = bind('calls')
+
+
+def spoke(n, previous=None, code=0, **kwargs):
+    return run('capture', dict(scoped, **capture(n, previous, **kwargs)), code)
+
+
+def supersede(call_id, cid='calls'):
+    """Retire what earlier calls left saved, as the first turn of a new call does."""
+    records = owning('audit', cid=cid)['requests']
+    assert call_id not in [r['call_id'] for r in records if r['state'] != 'saved']
+    for record in records:
+        if record['state'] == 'saved' and record['call_id'] != call_id:
+            owning('reject', {'request_id': record['request_id'],
+                              'reason': 'prior call ended; superseded'}, cid=cid)
+    return [r['request_id'] for r in owning('audit', cid=cid)['requests'] if r['state'] == 'rejected']
+
+
+for n, previous in ((1, None), (2, 't1'), (3, 't2')):
+    spoke(n, previous, call_id='CA-ended')
+spoke(4, 't3', call_id='CA-live')
+assert [r['call_id'] for r in owning('audit', cid='calls')['requests']] == ['CA-ended'] * 3 + ['CA-live']
+assert supersede('CA-live') == ['r1', 'r2', 'r3']
+live = owning('accept', cid='calls')
+assert live['input']['request_id'] == 'r4' and live['input']['call_id'] == 'CA-live'
+assert owning('accept', cid='calls')['dispatch'] is False
+# A turn captured without a call_id is saved, ordered and accepted exactly as it
+# was before the field existed, and the next call supersedes it on the same terms.
+spoke(5, 't4')
+assert owning('audit', cid='calls')['requests'][-1]['call_id'] is None
+# Carrying no call is an identity of its own: the retry matches it, and naming
+# the live call on the same turn does not.
+spoke(5, 't4')
+spoke(5, 't4', call_id='CA-third', code=2)
+spoke(6, 't5', call_id='CA-third')
+assert supersede('CA-third')[-1] == 'r5'
+assert owning('accept', cid='calls')['input']['request_id'] == 'r6'
+assert owning('accept', cid='calls')['dispatch'] is False
+# The call a turn was spoken on is part of its immutable identity, not a label.
+spoke(7, 't6', call_id='CA-third')
+spoke(7, 't6', call_id='CA-third')
+spoke(7, 't6', call_id='CA-relabelled', code=2)
+spoke(8, 't7', call_id=5, code=2)
+assert [r['request_id'] for r in owning('audit', cid='calls')['requests'] if r['state'] == 'saved'] == ['r7']
+print('PASS: a new call supersedes what earlier calls left saved, including a turn captured with no call')
+
 # Live publication uses the same owner seam, never a transport-supplied author.
 pilot = temp / 'pilot'
 (pilot / 'state').mkdir(parents=True)

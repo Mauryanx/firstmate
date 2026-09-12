@@ -43,7 +43,14 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
 ## Operating sequence
 
-1. Read the turn.
+1. Scope the conversation to the call in front of you.
+   The conversation outlives the call: every call the captain places rides the same `conversation_id`, so a turn nobody answered before an earlier call ended is still `saved`, still older than the live one, and `accept` takes the oldest first.
+   When the turn you were woken for carries a `call_id` that no accepted or rejected request in this conversation carries, reject every still-`saved` request whose `call_id` is different, and every one carrying no `call_id` at all, with the reason `prior call ended; superseded`.
+   Do that before accepting anything, so the live turn is the oldest `saved` request and the first `accept` returns it.
+   The commands are in [`references/publication.md`](references/publication.md), which also says why a superseded turn is never spoken to.
+   A turn that carries no `call_id` of its own comes from a bridge that does not name calls, so there is nothing to supersede and the rest of the sequence is unchanged.
+
+2. Read the turn.
    The wake key is `inbox:vc-<hash>` and the note is `state/inbox/vc-<hash>.note`, in the ordinary inbox header format with a JSON body:
 
    ```sh
@@ -53,7 +60,7 @@ Only accepting the request and publishing a reply against its `request_id` produ
    The body carries the `conversation_id`, the `request_id`, and the `committed_transcript`, which is what was actually said rather than any paraphrase of it.
    Once a request has been accepted or rejected, including an acceptance that crashed before returning, its note lives under `state/inbox/handled/` instead, so read a previously accepted request from there when reconciling.
 
-2. Accept the turn, which claims it exactly once and returns its transcript and `request_id`:
+3. Accept the turn, which claims it exactly once and returns its transcript and `request_id`:
 
    ```sh
    FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation accept <<<'{"conversation_id":"<cid>"}'
@@ -61,11 +68,11 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
    Keep accepting until it answers `dispatch: false`, because one call claims one turn and an earlier turn from the same call may still be unanswered.
 
-3. Do the work as an ordinary turn.
+4. Do the work as an ordinary turn.
    Answer from durable records where the answer already exists; dispatch a worker where it does not.
    Reading records takes seconds and a dispatch does not, so publish a progress portion before starting anything slow rather than leaving the line quiet.
 
-4. Publish the answer against that `request_id`, which is the step that turns it into speech:
+5. Publish the answer against that `request_id`, which is the step that turns it into speech:
 
    ```sh
    FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation publish <<'JSON'
@@ -77,7 +84,7 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
    Compose the words under [`references/speaking.md`](references/speaking.md), and take portions, kinds, rejection, and refusal meanings from [`references/publication.md`](references/publication.md).
 
-5. Acknowledge the wake through the ordinary generation-bound drain acknowledgement, and reconcile anything still `saved` per `references/publication.md`.
+6. Acknowledge the wake through the ordinary generation-bound drain acknowledgement, and reconcile anything still `saved` per `references/publication.md`.
    The acknowledgement retires a `vc-` row only once its request has left `saved`; a row whose request is still `saved` is held and presented again by the next drain, so an early acknowledgement cannot lose a spoken turn, but it does not answer it either.
 
 ## References

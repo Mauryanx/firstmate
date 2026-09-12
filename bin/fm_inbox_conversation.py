@@ -36,11 +36,18 @@ All remaining commands require conversation_id. Transport commands also require
     credential. Owner commands accept only the session holding this home's lock,
     which takes over a conversation an earlier session bound or left saved.
 capture (transport): {turn_id, request_id, committed_transcript, revision,
-    previous_turn_id, created_at, correction_of?, question_binding?}.
+    previous_turn_id, created_at, correction_of?, question_binding?, call_id?}.
     Principal comes from pairing, not input. revision is a positive integer.
     A committed turn is immutable; corrections get new turn/request IDs and an
     explicit correction_of. Out-of-order completions wait for their predecessor.
     Only committed input enters this interface; provisional events are refused.
+    call_id names the live call a turn was spoken on, since one conversation
+    carries every call the same principal places. It is part of the request's
+    immutable identity, and accept and audit report it so the owner can tell an
+    abandoned turn from an earlier call apart from the live one. It is optional:
+    a turn captured without it carries no such field and is ordered, accepted and
+    audited exactly as it was before the field existed. This module records the
+    scope; it never rejects or reorders by it.
 accept (owner): returns the oldest eligible input ONCE, with the prior playback
     context. Acceptance is committed BEFORE returning dispatch:true; a crash at
     this boundary leaves an accepted request with uncertain work state, never an
@@ -303,15 +310,18 @@ class Conversation:
 
     def capture(self):
         fields = ('turn_id', 'request_id', 'committed_transcript', 'revision', 'previous_turn_id',
-                  'created_at', 'correction_of', 'question_binding')
+                  'created_at', 'correction_of', 'question_binding', 'call_id')
         require(not (set(self.p) - set(fields) - {'credential', 'conversation_id'}), 'unsupported input fields')
-        event = {k: self.p.get(k) for k in fields}
+        # An absent call_id is left out of the event rather than stored as null, so
+        # a turn captured without one keeps the identity a pre-call_id release gave it.
+        event = {k: self.p.get(k) for k in fields if k != 'call_id' or self.p.get(k) is not None}
         for field in ('turn_id', 'request_id', 'created_at'):
             require(identifier(event[field]), field + ' is required')
         require(string(event['committed_transcript']), 'committed transcript is required')
         require(integer(event['revision'], 1), 'revision must be a positive integer')
         for field in ('previous_turn_id', 'correction_of', 'question_binding'):
             require(event[field] is None or identifier(event[field]), 'invalid ' + field)
+        require('call_id' not in event or identifier(event['call_id']), 'invalid call_id')
         require(event['previous_turn_id'] != event['turn_id'], 'turn cannot follow itself')
         event.update(conversation_id=self.cid, authenticated_principal=self.c['principal'])
         key = self.key(self.cid, event['request_id'])
@@ -475,7 +485,7 @@ class Conversation:
 
     def audit(self):
         requests = [{'request_id': e['request_id'], 'turn_id': e['turn_id'], 'state': r['state'],
-                     'note_id': key, 'reason': r.get('reason'),
+                     'note_id': key, 'reason': r.get('reason'), 'call_id': e.get('call_id'),
                      'previous_turn_id': e['previous_turn_id'], 'correction_of': e['correction_of'],
                      'question_binding': e['question_binding']} for key, r, e in self.rows()]
         replies = [{'request_id': r['event']['request_id'], 'response_id': r['event']['response_id'],
