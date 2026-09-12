@@ -8,20 +8,9 @@ set -u
 
 NM="$ROOT/.no-mistakes.yaml"
 
-yaml_to_json() {
-  local file=$1
-  if python3 -c 'import yaml' >/dev/null 2>&1; then
-    python3 -c 'import json, sys, yaml; json.dump(yaml.safe_load(open(sys.argv[1])), sys.stdout)' "$file"
-  elif command -v ruby >/dev/null 2>&1; then
-    ruby -ryaml -rjson -e 'print JSON.generate(YAML.load_file(ARGV[0]))' "$file"
-  else
-    return 127
-  fi
-}
-
 test_nm_has_no_deterministic_test_command() {
   local json val
-  json=$(yaml_to_json "$NM") \
+  json=$(fm_yaml_to_json "$NM") \
     || fail "could not parse .no-mistakes.yaml as YAML (needs python3 with PyYAML, or ruby with psych)"
   val=$(printf '%s' "$json" | python3 -c '
 import json, sys
@@ -40,7 +29,7 @@ print("" if empty else repr(val))
 
 test_nm_carries_a_test_instructions_runbook() {
   local json status
-  json=$(yaml_to_json "$NM") \
+  json=$(fm_yaml_to_json "$NM") \
     || fail "could not parse .no-mistakes.yaml as YAML (needs python3 with PyYAML, or ruby with psych)"
   status=$(printf '%s' "$json" | python3 -c '
 import json, sys
