@@ -404,3 +404,23 @@ assert json.loads(policy_path.read_text())['enabled_by'] == successor_owner
 (pilot / 'state/.lock').write_text(owner + '\n')
 assert owning('audit', cid='live')['requests'][-1]['state'] == 'accepted'
 print('PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused')
+
+# A spoken instruction that does not say what to do, or which project to do it
+# to, is not an order. It is answered with an open question naming the missing
+# part, and nothing is started on it: no receipt or progress portion claims
+# work that was never taken up, and no answer invents one. The caller supplies
+# the missing part as the next turn, bound to that still-open question.
+run('capture', dict(connection, **dict(capture(4, 't3'),
+                                       committed_transcript='GPT-6 Astra Medium as a test.')))
+assert owning('accept', cid='live')['input']['request_id'] == 'r4'
+missing = dict(conversation_id='live', request_id='r4', destination='elevenlabs')
+run('publish', dict(missing, response_id='live-missing-target', sequence=1,
+                    kind='question', final=False, question_binding='which-project',
+                    speech_text='I have that as a test of the new model, but not which project it is for. Which one?'))
+asked = [r for r in run('poll', dict(connection))['replies'] if r['request_id'] == 'r4']
+assert [(r['kind'], r['final'], r['question_open']) for r in asked] == [('question', False, True)], asked
+run('capture', dict(connection, **capture(5, 't4', question_binding='which-project')))
+supplied = owning('accept', cid='live')
+assert supplied['input']['request_id'] == 'r5'
+assert supplied['input']['question_binding'] == 'which-project'
+print('PASS: an instruction missing its target is answered with an open question and starts no work')

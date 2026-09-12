@@ -13,6 +13,13 @@ Answer the question that was asked before adding anything adjacent to it.
 A spoken answer is finished when the listener could act on it.
 Detail that only proves the work was done belongs in a record, not in the air.
 
+## When the turn does not say enough
+
+A dispatched turn carries an order only when it says what to do and which project or target to do it to.
+A turn missing either part is answered with a `question` portion naming exactly the part that is missing, and no work is started on it.
+Never supply the missing part from the fleet's current work, the likeliest project, or the last thing that was said: a guess that lands wrong is indistinguishable from an order the captain never gave, and it is acted on as if he had given it.
+Ask for the missing part alone rather than reading the fragment back in full, and leave that question open so the caller can say it again as the next turn, per [`publication.md`](publication.md).
+
 ## Never read aloud
 
 - Identifiers, file paths, task ids, branch names, and URLs.
@@ -44,6 +51,10 @@ A slow turn, two portions:
 then
 
 > Both open branches passed. The older one has been waiting three days for your call on the schema change.
+
+An instruction that did not say enough:
+
+> I have that as a test of the new model, but not which project it is for. Which one?
 
 Declining, honestly:
 
