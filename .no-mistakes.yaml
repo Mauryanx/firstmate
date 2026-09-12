@@ -56,8 +56,7 @@ test:
     bin/fm-voice-client.py, bin/fm-voice-relay.py, bin/fm-mail.py,
     bin/fm-arm-command-policy.mjs, bin/fm-cd-command-policy.mjs and
     bin/fm-extension-launch-barrier.mjs - plus the .pi/extensions TypeScript
-    editor extensions and the agent-facing contracts in AGENTS.md,
-    .agents/skills/ and docs/. Being something the fleet runs is the test, not
+    editor extensions. Being something the fleet runs is the test, not
     the language it happens to be written in. A module under bin/ that only
     gets imported, such as bin/fm_voice_frame.py, is library code those entry
     points use, not an entry point. Its end user is an operator, or a

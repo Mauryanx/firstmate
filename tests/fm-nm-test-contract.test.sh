@@ -8,17 +8,30 @@ set -u
 
 NM="$ROOT/.no-mistakes.yaml"
 
-command -v ruby >/dev/null 2>&1 \
-  || fail "ruby is required to parse .no-mistakes.yaml as YAML"
+yaml_to_json() {
+  local file=$1
+  if python3 -c 'import yaml' >/dev/null 2>&1; then
+    python3 -c 'import json, sys, yaml; json.dump(yaml.safe_load(open(sys.argv[1])), sys.stdout)' "$file"
+  elif command -v ruby >/dev/null 2>&1; then
+    ruby -ryaml -rjson -e 'print JSON.generate(YAML.load_file(ARGV[0]))' "$file"
+  else
+    return 127
+  fi
+}
 
 test_nm_has_no_deterministic_test_command() {
-  local val
-  val=$(ruby -ryaml -e '
-doc = YAML.load_file(ARGV[0]) || {}
-cmds = doc["commands"] || {}
-val = cmds.is_a?(Hash) ? cmds["test"] : nil
-puts (val.nil? || val == false || val == "") ? "" : val.inspect
-' "$NM") || fail "failed to parse .no-mistakes.yaml as YAML"
+  local json val
+  json=$(yaml_to_json "$NM") \
+    || fail "could not parse .no-mistakes.yaml as YAML (needs python3 with PyYAML, or ruby with psych)"
+  val=$(printf '%s' "$json" | python3 -c '
+import json, sys
+
+doc = json.load(sys.stdin) or {}
+commands = doc.get("commands")
+val = commands.get("test") if isinstance(commands, dict) else None
+empty = val is None or val is False or (isinstance(val, str) and not val.strip())
+print("" if empty else repr(val))
+') || fail "failed to read commands.test from the parsed .no-mistakes.yaml"
   if [ -n "$val" ]; then
     fail "commands.test must be absent or empty so Test stays intent-targeted; got: $val"
   fi
@@ -26,23 +39,25 @@ puts (val.nil? || val == false || val == "") ? "" : val.inspect
 }
 
 test_nm_carries_a_test_instructions_runbook() {
-  local status
-  status=$(ruby -ryaml -e '
-doc = YAML.load_file(ARGV[0]) || {}
-test = doc["test"]
-if !test.is_a?(Hash)
-  puts "test is not a mapping"
-else
-  val = test["instructions"]
-  if !val.is_a?(String)
-    puts "test.instructions is #{val.class} rather than a string"
-  elsif val.strip.empty?
-    puts "test.instructions is empty"
-  else
-    puts "ok"
-  end
-end
-' "$NM") || fail "failed to parse .no-mistakes.yaml as YAML"
+  local json status
+  json=$(yaml_to_json "$NM") \
+    || fail "could not parse .no-mistakes.yaml as YAML (needs python3 with PyYAML, or ruby with psych)"
+  status=$(printf '%s' "$json" | python3 -c '
+import json, sys
+
+doc = json.load(sys.stdin) or {}
+test = doc.get("test")
+if not isinstance(test, dict):
+    print("test is not a mapping")
+else:
+    val = test.get("instructions")
+    if not isinstance(val, str):
+        print("test.instructions is %s rather than a string" % type(val).__name__)
+    elif not val.strip():
+        print("test.instructions is empty")
+    else:
+        print("ok")
+') || fail "failed to read test.instructions from the parsed .no-mistakes.yaml"
   if [ "$status" != ok ]; then
     fail "test.instructions must stay present and non-empty so the test analyzer keeps its live-evidence runbook; $status"
   fi
