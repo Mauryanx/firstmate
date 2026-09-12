@@ -16,7 +16,7 @@ Detail that only proves the work was done belongs in a record, not in the air.
 ## When the turn does not say enough
 
 A dispatched turn carries an order only when it says what to do, and either says which project or target it is for or lets `../../../../AGENTS.md` section 7 intake resolve that to one genuinely confident match.
-What to do is never inferred, at any confidence: an unbound turn that does not say it is answered with a `question` portion that names it among the missing parts, per the rule below, and no work is started on it.
+What to do is never inferred, at any confidence: a turn that does not say it, read on its own rather than as a completing reply, is answered with a `question` portion that names it among the missing parts, per the rule below, and no work is started on it.
 Whether a missing project or target may be inferred is governed by `../../../../AGENTS.md` section 7 intake, unchanged: proceed only on one genuinely confident match against the registry, work under way, and project code, and ask when multiple or no projects plausibly match.
 The spoken channel adds to that rule rather than replacing it, so section 7 decides whether the part may be inferred and this section decides how the turn is answered once it has.
 A project or target that was inferred is said back in the reply, so the caller hears the assumption and can correct it; on one genuinely confident match the work proceeds while the assumption is spoken.
