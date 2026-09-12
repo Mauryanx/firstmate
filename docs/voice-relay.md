@@ -19,7 +19,7 @@ The wake drain's acknowledgement holds an `inbox:vc-*` row whose request is stil
 
 Acceptance is a durable single dispatch claim, not proof that work happened.
 An interrupted claim or a missing playback receipt stays visible for reconciliation instead of automatically repeating an action or a spoken line.
-The regression covers concurrent duplicate capture, out-of-order transcript completion, session ownership, explicit question and correction routing, an instruction that does not say enough being answered with an open question that the caller's next turn completes and whose binding no later question may reuse, ordered reply portions, supersession of the turns an earlier call left `saved` including a redial captured mid-pass, and crashes on both sides of the return path.
+The regression covers concurrent duplicate capture, out-of-order transcript completion, session ownership, explicit question and correction routing, an instruction that does not say enough being answered with an open question that the caller's next turn either completes or leaves behind by changing the subject, and whose binding no later question may reuse, ordered reply portions, supersession of the turns an earlier call left `saved` including a redial captured mid-pass, and crashes on both sides of the return path.
 Device-level latency, recognition fidelity and voice quality need a live client and are established nowhere in this transport.
 
 Publication is accountable speech.

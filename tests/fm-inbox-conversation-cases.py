@@ -466,3 +466,34 @@ assert [(r['response_id'], r['kind'], r['final']) for r in settled if r['request
         ] == [('live-decision-recorded', 'answer', True)], settled
 print('PASS: an instruction missing its target is answered with an open question the bound next turn consumes, '
       'and a clarifying question takes the same route with its own reply')
+
+# A turn bound to a missing-part question need not supply that part: the bridge
+# binds whatever comes next while the question is open, so a change of subject
+# arrives on the same route and consumes the question too. The transport shows
+# that turn answered on its own request while the abandoned order keeps only
+# the question already published against it, and that no further question is
+# published for it. Which of the two a bound turn is stays speaking.md's
+# reading; the transport interprets nothing.
+run('capture', dict(connection, **dict(capture(8, 't7'),
+                                       committed_transcript='The Sonnet run, five thousand samples.')))
+assert owning('accept', cid='live')['input']['request_id'] == 'r8'
+run('publish', dict(conversation_id='live', request_id='r8', destination='elevenlabs',
+                    response_id='live-second-missing', sequence=1, kind='question', final=False,
+                    question_binding='r8-missing-part',
+                    speech_text='I have five thousand samples of the Sonnet run, but not what to do with them. What would you like done?'))
+run('capture', dict(connection, **dict(capture(9, 't8', question_binding='r8-missing-part'),
+                                       committed_transcript='Never mind. What is on the board?')))
+abandoning = owning('accept', cid='live')
+assert abandoning['input']['request_id'] == 'r9'
+assert abandoning['input']['question_binding'] == 'r8-missing-part'
+run('publish', dict(conversation_id='live', request_id='r9', destination='elevenlabs',
+                    response_id='live-board', sequence=1, kind='answer', final=True,
+                    speech_text='Two branches are waiting on your review, and nothing else is blocked.'))
+abandoned = run('poll', dict(connection))['replies']
+assert [(r['response_id'], r['kind'], r['question_open']) for r in abandoned if r['request_id'] == 'r8'
+        ] == [('live-second-missing', 'question', False)], abandoned
+assert [(r['response_id'], r['kind'], r['final']) for r in abandoned if r['request_id'] == 'r9'
+        ] == [('live-board', 'answer', True)], abandoned
+assert not any(r['question_open'] for r in abandoned), abandoned
+print('PASS: a bound turn that changes the subject is answered on its own request, '
+      'and the order it abandons keeps only the question already published against it')
