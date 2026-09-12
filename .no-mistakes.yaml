@@ -60,11 +60,13 @@ test:
     not reasoning about the source.
 
     THE SUITES IN tests/ ARE THAT DRIVE, NOT UNIT TESTS.
-    A tests/<subject>.test.sh script builds a disposable state root and git
-    fixture and then runs the real bin/ entry points as real subprocesses,
+    Most tests/<subject>.test.sh scripts build a disposable state root and git
+    fixture and then run the real bin/ entry points as real subprocesses,
     asserting only what is observable through their public interfaces;
-    asserting implementation source bytes is forbidden in this repo. Run the
-    few scripts that cover your scenarios, by path:
+    asserting implementation source bytes is forbidden in this repo. Only a
+    script that actually launched an entry point as a subprocess drove the
+    product; check its transcript rather than assuming every script under
+    tests/ did. Run the few scripts that cover your scenarios, by path:
 
       bin/fm-test-run.sh tests/<subject>.test.sh [more scripts...]
 
@@ -94,9 +96,14 @@ test:
     credential is NOT proven by the portable suite, which substitutes a fixture
     or a fake for exactly that. Neither is a scenario covered only by a script
     that sources a library and feeds it recorded strings: that proves the
-    classifier's logic, not the live surface it was recorded from. Report every
-    such scenario "untested" with "live": false and a reason naming what was
-    missing and how to supply it - never "pass", and never "live": true.
+    classifier's logic, not the live surface it was recorded from. Neither is a
+    scenario covered only by a script that parses a declarative artifact - a
+    YAML, JSON or config file - without running its consumer: that proves the
+    artifact's shape, not that the consumer reads it, so a scenario whose
+    consumer is the gate itself or any other process this run never launched
+    stays untested. Report every such scenario "untested" with "live": false
+    and a reason naming what was missing and how to supply it - never "pass",
+    and never "live": true.
 
     The runner hands you that reason. bin/fm-test-run.sh classifies a script as
     a gate skip only when its FIRST meaningful line is "skip: <reason>", and
@@ -122,10 +129,3 @@ test:
     point a scenario at the operator's real firstmate home. An honest
     "untested" is listed on the pull request and costs nothing; a forced or
     guessed "pass" costs everything.
-
-    AGENT-FACING PROSE IS A REAL SURFACE HERE.
-    A change under .agents/skills/, docs/ or AGENTS.md is usually not
-    "no-surface": in this repo that prose is a contract some script renders or
-    enforces, or that a suite asserts through behavior. Drive the script or
-    suite that consumes it. Reserve "no-surface" for prose with no executing
-    consumer at all, and say in testing_summary which consumer you looked for.

@@ -1429,6 +1429,7 @@ families_for_changed_path() {
     .github/workflows/ci.yml|.no-mistakes.yaml)
       printf '%s\n' pure-contract-unit
       printf '%s\n' real-herdr-gated
+      printf '%s\n' __script__:fm-nm-test-contract.test.sh
       ;;
     docs/fm-test-portable-shards.md|docs/fm-test-isolation-proof.md|\
     docs/fm-test-isolation-proof.json)

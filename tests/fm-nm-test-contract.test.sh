@@ -8,12 +8,9 @@ set -u
 
 NM="$ROOT/.no-mistakes.yaml"
 
-if ! python3 -c 'import yaml' >/dev/null 2>&1; then
-  echo "skip: python3 with PyYAML not found (required to parse .no-mistakes.yaml)"
-  exit 0
-fi
-
 test_nm_has_no_deterministic_test_command() {
+  python3 -c 'import yaml' >/dev/null 2>&1 \
+    || fail "python3 with PyYAML is required to parse .no-mistakes.yaml for this contract"
   local val
   val=$(python3 - "$NM" <<'PY'
 import sys, yaml
@@ -32,6 +29,8 @@ PY
 }
 
 test_nm_carries_a_test_instructions_runbook() {
+  python3 -c 'import yaml' >/dev/null 2>&1 \
+    || fail "python3 with PyYAML is required to parse .no-mistakes.yaml for this contract"
   local status
   status=$(python3 - "$NM" <<'PY'
 import sys, yaml
