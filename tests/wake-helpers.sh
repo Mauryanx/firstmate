@@ -306,9 +306,22 @@ wait_for_exit() {
     sleep 0.1
     i=$((i + 1))
   done
-  kill "$pid" 2>/dev/null || true
-  wait "$pid" 2>/dev/null || true
+  stop_pid_bounded "$pid"
   return 124
+}
+
+# Stop a fixture child without turning a failed bounded wait into an unbounded
+# suite hang. A shell blocked in one of its own children can defer TERM, so give
+# normal cleanup a short chance and then make the direct child reapable.
+stop_pid_bounded() {  # <pid> [term-limit-ticks]
+  local pid=$1 limit=${2:-20} i=0
+  kill "$pid" 2>/dev/null || true
+  while is_live_non_zombie "$pid" && [ "$i" -lt "$limit" ]; do
+    sleep 0.1
+    i=$((i + 1))
+  done
+  is_live_non_zombie "$pid" && kill -KILL "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
 }
 
 is_live_non_zombie() {

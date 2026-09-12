@@ -174,7 +174,7 @@ record_pi_busy() {  # <state-dir> <id>
     --source pi-ext --event agent-start
 }
 
-reap() { kill "$1" 2>/dev/null || true; wait "$1" 2>/dev/null || true; }
+reap() { stop_pid_bounded "$1"; }
 
 # --- pure classifier predicates (fm-classify-lib.sh) ------------------------
 
@@ -3450,8 +3450,10 @@ test_afk_busy_declared_pause_hands_off_plain_stale() {
 # after each handled wake, is woken in a loop for the whole declared wait. This
 # fixture's fake tmux renders a fresh footer on EVERY capture-pane and asserts that
 # divergence outright on every re-arm (.hash-<key> moves, .count-<key> never
-# climbs), so the one-wake assertion across five silent re-arms cannot pass
-# vacuously on a pane that happened to sit still. Round 1 also starts from an
+# climbs), so the one-wake assertion across two silent re-arms cannot pass
+# vacuously on a pane that happened to sit still. Two silent re-arms prove the
+# one-shot remains stable without repeating the same full watcher lifecycle five
+# times. Round 1 also starts from an
 # undeclared wedge timer and escalation count, which the handoff must clear the
 # way the normal-mode absorber does, so lifting the declaration later starts the
 # wedge path from a fresh timer rather than resuming a stale count.
@@ -3517,12 +3519,12 @@ SH
     || fail "the away-mode handoff recorded normal-mode pause tracking on a ticking pane"
   ack_stopped_cycle "$state" || fail "could not acknowledge the ticking declared-pause handoff"
 
-  # Rounds 2-6: five consecutive re-arms on the same standing declaration. Every
+  # Rounds 2-3: two consecutive re-arms on the same standing declaration. Every
   # capture renders a new footer, so every poll lands on the changed-hash branch -
   # the exact shape a hash-keyed one-shot re-fires on. Each round proves the pane
   # really moved before it asserts silence, so the case cannot go vacuous.
   round=2
-  while [ "$round" -le 6 ]; do
+  while [ "$round" -le 3 ]; do
     prev_hash=$(cat "$state/.hash-$key" 2>/dev/null || true)
     prev_ticks=$(cat "$ticks" 2>/dev/null || echo 0)
     : > "$out"

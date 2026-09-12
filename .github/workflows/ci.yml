@@ -47,8 +47,8 @@ jobs:
   tests-portable-parallel-1:
     name: Behavior portable parallel 1
     runs-on: ubuntu-latest
-    # Measured shard wall is ~1 min of serial sum on proven scripts; this cap is
-    # a hang tripwire with margin, not the expected healthy end of the lane.
+    # Recent per-case maxima rebalance to ~6.7 min per shard. The runner fails
+    # at 8 min, before this job cap can erase the test verdict and artifacts.
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
@@ -80,6 +80,8 @@ jobs:
           mkdir -p "$RUNNER_TEMP/fm-test"
           bin/fm-test-run.sh --lane portable-parallel-1 \
             --fail-on-gate-skip 'Pi extension typecheck prerequisite not found' \
+            --per-script-timeout-secs 360 \
+            --max-wall-ms 480000 \
             --json "$RUNNER_TEMP/fm-test/fm-test-timing-portable-parallel-1.json"
       - name: Upload shard 1 timing artifact
         if: always()
@@ -117,6 +119,8 @@ jobs:
           set -eu
           mkdir -p "$RUNNER_TEMP/fm-test"
           bin/fm-test-run.sh --lane portable-parallel-2 \
+            --per-script-timeout-secs 360 \
+            --max-wall-ms 480000 \
             --json "$RUNNER_TEMP/fm-test/fm-test-timing-portable-parallel-2.json"
       - name: Upload shard 2 timing artifact
         if: always()
@@ -135,9 +139,8 @@ jobs:
   tests-portable-serial:
     name: Behavior portable serial ${{ matrix.shard }}
     runs-on: ubuntu-latest
-    # Current runners can take ~20 min for a balanced shard. This 30-minute cap
-    # preserves the timeout as a hang tripwire while allowing runner-speed and
-    # job-setup margin; it is not the expected healthy end of the lane.
+    # Recent per-case maxima rebalance to ~19.6 min per shard. The runner fails
+    # at 27 min, before this job cap can erase the test verdict and artifacts.
     timeout-minutes: 30
     strategy:
       # Every shard reports so one failure never hides another shard's result.
@@ -193,6 +196,8 @@ jobs:
           # any missing typecheck prerequisite is a broken lane, not a valid skip.
           bin/fm-test-run.sh --lane "$FM_SERIAL_LANE" \
             --fail-on-gate-skip 'Pi extension typecheck prerequisite not found' \
+            --per-script-timeout-secs 900 \
+            --max-wall-ms 1620000 \
             --json "$RUNNER_TEMP/fm-test/fm-test-timing-portable-serial-${FM_SERIAL_SHARD}.json"
       - name: Upload portable serial shard ${{ matrix.shard }} timing artifact
         if: always()
