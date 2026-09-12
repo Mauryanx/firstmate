@@ -62,7 +62,7 @@ A question carries a `question_binding` that must be unique for the life of the 
 The question stays open until the caller's next turn arrives bound to it and consumes it at acceptance; `final` governs only whether more portions may follow on this request, not whether the question is open.
 The completed order is answered as that later turn, read together with this one as [`speaking.md`](speaking.md) defines, rather than by publishing more against this one.
 Such a turn is not rejected, because rejection is for a turn that should not be run at all, and an incomplete one is waiting to be completed.
-A caller who says the missing part twice before the next `accept` jams the conversation, because `poll` reports the question open until acceptance and the bridge binds both turns: `accept` consumes the question for the first and then refuses the second with `stale or unknown question binding`, holding every later spoken turn `saved` behind it until that turn is rejected by the reconcile route below.
+A binding a later `accept` will not take is a reconcile state, and the section below owns the route out of it.
 
 ## Reject
 
