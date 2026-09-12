@@ -1,0 +1,221 @@
+
+### pilot enabled by the session holding the lock
+$ fm-inbox.sh conversation pilot-init <<< {"publication_policy":"owner-authored-elevenlabs-v1"}
+[exit 0] {"destination":"elevenlabs","pilot":true}
+
+bound conversation 'call' (credential withheld from this transcript)
+
+### 1. the captain's real first-call fragment arrives with no project and no task
+$ fm-inbox.sh conversation capture <<< {"conversation_id":"call","credential":"<redacted>","turn_id":"t1","request_id":"r1","committed_transcript":"GPT-6 Astra Medium as a test","revision":1,"previous_turn_id":null,"created_at":"2026-09-12T14:00:00Z"}
+[exit 0] {"request_id":"r1","state":"saved"}
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id":"call"}
+[exit 0] {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"GPT-6 Astra Medium as a test","conversation_id":"call","correction_of":null,"created_at":"2026-09-12T14:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"r1","revision":1,"turn_id":"t1"},"playback_context":[]}
+
+
+### 2. firstmate asks for exactly the missing part, as an open question, and starts nothing
+$ fm-inbox.sh conversation publish <<< {"conversation_id":"call","request_id":"r1","response_id":"ask-project","sequence":1,"kind":"question","final":false,"question_binding":"which-project","destination":"elevenlabs","speech_text":"I have that as a test of the new model, but not which project it is for. Which one?"}
+[exit 0] {"published":true,"response_id":"ask-project"}
+
+
+### 3. what the voice bridge sees: the question is waiting to be spoken and still open
+$ fm-inbox.sh conversation poll
+{
+    "conversation_id": "call",
+    "replies": [
+        {
+            "delivery": {
+                "state": "waiting"
+            },
+            "final": false,
+            "kind": "question",
+            "question_binding": "which-project",
+            "question_open": true,
+            "request_id": "r1",
+            "response_id": "ask-project",
+            "sequence": 1
+        }
+    ],
+    "requests": [
+        {
+            "previous_turn_id": null,
+            "request_id": "r1",
+            "state": "accepted",
+            "turn_id": "t1"
+        }
+    ]
+}
+
+### 4. the captain answers on the next turn, bound to that open question; accept hands firstmate the binding
+$ fm-inbox.sh conversation capture <<< {"conversation_id":"call","credential":"<redacted>","turn_id":"t2","request_id":"r2","committed_transcript":"For the firstmate project.","revision":1,"previous_turn_id":"t1","created_at":"2026-09-12T14:00:20Z","question_binding":"which-project"}
+[exit 0] {"request_id":"r2","state":"saved"}
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id":"call"}
+[exit 0] {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"For the firstmate project.","conversation_id":"call","correction_of":null,"created_at":"2026-09-12T14:00:20Z","previous_turn_id":"t1","question_binding":"which-project","request_id":"r2","revision":1,"turn_id":"t2"},"playback_context":[{"delivery":null,"response_id":"ask-project"}]}
+
+
+### 5. after the answer, the question is no longer open
+$ fm-inbox.sh conversation poll
+[["ask-project", "question", false]]
+
+### ADVERSARIAL A. the caller answers the same question a second time: refused, never a silent approval
+$ fm-inbox.sh conversation capture <<< {"conversation_id":"call","credential":"<redacted>","turn_id":"t3","request_id":"r3","committed_transcript":"For the firstmate project, I said.","revision":1,"previous_turn_id":"t2","created_at":"2026-09-12T14:00:40Z","question_binding":"which-project"}
+[exit 0] {"request_id":"r3","state":"saved"}
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id":"call"}
+[exit 2] fm-inbox conversation: stale or unknown question binding
+
+-> transport blocks the whole conversation until the stale turn is explicitly rejected:
+$ fm-inbox.sh conversation reject <<< {"conversation_id":"call","request_id":"r3","reason":"question which-project was already answered by r2"}
+[exit 0] {"request_id":"r3","state":"rejected"}
+
+$ fm-inbox.sh conversation publish <<< {"conversation_id":"call","request_id":"r3","response_id":"ask-again","sequence":1,"kind":"question","final":false,"question_binding":"say-it-again","destination":"elevenlabs","speech_text":"I already have that one. Say the new one again?"}
+[exit 0] {"published":true,"response_id":"ask-again"}
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id":"call"}
+[exit 0] {"dispatch":false}
+
+
+### ADVERSARIAL B. an answer bound to a question nobody asked is refused
+$ fm-inbox.sh conversation capture <<< {"conversation_id":"call","credential":"<redacted>","turn_id":"t4","request_id":"r4","committed_transcript":"The alpha project.","revision":1,"previous_turn_id":"t3","created_at":"2026-09-12T14:01:00Z","question_binding":"never-asked"}
+[exit 0] {"request_id":"r4","state":"saved"}
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id":"call"}
+[exit 2] fm-inbox conversation: stale or unknown question binding
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id":"call","request_id":"r4","reason":"bound to a question that was never asked"}
+[exit 0] {"request_id":"r4","state":"rejected"}
+
+
+### ADVERSARIAL C. a fragment that was rejected rather than accepted can be asked about, but never receipted or answered as if work had started
+$ fm-inbox.sh conversation capture <<< {"conversation_id":"call","credential":"<redacted>","turn_id":"t5","request_id":"r5","committed_transcript":"Astra medium.","revision":1,"previous_turn_id":"t4","created_at":"2026-09-12T14:01:20Z"}
+[exit 0] {"request_id":"r5","state":"saved"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id":"call","request_id":"r5","reason":"no task and no project"}
+[exit 0] {"request_id":"r5","state":"rejected"}
+
+$ fm-inbox.sh conversation publish <<< {"conversation_id":"call","request_id":"r5","response_id":"r5-receipt","sequence":1,"kind":"receipt","final":false,"destination":"elevenlabs","speech_text":"On it."}
+[exit 2] fm-inbox conversation: request has not been accepted or explicitly rejected here
+
+$ fm-inbox.sh conversation publish <<< {"conversation_id":"call","request_id":"r5","response_id":"r5-progress","sequence":1,"kind":"progress","final":false,"destination":"elevenlabs","speech_text":"Starting that now."}
+[exit 2] fm-inbox conversation: request has not been accepted or explicitly rejected here
+
+$ fm-inbox.sh conversation publish <<< {"conversation_id":"call","request_id":"r5","response_id":"r5-answer","sequence":1,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"Done."}
+[exit 2] fm-inbox conversation: request has not been accepted or explicitly rejected here
+
+$ fm-inbox.sh conversation publish <<< {"conversation_id":"call","request_id":"r5","response_id":"r5-ask","sequence":1,"kind":"question","final":false,"question_binding":"what-and-where","destination":"elevenlabs","speech_text":"I heard the model name but not what to do with it or where. What should I do, and on which project?"}
+[exit 0] {"published":true,"response_id":"r5-ask"}
+
+
+### ADVERSARIAL D. a question portion without a binding, or a non-question carrying one, is refused
+$ fm-inbox.sh conversation publish <<< {"conversation_id":"call","request_id":"r2","response_id":"unbound-q","sequence":1,"kind":"question","final":false,"destination":"elevenlabs","speech_text":"Which one?"}
+[exit 2] fm-inbox conversation: invalid question binding
+
+$ fm-inbox.sh conversation publish <<< {"conversation_id":"call","request_id":"r2","response_id":"bound-answer","sequence":1,"kind":"answer","final":true,"question_binding":"sneaky","destination":"elevenlabs","speech_text":"Done."}
+[exit 2] fm-inbox conversation: invalid question binding
+
+
+### durable record: owner audit (no transcripts, no credentials)
+{
+    "conversation_id": "call",
+    "replies": [
+        {
+            "delivery": {
+                "state": "waiting"
+            },
+            "disclosure": {
+                "author": "linux-starttime=306151934 cmdline-hex=2f746d702f666d2d766f6963652d6c6976652e4c3654486e6a2f636f646578002f746d702f666d2d766f6963652d6c6976652e4c3654486e6a2f64726976652e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d32413058474b3737345958304348363339374248365930002f746d702f666d2d766f6963652d6c6976652e4c3654486e6a00",
+                "destination": "elevenlabs",
+                "digest": "013dfdd284fb4c3e78c7e792bd7bfd71d4c5e570739eee8bb1ccb14cd7c0596b",
+                "policy": "owner-authored-elevenlabs-v1",
+                "published_at": 1789190843
+            },
+            "final": false,
+            "request_id": "r3",
+            "response_id": "ask-again"
+        },
+        {
+            "delivery": {
+                "state": "waiting"
+            },
+            "disclosure": {
+                "author": "linux-starttime=306151934 cmdline-hex=2f746d702f666d2d766f6963652d6c6976652e4c3654486e6a2f636f646578002f746d702f666d2d766f6963652d6c6976652e4c3654486e6a2f64726976652e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d32413058474b3737345958304348363339374248365930002f746d702f666d2d766f6963652d6c6976652e4c3654486e6a00",
+                "destination": "elevenlabs",
+                "digest": "71bb3f1f26222db2c0ec23788103835d335ac05b2bb317f8db9cf7309e106e67",
+                "policy": "owner-authored-elevenlabs-v1",
+                "published_at": 1789190849
+            },
+            "final": false,
+            "request_id": "r5",
+            "response_id": "r5-ask"
+        },
+        {
+            "delivery": {
+                "state": "waiting"
+            },
+            "disclosure": {
+                "author": "linux-starttime=306151934 cmdline-hex=2f746d702f666d2d766f6963652d6c6976652e4c3654486e6a2f636f646578002f746d702f666d2d766f6963652d6c6976652e4c3654486e6a2f64726976652e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d32413058474b3737345958304348363339374248365930002f746d702f666d2d766f6963652d6c6976652e4c3654486e6a00",
+                "destination": "elevenlabs",
+                "digest": "8c16170b6bc196fa7b1a8cd2da6969fd09a9b4895dcfea5ee0c491cdff132008",
+                "policy": "owner-authored-elevenlabs-v1",
+                "published_at": 1789190840
+            },
+            "final": false,
+            "request_id": "r1",
+            "response_id": "ask-project"
+        }
+    ],
+    "requests": [
+        {
+            "correction_of": null,
+            "note_id": "vc-d8a778ab22096ebfaf89d4d68dfbb6423e89bd199b6347a85722b74bc44c6f89",
+            "previous_turn_id": null,
+            "question_binding": null,
+            "reason": null,
+            "request_id": "r1",
+            "state": "accepted",
+            "turn_id": "t1"
+        },
+        {
+            "correction_of": null,
+            "note_id": "vc-a0bde042b64c246ddf015aeac9acbd2f1f4bc97ad03596af95bf233ffe931412",
+            "previous_turn_id": "t1",
+            "question_binding": "which-project",
+            "reason": null,
+            "request_id": "r2",
+            "state": "accepted",
+            "turn_id": "t2"
+        },
+        {
+            "correction_of": null,
+            "note_id": "vc-a9ac79aa2440da1df52dddb2d40e7913eaa11e633beebdd48866717b21621a2c",
+            "previous_turn_id": "t2",
+            "question_binding": "which-project",
+            "reason": "question which-project was already answered by r2",
+            "request_id": "r3",
+            "state": "rejected",
+            "turn_id": "t3"
+        },
+        {
+            "correction_of": null,
+            "note_id": "vc-4a9da4babfa41c0a3a26137a46547dc4cca52282b5e675cad7b6feaafc015286",
+            "previous_turn_id": "t3",
+            "question_binding": "never-asked",
+            "reason": "bound to a question that was never asked",
+            "request_id": "r4",
+            "state": "rejected",
+            "turn_id": "t4"
+        },
+        {
+            "correction_of": null,
+            "note_id": "vc-8f31571c7b4e31abc87e03b106e33b208b3b99441aebca0be5a40d603e34a060",
+            "previous_turn_id": "t4",
+            "question_binding": null,
+            "reason": "no task and no project",
+            "request_id": "r5",
+            "state": "rejected",
+            "turn_id": "t5"
+        }
+    ],
+    "work_outcome": "Firstmate-owned; acceptance and playback do not prove action completion"
+}

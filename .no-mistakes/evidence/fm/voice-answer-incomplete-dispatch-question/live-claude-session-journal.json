@@ -1,0 +1,27 @@
+{
+ "requests": {
+  "vc-d8a778ab22096ebfaf89d4d68dfbb6423e89bd199b6347a85722b74bc44c6f89": {
+   "conversation_id": "call",
+   "hash": "b6386577e645e15c763b0ca4cf5d3f509ad89299497dae9d20abefe5dbd6bb1d",
+   "order": 1,
+   "state": "accepted"
+  }
+ },
+ "replies": {
+  "vc-5bb93a99dd38f59d3dc7aaedb999a4e48885b02e8afb3303b5cb6c6a56f6490e": {
+   "event": {
+    "destination": "elevenlabs",
+    "final": false,
+    "kind": "question",
+    "question_binding": "r1-q1",
+    "request_id": "r1",
+    "response_id": "r1-q1",
+    "sequence": 1,
+    "speech_text": "I have that as trying GPT-6 Astra Medium as a test, but not what to try it on. What should it work on, and on which project?"
+   },
+   "speech_text": "I have that as trying GPT-6 Astra Medium as a test, but not what to try it on. What should it work on, and on which project?",
+   "delivery": null,
+   "consumed_by": null
+  }
+ }
+}

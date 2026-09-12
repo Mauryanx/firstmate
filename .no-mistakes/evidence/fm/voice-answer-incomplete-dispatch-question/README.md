@@ -1,0 +1,5 @@
+# Evidence: an incomplete spoken instruction is answered with a question, and starts nothing
+
+- `transport-open-question-transcript.txt` - hand-driven CLI transcript against `bin/fm-inbox.sh conversation` in an isolated pilot home: the captain's real first-call fragment ("GPT-6 Astra Medium as a test") is captured, accepted, answered with an open `question` portion naming the missing project, the bridge poll shows it open, the captain's bound follow-up consumes it; plus adversarial cases (double answer refused, unknown binding refused, receipt/progress/answer refused on a rejected fragment, unbound question / bound answer refused).
+- `live-claude-session-transcript.txt` - a real `claude -p` session (claude-opus-5) holding the lab home's session lock, given the exact VOICE block rendered by `bin/fm-wake-drain.sh`. It loads `answer-voice-turn`, accepts the turn, finds no target to infer, publishes a `question` portion, dispatches nothing, and acknowledges the wake.
+- `live-claude-session-journal.json` - the persisted voice-conversation journal after that session: one accepted request, one open `question` reply, no receipt/progress/answer.

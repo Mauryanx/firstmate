@@ -1,0 +1,157 @@
+[init] model=claude-opus-5 cwd=/tmp/fm-voice-live.L6THnj/llm/project skills=[]
+
+[assistant text]
+I'll load the voice-answer skill first, since that drain explicitly requires it.
+
+[tool Skill] {'skill': 'answer-voice-turn'}
+[result]
+Launching skill: answer-voice-turn
+
+[assistant text]
+I'll read the voice turn first.
+
+[tool Bash]
+echo "FM_HOME=$FM_HOME" && ls "$FM_HOME/state/inbox/" 2>/dev/null | head -20
+[result]
+FM_HOME=/tmp/fm-voice-live.L6THnj/llm/home
+handled
+vc-d8a778ab22096ebfaf89d4d68dfbb6423e89bd199b6347a85722b74bc44c6f89.note
+
+[tool Bash]
+cat "$FM_HOME/state/inbox/vc-d8a778ab22096ebfaf89d4d68dfbb6423e89bd199b6347a85722b74bc44c6f89.note"
+[result]
+id=vc-d8a778ab22096ebfaf89d4d68dfbb6423e89bd199b6347a85722b74bc44c6f89
+source=voice-conversation
+--
+{"authenticated_principal":"captain","committed_transcript":"GPT-6 Astra Medium as a test","conversation_id":"call","correction_of":null,"created_at":"2026-09-12T14:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"r1","revision":1,"turn_id":"t1"}
+
+[assistant text]
+The transcript is odd - "GPT-6 Astra Medium as a test". Let me claim the turn first.
+
+[tool Bash]
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation accept <<<'{"conversation_id":"call"}'
+[result]
+{"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"GPT-6 Astra Medium as a test","conversation_id":"call","correction_of":null,"created_at":"2026-09-12T14:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"r1","revision":1,"turn_id":"t1"},"playback_context":[]}
+
+[tool Bash]
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation accept <<<'{"conversation_id":"call"}'
+[result]
+{"dispatch":false}
+
+[tool Bash]
+cd /tmp/fm-voice-live.L6THnj/llm/project/.claude/skills/answer-voice-turn && cat references/speaking.md
+[result]
+# Composing an answer for the ear
+
+Loaded from [`../SKILL.md`](../SKILL.md).
+Everything in `../../../../AGENTS.md` section 9 applies unchanged: outcomes and consequences in the captain's own nouns, never internal mechanics.
+Speech tightens that, because a listener cannot re-read the sentence and cannot skim past a detail that does not matter.
+
+## Shape
+
+Say the outcome first, then what it means, then the decision if there is one.
+Prefer short sentences over clauses stacked with commas.
+Answer the question that was asked before adding anything adjacent to it.
+
+A spoken answer is finished when the listener could act on it.
+Detail that only proves the work was done belongs in a record, not in the air.
+
+## When the turn does not say enough
+
+A dispatched turn carries an order only when it says what to do and which project or target to do it to.
+A turn missing either part is answered with a `question` portion naming exactly the part that is missing, and no work is started on it.
+Never supply the missing part from the fleet's current work, the likeliest project, or the last thing that was said: a guess that lands wrong is indistinguishable from an order the captain never gave, and it is acted on as if he had given it.
+Ask for the missing part alone rather than reading the fragment back in full, and leave that question open so the caller can say it again as the next turn, per [`publication.md`](publication.md).
+
+## Never read aloud
+
+- Identifiers, file paths, task ids, branch names, 
+
+[tool Bash]
+cat references/publication.md
+[result]
+# Publishing an answer to a spoken turn
+
+Loaded from [`../SKILL.md`](../SKILL.md), which owns the sequence these commands sit inside.
+`../../../../bin/fm-inbox.sh conversation --help` remains the owner of every field, default, and refusal; the shapes below are a starting point so a live call is not spent reading help.
+Every command takes one JSON object on stdin, prints one JSON object, and needs `FM_HOME` set to this home's path.
+An empty `FM_HOME` is refused rather than defaulted.
+
+## Accept
+
+```sh
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation accept <<<'{"conversation_id":"<cid>"}'
+```
+
+`dispatch: true` carries `input`, including the `request_id` to answer and the committed transcript.
+Acceptance is committed before the command returns, so the same turn is never dispatched twice; a crash at that boundary leaves an accepted request whose work state is unknown, which is why an interrupted claim is reconciled rather than re-run.
+`dispatch: false` means nothing is waiting.
+
+Repeat the call until `dispatch: false`.
+One call claims one turn, and turns are returned oldest first, so an earlier question from the same call is answered before a later one.
+
+## Publish
+
+```sh
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation publish <<'JSON'
+{"conversation_id":"<cid>","request_id":"<rid>","response_id":"<unique>",
+ "sequence":1,"kind":"answer","final":true,
+ "destination":"elevenlabs","speech_text":"..."}
+JSON
+```
+
+`kind` is one of `receipt`, `progress`, `question`, `answer`, or `error
+
+[tool Bash]
+cd /tmp/fm-voice-live.L6THnj/llm/project && ls "$FM_HOME/config/" 2>/dev/null; echo "---dispatch---"; cat "$FM_HOME/config/crew-dispatch.json" 2>/dev/null; echo "---projects---"; cat "$FM_HOME/data/projects.md" 2>/dev/null | head -40; echo "---backlog---"; cat "$FM_HOME/data/backlog.md" 2>/dev/null | head -40
+[result]
+---dispatch---
+---projects---
+---backlog---
+
+[assistant text]
+Records are empty - no registered projects, no backlog, no dispatch profiles - so there's nothing to infer a target from. Asking for the missing part.
+
+[tool Bash]
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation publish <<'JSON'
+{"conversation_id":"call","request_id":"r1","response_id":"r1-q1",
+ "sequence":1,"kind":"question","final":false,"question_binding":"r1-q1",
+ "destination":"elevenlabs",
+ "speech_text":"I have that as trying GPT-6 Astra Medium as a test, but not what to try it on. What should it work on, and on which project?"}
+JSON
+[result]
+{"published":true,"response_id":"r1-q1"}
+
+[tool Bash]
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation audit <<<'{"conversation_id":"call"}'
+[result]
+{"conversation_id":"call","replies":[{"delivery":{"state":"waiting"},"disclosure":{"author":"linux-starttime=306162096 cmdline-hex=636c61756465002d700057616b652d68616e646c696e67207475726e2e20546869732073657373696f6e20686f6c647320746865206c6f636b206f66207468652066697273746d61746520686f6d6520617420464d5f484f4d452028616c7265616479206578706f7274656420696e2074686520656e7669726f6e6d656e74292e20447261696e206f75747075743a0a0a564f4943453a20746865206361707461696e2073706f6b65202d203120766f696365206e6f74652873292062656c6f773b20616e73776572206576657279206f6e65206265666f726520616e79206f746865722077616b6520287472616e73637269707420696e2073746174652f696e626f782f3c69643e2e6e6f74653b206c6f61642074686520616e737765722d766f6963652d7475726e20736b696c6c2c206265636175736520746865206f7264696e61727920647261696e2061636b6e6f776c656467656d656e74207265667573657320612076632d20696420616e6420616e7377657273206e6f626f6479293a0a31373839313930393138093109636865636b09696e626f783a76632d6438613737386162323230393665626661663839643464363864666262363432336538396264313939623633343761383537323262373462633434633666383909636865636b3a20636f6e766572736174696f6e20696e626f78206e6f74652076632d643861373738616232323039366562666166383964346436386466626236343233653839626431393962363334376138353732326237346263343463366638393b2075736520666d2d696e626f782e736820636f6e766572736174696f6e206163636570740a57414b455f41434b5f52455155495245443a2061667465722068616e646c696e6720636f6d706c657465732072756e2062696e2f666d2d77616b652d647261696e2e73682
+
+[assistant text]
+Request is out of `saved` and the reply is queued for speech. Acknowledging the wake.
+
+[tool Bash]
+bin/fm-wake-drain.sh --ack-through 1 --recovery-generation 3991553.1789190918.9OIQ6w
+[result]
+(Bash completed with no output)
+
+[tool Bash]
+ls "$FM_HOME/state/inbox/" "$FM_HOME/state/inbox/handled/" 2>/dev/null; echo "--- queue ---"; cat "$FM_HOME/state/.wake-queue" 2>/dev/null || echo "(empty)"
+[result]
+/tmp/fm-voice-live.L6THnj/llm/home/state/inbox/:
+handled
+
+/tmp/fm-voice-live.L6THnj/llm/home/state/inbox/handled/:
+vc-d8a778ab22096ebfaf89d4d68dfbb6423e89bd199b6347a85722b74bc44c6f89.note
+--- queue ---
+
+[assistant text]
+Captain, the spoken turn is answered and the line is no longer quiet.
+
+What you said came through as "GPT-6 Astra Medium as a test" - a model name and the intent to test it, but nothing about what it should work on or where. There are no projects registered here and nothing queued, so there was no sensible target to infer, and guessing one would have looked exactly like an order you never gave. I put the question back to you instead, spoken as: "I have that as trying GPT-6 Astra Medium as a test, but not what to try it on. What should it work on, and on which project?"
+
+That question is left open, so you can just say the missing part as your next turn and I'll pick it up from there. The turn is claimed and the reply is queued for playback - queued is not the same as heard, so if it didn't reach you, say so and I'll reconcile rather than repeat it blindly.
+
+One thing worth flagging: I have no knowledge of a model by that name, so I made no claim about it either way in what was spoken. If it's real and you want work dispatched on it, I'll confirm it against the worker runtime's own catalog before committing anything to it. The notification queue is otherwise clear.
+
+[result] subtype=success turns=14 cost_usd=1.1034085 duration_ms=59250
