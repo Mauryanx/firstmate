@@ -64,6 +64,24 @@ pass() {
   printf 'ok - %s\n' "$1"
 }
 
+# --- YAML -------------------------------------------------------------------
+#
+# fm_yaml_to_json <file> prints the file's YAML content as JSON, using whichever
+# parser the host has: python3 with PyYAML, else ruby with psych. With neither
+# it returns non-zero so the caller fails loudly; a suite must never skip green
+# because no parser was found.
+
+fm_yaml_to_json() {
+  local file=$1
+  if python3 -c 'import yaml' >/dev/null 2>&1; then
+    python3 -c 'import json, sys, yaml; json.dump(yaml.safe_load(open(sys.argv[1])), sys.stdout)' "$file"
+  elif command -v ruby >/dev/null 2>&1; then
+    ruby -ryaml -rjson -e 'print JSON.generate(YAML.load_file(ARGV[0]))' "$file"
+  else
+    return 127
+  fi
+}
+
 # --- self-cleaning temp root ------------------------------------------------
 #
 # fm_test_tmproot <prefix> echoes a fresh temp dir and registers it for removal
