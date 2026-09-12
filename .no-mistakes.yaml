@@ -63,23 +63,24 @@ test:
     Most tests/<subject>.test.sh scripts build a disposable state root and git
     fixture and then run the real bin/ entry points as real subprocesses,
     asserting only what is observable through their public interfaces;
-    asserting implementation source bytes is forbidden in this repo. Only a
-    script that invokes a bin/fm-*.sh entry point as a subprocess drove the
-    product, so read the script you are about to cite and confirm it does: its
-    transcript proves the script ran and its named assertion held, never that
-    it launched anything. Run the few scripts that cover your scenarios, by
-    path:
+    asserting implementation source bytes is forbidden in this repo. Only the
+    test case that itself invokes a bin/fm-*.sh entry point as a subprocess
+    drove the product, so read the case behind the transcript line you are
+    about to cite and confirm that case does: the transcript proves the case
+    ran and its named assertion held, never that it launched anything, and a
+    script that drives entry points in its other cases does not make this one
+    live. Run the few scripts that cover your scenarios, by path:
 
       bin/fm-test-run.sh tests/<subject>.test.sh [more scripts...]
 
     bin/fm-test-run.sh --help owns the selection and timing mechanics. Do not
     run the whole suite.
 
-    When such a script executes a scenario, that IS driving the product live in
+    When such a case executes a scenario, that IS driving the product live in
     this run: report the scenario "pass" with "live": true and cite the script
-    and the transcript lines it printed. Each "ok - <behavior>" line, and each
-    "PASS: <behavior>" line a child contract executable prints through its
-    owning .test.sh wrapper, names an observable behavior that was driven, and
+    and the transcript lines that case printed. Each "ok - <behavior>" line,
+    and each "PASS: <behavior>" line a child contract executable prints
+    through its owning .test.sh wrapper, names a behavior that was driven, and
     the closing "FM_TEST_END ... exit=0 ... gate_skip=false" proves the script
     as a whole ran, so that transcript is behavior-level evidence rather than
     generic pass/fail output. That closing marker does not prove every case
@@ -87,7 +88,7 @@ test:
     scenario, never the marker alone. This is the standing rule that an existing
     automated test which drives a scenario end-to-end may be run as the
     scenario and cited as its evidence. It is not an exemption from live
-    evidence, so apply it only to a script that actually executed here.
+    evidence, so apply it only to a case that actually executed here.
 
     THE BOUNDARY THAT STAYS REFUSED.
     Ask of every scenario: did a script execute the real surface as a process
@@ -96,10 +97,10 @@ test:
     depends on a real vendor agent harness rendering in a real terminal pane, a
     real network or forge call, a real remote host over SSH, or a real
     credential is NOT proven by the portable suite, which substitutes a fixture
-    or a fake for exactly that. Neither is a scenario covered only by a script
+    or a fake for exactly that. Neither is a scenario covered only by a case
     that sources a library and feeds it recorded strings: that proves the
     classifier's logic, not the live surface it was recorded from. Neither is a
-    scenario covered only by a script that parses a declarative artifact - a
+    scenario covered only by a case that parses a declarative artifact - a
     YAML, JSON or config file - without running its consumer: that proves the
     artifact's shape, not that the consumer reads it, so a scenario whose
     consumer is the gate itself or any other process this run never launched
