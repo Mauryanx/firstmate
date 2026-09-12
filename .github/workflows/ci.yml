@@ -239,10 +239,6 @@ jobs:
           command -v python3 >/dev/null || { echo "::error::python3 is required"; exit 1; }
           command -v curl >/dev/null || { echo "::error::curl is required"; exit 1; }
           command -v tar >/dev/null || { echo "::error::tar is required"; exit 1; }
-          python3 -c 'import yaml' >/dev/null 2>&1 || {
-            echo "::error::python3 with PyYAML is required to parse YAML contracts"
-            exit 1
-          }
           jq --version
           python3 --version
       - name: Install pinned Herdr

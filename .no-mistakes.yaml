@@ -50,15 +50,17 @@ test:
     store_in_repo: true
   instructions: |
     WHAT THE PRODUCT IS HERE.
-    Firstmate is not a service you stand up. It is every first-party entry
-    point this repository ships - the bin/ commands whatever language each is
-    written in (bin/fm-*.sh, bin/backends/*.sh and *.py, the bin/fm_*.py
-    modules such as bin/fm_inbox_conversation.py, bin/fm_voice_frame.py and
-    bin/fm_voice_records.py, bin/fm-extension.mjs and
-    bin/fm-procevent-extension-capture.pl) and the .pi/extensions/*.ts editor
-    extensions - plus the agent-facing contracts in AGENTS.md, .agents/skills/
-    and docs/. Being a shipped first-party entry point is the test, not the
-    language it happens to be written in. Its end user is an operator, or a
+    Firstmate is not a service you stand up. Its product entry points are the
+    executable files under bin/ that the fleet runs as processes, whatever
+    language each is written in - the bin/fm-*.sh commands and equally
+    bin/fm-voice-client.py, bin/fm-voice-relay.py, bin/fm-mail.py,
+    bin/fm-arm-command-policy.mjs, bin/fm-cd-command-policy.mjs and
+    bin/fm-extension-launch-barrier.mjs - plus the .pi/extensions TypeScript
+    editor extensions and the agent-facing contracts in AGENTS.md,
+    .agents/skills/ and docs/. Being something the fleet runs is the test, not
+    the language it happens to be written in. A module under bin/ that only
+    gets imported, such as bin/fm_voice_frame.py, is library code those entry
+    points use, not an entry point. Its end user is an operator, or a
     supervising agent, who runs those entry points against a firstmate home
     (FM_HOME) holding data/, state/, config/ and projects/. So driving a
     scenario end-to-end here means running those real entry points as real
@@ -69,17 +71,22 @@ test:
     Most tests/<subject>.test.sh scripts build a disposable state root and git
     fixture and then run the real bin/ entry points as real subprocesses,
     asserting only what is observable through their public interfaces;
-    asserting implementation source bytes is forbidden in this repo. Only the
-    test case that runs such an entry point as a subprocess drove the product -
-    directly, or through a child contract executable the case launches, as
-    tests/fm-inbox-conversation.test.sh drives bin/fm-inbox.sh through
-    tests/fm-inbox-conversation-cases.py, and as the Pi extension suites drive
-    a .pi/extensions/*.ts extension through the real installed pi package. Read
-    the case behind the transcript line you are about to cite and confirm that
-    case does: the transcript proves the case ran and its named assertion held,
-    never that it launched anything, and a script that drives entry points in
-    its other cases does not make this one live. Run the few scripts that cover
-    your scenarios, by path:
+    asserting implementation source bytes is forbidden in this repo. A case
+    drove the product when it exercised the shipped artefact through the real
+    runtime that actually runs it, in a process the case launched. Launching
+    the entry point itself qualifies, directly or through a child contract
+    executable the case launches - tests/fm-inbox-conversation.test.sh drives
+    bin/fm-inbox.sh that way, through tests/fm-inbox-conversation-cases.py. So
+    does a .pi/extensions extension loaded by the real installed pi binary,
+    because being loaded by pi is how that extension ships and runs. Importing
+    a bin/ module into the test's own interpreter and calling its functions
+    does NOT qualify, even for a file under bin/ and even when the interpreter
+    is a child process: the product's runtime never started. Read the case
+    behind the transcript line you are about to cite and confirm what it did:
+    the transcript proves the case ran and its named assertion held, never that
+    it launched anything, and a script that drives entry points in its other
+    cases does not make this one live. Run the few scripts that cover your
+    scenarios, by path:
 
       bin/fm-test-run.sh tests/<subject>.test.sh [more scripts...]
 
