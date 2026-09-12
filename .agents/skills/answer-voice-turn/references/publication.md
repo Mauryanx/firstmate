@@ -58,8 +58,8 @@ FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation publish <<'JSON'
 JSON
 ```
 
-A question carries a unique `question_binding` and is published at `final: false`, which is what leaves it open.
-The caller's next turn arrives bound to that question and consumes it at acceptance, so the completed order is answered as that later turn rather than by publishing more against this one.
+A question carries a unique `question_binding` and stays open until the caller's next turn arrives bound to it and consumes it at acceptance; `final` governs only whether more portions may follow on this request, not whether the question is open.
+The completed order is answered as that later turn rather than by publishing more against this one.
 Such a turn is not rejected, because rejection is for a turn that should not be run at all, and an incomplete one is waiting to be completed.
 
 ## Reject

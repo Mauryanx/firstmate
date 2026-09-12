@@ -406,10 +406,9 @@ assert owning('audit', cid='live')['requests'][-1]['state'] == 'accepted'
 print('PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused')
 
 # A spoken instruction that does not say what to do, or which project to do it
-# to, is not an order. It is answered with an open question naming the missing
-# part, and nothing is started on it: no receipt or progress portion claims
-# work that was never taken up, and no answer invents one. The caller supplies
-# the missing part as the next turn, bound to that still-open question.
+# to, is answered with a question naming the missing part. The transport
+# accepts that question as the only portion on the turn, reports it open, and
+# lets the caller supply the missing part as the next turn, bound to it.
 run('capture', dict(connection, **dict(capture(4, 't3'),
                                        committed_transcript='GPT-6 Astra Medium as a test.')))
 assert owning('accept', cid='live')['input']['request_id'] == 'r4'
@@ -423,4 +422,4 @@ run('capture', dict(connection, **capture(5, 't4', question_binding='which-proje
 supplied = owning('accept', cid='live')
 assert supplied['input']['request_id'] == 'r5'
 assert supplied['input']['question_binding'] == 'which-project'
-print('PASS: an instruction missing its target is answered with an open question and starts no work')
+print('PASS: an instruction missing its target is answered with an open question that the next bound turn completes')
