@@ -1846,6 +1846,64 @@ fm_wake_print_deduped() {
   ' "$file"
 }
 
+# --- captain voice notes -----------------------------------------------------
+#
+# A spoken turn the voice conversation transport hands to firstmate arrives as
+# a `check` row keyed `inbox:vc-<sha256>` beside its durable record
+# state/inbox/vc-<sha256>.note. The producer is fm_inbox_conversation.py's
+# capture command, reached through bin/fm-inbox.sh conversation.
+# bin/fm-inbox.sh note is the typed-note path: it mints <epoch>-<suffix> ids
+# with no voice marker, and no reply can be published against such a note. Only
+# the transport capture writes vc-<sha256> ids, and a spoken reply can be
+# published only against such a capture, which is why the two are presented
+# differently: a typed note is answered whenever the turn allows, while a
+# spoken one has somebody listening to the silence.
+# These helpers are the one owner of that key and of the VOICE heading, used by
+# bin/fm-wake-drain.sh to present voice rows first inside its locked,
+# actor-filtered view; docs/watcher-continuity.md owns the contract.
+FM_WAKE_VOICE_KEY_PATTERN='^inbox:vc-'
+
+# Print the check rows of <queue-file> whose key matches
+# FM_WAKE_VOICE_KEY_PATTERN, same-key deduplicated keeping the latest row, in
+# queue order; print nothing when there are none.
+fm_wake_voice_rows() {  # <queue-file>
+  awk -F '\t' -v voice="$FM_WAKE_VOICE_KEY_PATTERN" '
+    NF >= 5 && $3 == "check" && $4 ~ voice {
+      if (!($4 in seen)) {
+        order[++count] = $4
+        seen[$4] = 1
+      }
+      line[$4] = $0
+    }
+    END {
+      for (i = 1; i <= count; i++) {
+        print line[order[i]]
+      }
+    }
+  ' "$1"
+}
+
+# Print the key of every voice check row of <queue-file> whose conversation
+# request is still saved, one per line, in queue order. The transport keeps
+# state/inbox/vc-<id>.note pending until the request is accepted or rejected
+# and only then moves it to <inbox-dir>/handled/ (its recovery completes an
+# interrupted move), so a pending note is the durable "still saved" signal.
+# A row with no note anywhere is not still saved and is not reported.
+fm_wake_voice_keys_still_saved() {  # <queue-file> <inbox-dir>
+  local key
+  awk -F '\t' -v voice="$FM_WAKE_VOICE_KEY_PATTERN" '
+    NF >= 5 && $3 == "check" && $4 ~ voice && !seen[$4]++ { print $4 }
+  ' "$1" | while IFS= read -r key; do
+    [ -f "$2/${key#inbox:}.note" ] || continue
+    printf '%s\n' "$key"
+  done
+}
+
+# Print the heading placed above <count> presented voice rows.
+fm_wake_voice_heading() {  # <count>
+  printf 'VOICE: the captain spoke - %s voice note(s) below; answer every one before any other wake (transcript in state/inbox/<id>.note; load the answer-voice-turn skill, because the ordinary drain acknowledgement refuses a vc- id and answers nobody):\n' "$1"
+}
+
 # --- branch grant evidence and per-actor pending rows ------------------------
 #
 # docs/watcher-continuity.md "Per-actor acknowledgement" owns the contract these

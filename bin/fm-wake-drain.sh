@@ -6,6 +6,18 @@
 # newer branch outcome, OPEN DECISIONS, and captain-call record divergence,
 # then assert liveness.
 #
+# Captain voice notes come first. A spoken turn arrives as a `check` row keyed
+# by fm-wake-lib.sh's FM_WAKE_VOICE_KEY_PATTERN (that library's "captain voice
+# notes" section owns the key, the producer, and the VOICE heading); this
+# script presents every such row ahead of every other row, under that heading,
+# so it cannot be read past. Presentation order only: sequence numbers, claims,
+# deduplication, and the acknowledgement cutoff are exactly what they would be
+# without it. An acknowledgement retires such a row only once its conversation
+# request has left saved (fm_wake_voice_keys_still_saved): a row whose request
+# is still saved is held in the queue and presented again by the next drain,
+# because a wake consumed while the request stays saved is a spoken turn that
+# is never answered. Every other row is acknowledged exactly as before.
+#
 # Keep sequence-bound row consumption independent from generation-bound episode
 # retirement; docs/watcher-continuity.md owns the recovery contract.
 # FM_STATUS_PRESENTATION_LOCK_TIMEOUT sets the positive whole-second wait for
@@ -40,6 +52,13 @@ ACK_FINGERPRINTS=
 ACK_NOTICE_FINGERPRINTS=
 PRESENTATION_LOCK_TIMEOUT=${FM_STATUS_PRESENTATION_LOCK_TIMEOUT:-10}
 case "$PRESENTATION_LOCK_TIMEOUT" in ''|*[!0-9]*|0) PRESENTATION_LOCK_TIMEOUT=10 ;; esac
+VOICE_VIEW=
+VOICE_ROWS=0
+OTHER_ROWS=
+HELD_VOICE_KEYS=
+HELD_VOICE_SEQS=
+HELD_VOICE_ROWS=0
+STALE_ACK_REASON=
 
 # --- per-actor consume (docs/watcher-continuity.md "Per-actor acknowledgement") --
 # main (FM_SUPERVISION_ACTOR unset or "main", via fm-lease-lib.sh's fm_lease_actor
@@ -156,13 +175,16 @@ claim_main_rows_locked() {
   DRAIN_TMP=
 }
 
-consume_actor_rows_locked() { # <rows-file> <cutoff>
-  local rows=$1 cutoff=$2
+consume_actor_rows_locked() { # <rows-file> <cutoff> [<held-sequences>]
+  local rows=$1 cutoff=$2 held=${3:-}
   if [ ! -e "$rows" ] && [ ! -L "$rows" ]; then
     return 0
   fi
   DRAIN_TMP=$(mktemp "$STATE/.wake-rows.consume.XXXXXX") || return 1
-  awk -v cutoff="$cutoff" '$1 ~ /^[0-9]+$/ && $1 > cutoff { print $1 }' "$rows" > "$DRAIN_TMP" || return 1
+  awk -v cutoff="$cutoff" -v held="$held" '
+    BEGIN { n = split(held, seqs, "\n"); for (i = 1; i <= n; i++) if (seqs[i] != "") keep[seqs[i]] = 1 }
+    $1 ~ /^[0-9]+$/ && ($1 > cutoff || ($1 in keep)) { print $1 }
+  ' "$rows" > "$DRAIN_TMP" || return 1
   write_rows_file_locked "$rows" "$DRAIN_TMP" || return 1
   DRAIN_TMP=
 }
@@ -695,10 +717,23 @@ if [ -n "$ACK_THROUGH" ]; then
       NF < 5 || $2 !~ /^[0-9]+$/ || $2 > cutoff || !($2 in keep) { print }
     ' "$FM_WAKE_QUEUE" > "$DRAIN_TMP" || exit 1
   else
-    awk -F '\t' -v cutoff="$ACK_THROUGH" -v seqs="$MAIN_ROWS_FILE" '
-      BEGIN { while ((getline line < seqs) > 0) owned[line]=1 }
-      NF < 5 || $2 !~ /^[0-9]+$/ || $2 > cutoff || !($2 in owned) { print }
+    HELD_VOICE_KEYS=$(fm_wake_voice_keys_still_saved "$FM_WAKE_QUEUE" "$STATE/inbox") || exit 1
+    awk -F '\t' -v cutoff="$ACK_THROUGH" -v seqs="$MAIN_ROWS_FILE" -v held="$HELD_VOICE_KEYS" '
+      BEGIN {
+        while ((getline line < seqs) > 0) owned[line]=1
+        n = split(held, keys, "\n"); for (i = 1; i <= n; i++) if (keys[i] != "") hold[keys[i]] = 1
+      }
+      NF < 5 || $2 !~ /^[0-9]+$/ || $2 > cutoff || !($2 in owned) { print; next }
+      $3 == "check" && ($4 in hold) { print }
     ' "$FM_WAKE_QUEUE" > "$DRAIN_TMP" || exit 1
+    # The only owned rows at or below the cutoff still in the rewritten queue
+    # are the held voice rows; they keep their claim so the next acknowledgement
+    # still knows them as presented.
+    HELD_VOICE_SEQS=$(awk -F '\t' -v cutoff="$ACK_THROUGH" -v seqs="$MAIN_ROWS_FILE" '
+      BEGIN { while ((getline line < seqs) > 0) owned[line]=1 }
+      NF >= 5 && $2 ~ /^[0-9]+$/ && $2 <= cutoff && ($2 in owned) { print $2 }
+    ' "$DRAIN_TMP") || exit 1
+    HELD_VOICE_ROWS=$(printf '%s\n' "$HELD_VOICE_SEQS" | awk 'NF { n++ } END { print n + 0 }') || exit 1
     fm_wake_commit_secondmate_stall_receipts_through "$ACK_THROUGH" "$MAIN_ROWS_FILE" || {
       echo "wake drain: secondmate stall receipt could not be recorded safely" >&2
       exit 1
@@ -731,10 +766,14 @@ if [ -n "$ACK_THROUGH" ]; then
   if [ "$ACTOR" = branch ]; then
     consume_actor_rows_locked "$ELIGIBLE_ROWS_FILE" "$ACK_THROUGH" || exit 1
   else
-    consume_actor_rows_locked "$MAIN_ROWS_FILE" "$ACK_THROUGH" || exit 1
+    consume_actor_rows_locked "$MAIN_ROWS_FILE" "$ACK_THROUGH" "$HELD_VOICE_SEQS" || exit 1
   fi
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   DRAIN_LOCK_HELD=false
+  if [ "$HELD_VOICE_ROWS" -gt 0 ]; then
+    printf 'wake drain: held %s voice wake row(s) through %s instead of acknowledging: the conversation request behind each is still saved, so nobody has answered the captain yet; accept and publish (or reject) it through answer-voice-turn, and the next drain presents it again\n' \
+      "$HELD_VOICE_ROWS" "$ACK_THROUGH" >&2
+  fi
   if [ "$ACK_REMOVED" -eq 0 ] && [ "$PRESENTED_MAX" -gt "$ACK_THROUGH" ]; then
     # Nothing at or below the cutoff was this actor's to consume, while a
     # presented row above it is still waiting: the caller acknowledged an
@@ -743,14 +782,19 @@ if [ -n "$ACK_THROUGH" ]; then
     # re-presents the same row and invites the same stale acknowledgement).
     # The generation is the marker's current one; only a retired marker cannot
     # be named because the next drain opens a fresh generation for it.
+    if [ "$HELD_VOICE_ROWS" -gt 0 ]; then
+      STALE_ACK_REASON='every presented wake row at or below it is a held voice row'
+    else
+      STALE_ACK_REASON='none of your presented wake rows is at or below it'
+    fi
     case "$RECOVERY_MARKER_TOKEN" in
       pending:*|announced:*)
-        printf 'wake drain: nothing was acknowledged through %s (none of your presented wake rows is at or below it); the current wake is row %s: run bin/fm-wake-drain.sh --ack-through %s --recovery-generation %s after handling it\n' \
-          "$ACK_THROUGH" "$PRESENTED_MAX" "$PRESENTED_MAX" "${RECOVERY_MARKER_TOKEN##*:}" >&2
+        printf 'wake drain: nothing was acknowledged through %s (%s); the current wake is row %s: run bin/fm-wake-drain.sh --ack-through %s --recovery-generation %s after handling it\n' \
+          "$ACK_THROUGH" "$STALE_ACK_REASON" "$PRESENTED_MAX" "$PRESENTED_MAX" "${RECOVERY_MARKER_TOKEN##*:}" >&2
         ;;
       *)
-        printf 'wake drain: nothing was acknowledged through %s (none of your presented wake rows is at or below it); the current wake is row %s: re-run bin/fm-wake-drain.sh and use the WAKE_ACK_REQUIRED command it prints\n' \
-          "$ACK_THROUGH" "$PRESENTED_MAX" >&2
+        printf 'wake drain: nothing was acknowledged through %s (%s); the current wake is row %s: re-run bin/fm-wake-drain.sh and use the WAKE_ACK_REQUIRED command it prints\n' \
+          "$ACK_THROUGH" "$STALE_ACK_REASON" "$PRESENTED_MAX" >&2
         ;;
     esac
   elif [ "$RECOVERY_ACK_MOVED" = true ]; then
@@ -838,15 +882,37 @@ awk -F '\t' -v seqs="$ACTOR_ROWS_FILE" '
   NF >= 5 && ($2 in keep)
 ' "$FM_WAKE_QUEUE" > "$DRAIN_VIEW_TMP" || exit 1
 RAW_ROWS=$(fm_wake_print_deduped "$DRAIN_VIEW_TMP") || exit "$?"
+VOICE_VIEW=$(fm_wake_voice_rows "$DRAIN_VIEW_TMP") || exit 1
 rm -f -- "$DRAIN_VIEW_TMP" || exit 1
 DRAIN_VIEW_TMP=
+# Voice first (header). The 2026-09-10 incident: eleven spoken turns were
+# queued behind a text message that pulled firstmate onto other work, and none
+# were answered. Reordering the presented view is the whole mechanism: the
+# voice rows move to the top in their own queue order, every other row keeps
+# its order behind them, and nothing about the rows themselves changes.
+if [ -n "$VOICE_VIEW" ]; then
+  VOICE_ROWS=$(printf '%s\n' "$VOICE_VIEW" | awk 'END { print NR }') || exit 1
+  OTHER_ROWS=$(printf '%s\n' "$RAW_ROWS" | awk -F '\t' -v voice="$FM_WAKE_VOICE_KEY_PATTERN" \
+    '!($3 == "check" && $4 ~ voice)') || exit 1
+  RAW_ROWS=$(
+    printf '%s\n' "$VOICE_VIEW"
+    [ -z "$OTHER_ROWS" ] || printf '%s\n' "$OTHER_ROWS"
+  ) || exit 1
+fi
 ACK_THROUGH=$(printf '%s\n' "$RAW_ROWS" | awk -F '\t' '$2 ~ /^[0-9]+$/ && $2 > max { max=$2 } END { print max + 0 }') || exit 1
 case "${FM_WAKE_DRAIN_TEST_DELAY_BEFORE_COMMIT:-0}" in
   0) ;;
   ''|*[!0-9]*) ;;
   *) sleep "$FM_WAKE_DRAIN_TEST_DELAY_BEFORE_COMMIT" ;;
 esac
-if [ -n "$RAW_ROWS" ]; then
+if [ "$VOICE_ROWS" -gt 0 ]; then
+  fm_wake_voice_heading "$VOICE_ROWS" || exit "$?"
+  printf '%s\n' "$VOICE_VIEW" || exit "$?"
+  if [ -n "$OTHER_ROWS" ]; then
+    printf 'OTHER WAKES (handle only after every voice note above):\n' || exit "$?"
+    printf '%s\n' "$OTHER_ROWS" || exit "$?"
+  fi
+elif [ -n "$RAW_ROWS" ]; then
   printf '%s\n' "$RAW_ROWS" || exit "$?"
 fi
 fm_recovery_marker_snapshot "$RECOVERY_MARKER" || exit 1
