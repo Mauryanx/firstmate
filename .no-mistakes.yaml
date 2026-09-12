@@ -64,9 +64,11 @@ test:
     fixture and then run the real bin/ entry points as real subprocesses,
     asserting only what is observable through their public interfaces;
     asserting implementation source bytes is forbidden in this repo. Only a
-    script that actually launched an entry point as a subprocess drove the
-    product; check its transcript rather than assuming every script under
-    tests/ did. Run the few scripts that cover your scenarios, by path:
+    script that invokes a bin/fm-*.sh entry point as a subprocess drove the
+    product, so read the script you are about to cite and confirm it does: its
+    transcript proves the script ran and its named assertion held, never that
+    it launched anything. Run the few scripts that cover your scenarios, by
+    path:
 
       bin/fm-test-run.sh tests/<subject>.test.sh [more scripts...]
 
