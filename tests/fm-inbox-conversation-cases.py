@@ -18,7 +18,7 @@ cli = root / 'bin/fm-inbox.sh'
 def run(command, payload, code=0, extra=None):
     result = subprocess.run([str(cli), 'conversation', command], input=json.dumps(payload),
                             text=True, capture_output=True, env=dict(env, **(extra or {})), timeout=30)
-    assert result.returncode == code, (command, result.returncode, result.stderr, result.stdout)
+    assert code is None or result.returncode == code, (command, result.returncode, result.stderr, result.stdout)
     return json.loads(result.stdout) if code == 0 else result
 
 
@@ -212,6 +212,112 @@ assert 'committed_transcript' not in json.dumps(accounting)
 assert owning('audit', cid='other')['requests'] == []
 print('PASS: 9 inputs accounted for; 8 single dispatch claims, 1 stale bound input explicitly rejected; 6 replies retained')
 print('PASS: capture/accept/publication/playback crash windows, duplicate races and wrong-session refusals')
+
+# One conversation carries every call, so turns an earlier call left saved are
+# older than the live question and would be dispatched in front of it. The
+# transport records the call each turn was spoken on; the owner's supersession
+# step is exercised against it here.
+scoped = {cid: bind(cid) for cid in ('calls', 'redial')}
+
+
+def spoke(n, previous=None, code=0, cid='calls', **kwargs):
+    return run('capture', dict(scoped[cid], **capture(n, previous, **kwargs)), code)
+
+
+def scope_to_live_call(cid='calls', meanwhile=None):
+    """Retire what earlier calls left saved, as the owner does before accepting.
+
+    The live call is the call of the most recently captured request per audit;
+    the wake row presented first is not consulted. `meanwhile` runs between the
+    audit and the rejects, where a redial can land. A refused reject restarts the
+    pass from a fresh audit.
+    """
+    while True:
+        live = owning('audit', cid=cid)['requests'][-1]['call_id']
+        if meanwhile:
+            meanwhile, _ = None, meanwhile()
+        if live is not None:
+            refused = False
+            for record in saved(cid):
+                if record['call_id'] != live:
+                    result = owning('reject', {'request_id': record['request_id'],
+                                               'reason': 'prior call ended; superseded'}, cid=cid, code=None)
+                    if result.returncode == 2:
+                        assert 'live call ' + record['call_id'] + '; not superseded' in result.stderr, result
+                        refused = True
+                        break
+                    assert result.returncode == 0, result
+            if refused:
+                continue
+        return live, [r['request_id'] for r in owning('audit', cid=cid)['requests'] if r['state'] == 'rejected']
+
+
+def saved(cid='calls'):
+    return [r for r in owning('audit', cid=cid)['requests'] if r['state'] == 'saved']
+
+
+# The 2026-09-12 shape: the captain hangs up before any turn of the first call is
+# accepted, then places a second call. The drain wakes the owner for the oldest
+# held row, r1, whose call is the ended one; scoping by that row would reject the
+# live caller. Scoping by the newest capture answers r4 and retires r1 to r3.
+for n, previous in ((1, None), (2, 't1'), (3, 't2')):
+    spoke(n, previous, call_id='CA-ended')
+spoke(4, 't3', call_id='CA-live')
+assert [r['call_id'] for r in owning('audit', cid='calls')['requests']] == ['CA-ended'] * 3 + ['CA-live']
+assert saved()[0]['call_id'] == 'CA-ended'
+assert scope_to_live_call() == ('CA-live', ['r1', 'r2', 'r3'])
+live = owning('accept', cid='calls')
+assert live['input']['request_id'] == 'r4' and live['input']['call_id'] == 'CA-live'
+assert owning('accept', cid='calls')['dispatch'] is False
+assert [r['reason'] for r in owning('audit', cid='calls')['requests'][:3]] == ['prior call ended; superseded'] * 3
+# A turn captured without a call_id is saved, ordered and accepted exactly as it
+# was before the field existed, and the next call supersedes it on the same terms.
+spoke(5, 't4')
+assert owning('audit', cid='calls')['requests'][-1]['call_id'] is None
+# Carrying no call is an identity of its own: the retry matches it, and naming
+# the live call on the same turn does not.
+spoke(5, 't4')
+spoke(5, 't4', call_id='CA-third', code=2)
+spoke(6, 't5', call_id='CA-third')
+assert scope_to_live_call() == ('CA-third', ['r1', 'r2', 'r3', 'r5'])
+assert owning('accept', cid='calls')['input']['request_id'] == 'r6'
+assert owning('accept', cid='calls')['dispatch'] is False
+# A later turn of the same call supersedes nothing.
+spoke(7, 't6', call_id='CA-third')
+assert scope_to_live_call() == ('CA-third', ['r1', 'r2', 'r3', 'r5'])
+# The call a turn was spoken on is part of its immutable identity, not a label.
+spoke(7, 't6', call_id='CA-third')
+spoke(7, 't6', call_id='CA-relabelled', code=2)
+spoke(8, 't7', call_id=5, code=2)
+assert [r['request_id'] for r in saved()] == ['r7']
+# When the newest capture names no call there is no live call to scope by, so a
+# saved turn from a named call is left alone and handling proceeds oldest first.
+spoke(9, 't7')
+assert scope_to_live_call() == (None, ['r1', 'r2', 'r3', 'r5'])
+assert [r['request_id'] for r in saved()] == ['r7', 'r9']
+assert owning('accept', cid='calls')['input']['request_id'] == 'r7'
+assert owning('accept', cid='calls')['input']['request_id'] == 'r9'
+assert owning('accept', cid='calls')['dispatch'] is False
+print('PASS: the newest capture names the live call; a call nobody answered is superseded, a nameless one supersedes nothing')
+
+# The captain redials while the owner is between its audit and its rejects: the
+# stale pass would retire the redial's turn as superseded. The transport refuses
+# that, naming the live call, and the restarted pass retires the dropped call.
+spoke(4, None, cid='redial', call_id='CA-2')
+assert owning('audit', cid='redial')['requests'][-1]['call_id'] == 'CA-2'
+assert scope_to_live_call('redial', meanwhile=lambda: spoke(5, 't4', cid='redial', call_id='CA-3')) == ('CA-3', ['r4'])
+assert owning('accept', cid='redial')['input']['request_id'] == 'r5'
+assert owning('accept', cid='redial')['dispatch'] is False
+# The refusal is scoped to that one reason: the live call's turn can still be
+# declined for a reason of its own, and a nameless newest turn refuses nothing.
+spoke(6, 't5', cid='redial', call_id='CA-3')
+assert owning('reject', {'request_id': 'r6', 'reason': 'prior call ended; superseded'}, cid='redial', code=2)
+assert owning('reject', {'request_id': 'r6', 'reason': 'say that again'}, cid='redial')['state'] == 'rejected'
+spoke(7, 't6', cid='redial', call_id='CA-3')
+spoke(8, 't7', cid='redial')
+assert owning('reject', {'request_id': 'r7', 'reason': 'prior call ended; superseded'}, cid='redial')['state'] == 'rejected'
+assert owning('accept', cid='redial')['input']['request_id'] == 'r8'
+print('PASS: a redial captured mid-pass is never superseded; the pass restarts and retires the dropped call')
 
 # Live publication uses the same owner seam, never a transport-supplied author.
 pilot = temp / 'pilot'

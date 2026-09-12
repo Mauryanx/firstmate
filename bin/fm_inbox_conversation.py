@@ -36,17 +36,31 @@ All remaining commands require conversation_id. Transport commands also require
     credential. Owner commands accept only the session holding this home's lock,
     which takes over a conversation an earlier session bound or left saved.
 capture (transport): {turn_id, request_id, committed_transcript, revision,
-    previous_turn_id, created_at, correction_of?, question_binding?}.
+    previous_turn_id, created_at, correction_of?, question_binding?, call_id?}.
     Principal comes from pairing, not input. revision is a positive integer.
     A committed turn is immutable; corrections get new turn/request IDs and an
     explicit correction_of. Out-of-order completions wait for their predecessor.
     Only committed input enters this interface; provisional events are refused.
+    call_id names the live call a turn was spoken on, since one conversation
+    carries every call the same principal places. The firstmate-voice bridge
+    stamps it on every capture from the live call's Twilio CallSid, so a capture
+    carrying no call_id is a legacy or non-bridge caller, which the answering
+    procedure treats as a prior call. It is part of the request's
+    immutable identity, and accept and audit report it so the owner can tell an
+    abandoned turn from an earlier call apart from the live one. It is optional:
+    a turn captured without it carries no such field and is ordered, accepted and
+    audited exactly as it was before the field existed. This module records the
+    scope and never reorders by it. The one place it acts on the scope is
+    reject, which refuses the reason 'prior call ended; superseded' for a request
+    spoken on the newest captured call and names that call, so a redial captured
+    while the owner is retiring an earlier call is never retired with it.
 accept (owner): returns the oldest eligible input ONCE, with the prior playback
     context. Acceptance is committed BEFORE returning dispatch:true; a crash at
     this boundary leaves an accepted request with uncertain work state, never an
     automatic second dispatch. Recovery requires owner inspection (audit).
 reject (owner): {request_id, reason}. Declines an unaccepted input explicitly;
     retains its transcript and reason without running it or cancelling work.
+    Refuses reason 'prior call ended; superseded' on the newest captured call.
 publish (owner): {request_id, response_id, sequence, kind, speech_key, final,
     question_binding?}. kind is receipt/progress/question/answer/error; sequence
     starts at 1 per request. IDs are immutable and retries must match exactly.
@@ -100,6 +114,9 @@ import sys
 import time
 
 MAX_SPEECH_CHARS = 1200
+
+
+SUPERSEDED_REASON = 'prior call ended; superseded'
 
 
 class ContractError(Exception):
@@ -303,15 +320,18 @@ class Conversation:
 
     def capture(self):
         fields = ('turn_id', 'request_id', 'committed_transcript', 'revision', 'previous_turn_id',
-                  'created_at', 'correction_of', 'question_binding')
+                  'created_at', 'correction_of', 'question_binding', 'call_id')
         require(not (set(self.p) - set(fields) - {'credential', 'conversation_id'}), 'unsupported input fields')
-        event = {k: self.p.get(k) for k in fields}
+        # An absent call_id is left out of the event rather than stored as null, so
+        # a turn captured without one keeps the identity a pre-call_id release gave it.
+        event = {k: self.p.get(k) for k in fields if k != 'call_id' or self.p.get(k) is not None}
         for field in ('turn_id', 'request_id', 'created_at'):
             require(identifier(event[field]), field + ' is required')
         require(string(event['committed_transcript']), 'committed transcript is required')
         require(integer(event['revision'], 1), 'revision must be a positive integer')
         for field in ('previous_turn_id', 'correction_of', 'question_binding'):
             require(event[field] is None or identifier(event[field]), 'invalid ' + field)
+        require('call_id' not in event or identifier(event['call_id']), 'invalid call_id')
         require(event['previous_turn_id'] != event['turn_id'], 'turn cannot follow itself')
         event.update(conversation_id=self.cid, authenticated_principal=self.c['principal'])
         key = self.key(self.cid, event['request_id'])
@@ -374,6 +394,10 @@ class Conversation:
         row = self.j['requests'].get(self.key(self.cid, self.p['request_id']))
         require(row is not None and row['state'] != 'accepted', 'cannot reject unknown or accepted input')
         require(row['state'] != 'rejected' or row['reason'] == self.p['reason'], 'conflicting rejection')
+        if self.p['reason'] == SUPERSEDED_REASON:
+            live = self.rows()[-1][2].get('call_id')
+            require(live is None or self.event(self.key(self.cid, self.p['request_id'])).get('call_id') != live,
+                    'request was spoken on the live call %s; not superseded' % live)
         row.update(state='rejected', reason=self.p['reason'])
         self.save()
         self.recover()
@@ -475,7 +499,7 @@ class Conversation:
 
     def audit(self):
         requests = [{'request_id': e['request_id'], 'turn_id': e['turn_id'], 'state': r['state'],
-                     'note_id': key, 'reason': r.get('reason'),
+                     'note_id': key, 'reason': r.get('reason'), 'call_id': e.get('call_id'),
                      'previous_turn_id': e['previous_turn_id'], 'correction_of': e['correction_of'],
                      'question_binding': e['question_binding']} for key, r, e in self.rows()]
         replies = [{'request_id': r['event']['request_id'], 'response_id': r['event']['response_id'],

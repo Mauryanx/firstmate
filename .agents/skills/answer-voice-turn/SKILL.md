@@ -4,7 +4,7 @@ description: >-
   Agent-only procedure for answering a spoken turn a voice conversation filed with firstmate, where draining the note leaves the caller listening to silence.
   Load on any `check:` wake whose key is `inbox:vc-*`, before accepting, publishing, or rejecting a reply on a voice conversation, and whenever a conversation request is still `saved`.
   Load it even when the turn looks like an ordinary note or a question you could answer in chat, because only this path reaches the caller.
-  This skill is the single owner of the answer-back sequence: recognition, ordering ahead of other work, accept-then-publish, ordered progress portions, and what may be spoken aloud.
+  This skill is the single owner of the answer-back sequence: recognition, ordering ahead of other work, scoping to the live call, accept-then-publish, ordered progress portions, and what may be spoken aloud.
 user-invocable: false
 metadata:
   internal: true
@@ -43,7 +43,21 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
 ## Operating sequence
 
-1. Read the turn.
+1. Scope the conversation to the live call before accepting anything.
+   The conversation outlives the call: every call the captain places rides the same `conversation_id`, so a turn nobody answered before an earlier call ended is still `saved`, still older than the live one, and `accept` takes the oldest first.
+   The drain presents held `vc-` rows oldest first for the same reason, so the note you were woken for can belong to a call that already ended, and it says nothing about which call is live.
+   Open that note only to take its `conversation_id`, using the command in step 2, and do not consult its `call_id`.
+   Then run `audit` on that conversation.
+   The live call is the `call_id` of the most recently captured request in the conversation, which is the last request `audit` lists, because `audit` lists requests in capture order.
+   The firstmate-voice bridge stamps `call_id` on every capture from the live call's Twilio CallSid, so a request carrying none came from a legacy or non-bridge caller and is treated as a prior call.
+   Reject every still-`saved` request whose `call_id` differs from it, and every one carrying no `call_id` at all, with the reason `prior call ended; superseded`.
+   Do that before accepting anything, so the live turn is the oldest `saved` request and the first `accept` returns it.
+   A `reject` with that reason is refused, naming the live call, when the request belongs to the most recently captured call, which happens when the captain redialled after your `audit` and the bridge captured the new call's turn before your pass finished.
+   On that refusal, re-run `audit` and restart the pass against the new newest `call_id`, so a request of the newest call is never left rejected.
+   The commands are in [`references/publication.md`](references/publication.md), which also says why a superseded turn is never spoken to.
+   When the most recently captured request itself carries no `call_id`, there is no live call to scope by, nothing is superseded, and the rest of the sequence is unchanged.
+
+2. Read the turn.
    The wake key is `inbox:vc-<hash>` and the note is `state/inbox/vc-<hash>.note`, in the ordinary inbox header format with a JSON body:
 
    ```sh
@@ -53,19 +67,19 @@ Only accepting the request and publishing a reply against its `request_id` produ
    The body carries the `conversation_id`, the `request_id`, and the `committed_transcript`, which is what was actually said rather than any paraphrase of it.
    Once a request has been accepted or rejected, including an acceptance that crashed before returning, its note lives under `state/inbox/handled/` instead, so read a previously accepted request from there when reconciling.
 
-2. Accept the turn, which claims it exactly once and returns its transcript and `request_id`:
+3. Accept the turn, which claims it exactly once and returns its transcript and `request_id`:
 
    ```sh
    FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation accept <<<'{"conversation_id":"<cid>"}'
    ```
 
-   Keep accepting until it answers `dispatch: false`, because one call claims one turn and an earlier turn from the same call may still be unanswered.
+   Keep accepting until it answers `dispatch: false`, because one `accept` claims one turn and an earlier turn from the live call may still be unanswered.
 
-3. Do the work as an ordinary turn.
+4. Do the work as an ordinary turn.
    Answer from durable records where the answer already exists; dispatch a worker where it does not.
    Reading records takes seconds and a dispatch does not, so publish a progress portion before starting anything slow rather than leaving the line quiet.
 
-4. Publish the answer against that `request_id`, which is the step that turns it into speech:
+5. Publish the answer against that `request_id`, which is the step that turns it into speech:
 
    ```sh
    FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation publish <<'JSON'
@@ -77,7 +91,7 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
    Compose the words under [`references/speaking.md`](references/speaking.md), and take portions, kinds, rejection, and refusal meanings from [`references/publication.md`](references/publication.md).
 
-5. Acknowledge the wake through the ordinary generation-bound drain acknowledgement, and reconcile anything still `saved` per `references/publication.md`.
+6. Acknowledge the wake through the ordinary generation-bound drain acknowledgement, and reconcile anything still `saved` per `references/publication.md`.
    The acknowledgement retires a `vc-` row only once its request has left `saved`; a row whose request is still `saved` is held and presented again by the next drain, so an early acknowledgement cannot lose a spoken turn, but it does not answer it either.
 
 ## References
