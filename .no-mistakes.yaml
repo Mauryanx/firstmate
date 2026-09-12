@@ -94,14 +94,15 @@ test:
 
     When such a case executes a scenario, that IS driving the product live in
     this run: report the scenario "pass" with "live": true and cite the script
-    and the transcript lines that case printed. Each "ok - <behavior>" line,
-    and each "PASS: <behavior>" line a child contract executable prints
-    through its owning .test.sh wrapper, names a behavior that was driven, and
-    the closing "FM_TEST_END ... exit=0 ... gate_skip=false" proves the script
-    as a whole ran, so that transcript is behavior-level evidence rather than
-    generic pass/fail output. That closing marker does not prove every case
-    inside the script ran, so cite the transcript line that names your
-    scenario, never the marker alone. This is the standing rule that an existing
+    and the transcript lines that case printed. An "ok - <behavior>" line, or a
+    "PASS: <behavior>" line a child contract executable prints through its
+    owning .test.sh wrapper, proves only that the named assertion held in a
+    case that ran; whether that case drove the product is settled by the
+    principle above, never by the line itself. The closing
+    "FM_TEST_END ... exit=0 ... gate_skip=false" proves the script as a whole
+    ran, not that every case inside it did, so cite the transcript line that
+    names your scenario, never the marker alone, and cite it only once you have
+    read the case behind it. This is the standing rule that an existing
     automated test which drives a scenario end-to-end may be run as the
     scenario and cited as its evidence. It is not an exemption from live
     evidence, so apply it only to a case that actually executed here.
@@ -120,7 +121,9 @@ test:
     YAML, JSON or config file - without running its consumer: that proves the
     artifact's shape, not that the consumer reads it, so a scenario whose
     consumer is the gate itself or any other process this run never launched
-    stays untested. Report every such scenario "untested" with "live": false
+    stays untested. tests/fm-nm-test-contract.test.sh is exactly such a case:
+    its "ok -" lines prove this file's shape, never that the gate read it.
+    Report every such scenario "untested" with "live": false
     and a reason naming what was missing and how to supply it - never "pass",
     and never "live": true.
 

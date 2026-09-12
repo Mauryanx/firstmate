@@ -64,13 +64,6 @@ jobs:
           set -eu
           bin/fm-install-actionlint.sh "$RUNNER_TEMP/bin"
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
-      - name: Require python3 with PyYAML for the YAML contract tests
-        run: |
-          set -eu
-          python3 -c 'import yaml' >/dev/null 2>&1 || {
-            echo "::error::python3 with PyYAML is required by tests/fm-test-run.test.sh"
-            exit 1
-          }
       - name: Install tasks-axi
         run: |
           set -eu
@@ -173,13 +166,6 @@ jobs:
             exit 1
           }
           tmux -V
-      - name: Require python3 with PyYAML for the YAML contract tests
-        run: |
-          set -eu
-          python3 -c 'import yaml' >/dev/null 2>&1 || {
-            echo "::error::python3 with PyYAML is required by tests/fm-nm-test-contract.test.sh"
-            exit 1
-          }
       - name: Install tasks-axi for backlog-handoff delegation
         run: |
           set -eu
