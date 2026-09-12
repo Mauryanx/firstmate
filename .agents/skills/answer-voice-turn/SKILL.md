@@ -4,7 +4,7 @@ description: >-
   Agent-only procedure for answering a spoken turn a voice conversation filed with firstmate, where draining the note leaves the caller listening to silence.
   Load on any `check:` wake whose key is `inbox:vc-*`, before accepting, publishing, or rejecting a reply on a voice conversation, and whenever a conversation request is still `saved`.
   Load it even when the turn looks like an ordinary note or a question you could answer in chat, because only this path reaches the caller.
-  This skill is the single owner of the answer-back sequence: recognition, ordering ahead of other work, accept-then-publish, ordered progress portions, and what may be spoken aloud.
+  This skill is the single owner of the answer-back sequence: recognition, ordering ahead of other work, scoping to the live call, accept-then-publish, ordered progress portions, and what may be spoken aloud.
 user-invocable: false
 metadata:
   internal: true
@@ -73,7 +73,7 @@ Only accepting the request and publishing a reply against its `request_id` produ
    FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation accept <<<'{"conversation_id":"<cid>"}'
    ```
 
-   Keep accepting until it answers `dispatch: false`, because one call claims one turn and an earlier turn from the same call may still be unanswered.
+   Keep accepting until it answers `dispatch: false`, because one `accept` claims one turn and an earlier turn from the live call may still be unanswered.
 
 4. Do the work as an ordinary turn.
    Answer from durable records where the answer already exists; dispatch a worker where it does not.

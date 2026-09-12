@@ -16,7 +16,7 @@ Acceptance is committed before the command returns, so the same turn is never di
 `dispatch: false` means nothing is waiting.
 
 Repeat the call until `dispatch: false`.
-One call claims one turn, and turns are returned oldest first, so an earlier question from the same call is answered before a later one - and so a turn an earlier call left behind is answered before the live one, which is what the supersession below prevents.
+One `accept` claims one turn, and turns are returned oldest first, so an earlier question from the same call is answered before a later one - and so a turn an earlier call left behind is answered before the live one, which is what the supersession below prevents.
 
 ## Publish
 
