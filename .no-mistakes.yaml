@@ -76,12 +76,11 @@ test:
     runtime that actually runs it, in a process the case launched. Launching
     the entry point itself qualifies, directly or through a child contract
     executable the case launches - tests/fm-inbox-conversation.test.sh drives
-    bin/fm-inbox.sh that way, through tests/fm-inbox-conversation-cases.py. So
-    does a .pi/extensions extension loaded by the real installed pi binary,
-    because being loaded by pi is how that extension ships and runs. Importing
-    a bin/ module into the test's own interpreter and calling its functions
-    does NOT qualify, even for a file under bin/ and even when the interpreter
-    is a child process: the product's runtime never started. Read the case
+    bin/fm-inbox.sh that way, through tests/fm-inbox-conversation-cases.py.
+    Importing a module into an interpreter the test controls and calling its
+    functions does NOT qualify, even for a file the product ships, even when
+    that interpreter is a child process, and even when real packages are
+    symlinked beside it: the product's runtime never started. Read the case
     behind the transcript line you are about to cite and confirm what it did:
     the transcript proves the case ran and its named assertion held, never that
     it launched anything, and a script that drives entry points in its other
