@@ -49,12 +49,13 @@ Only accepting the request and publishing a reply against its `request_id` produ
    Open that note only to take its `conversation_id`, using the command in step 2, and do not consult its `call_id`.
    Then run `audit` on that conversation.
    The live call is the `call_id` of the most recently captured request in the conversation, which is the last request `audit` lists, because `audit` lists requests in capture order.
+   The firstmate-voice bridge stamps `call_id` on every capture from the live call's Twilio CallSid, so a request carrying none came from a legacy or non-bridge caller and is treated as a prior call.
    Reject every still-`saved` request whose `call_id` differs from it, and every one carrying no `call_id` at all, with the reason `prior call ended; superseded`.
    Do that before accepting anything, so the live turn is the oldest `saved` request and the first `accept` returns it.
    A `reject` with that reason is refused, naming the live call, when the request belongs to the most recently captured call, which happens when the captain redialled after your `audit` and the bridge captured the new call's turn before your pass finished.
    On that refusal, re-run `audit` and restart the pass against the new newest `call_id`, so a request of the newest call is never left rejected.
    The commands are in [`references/publication.md`](references/publication.md), which also says why a superseded turn is never spoken to.
-   When the most recently captured request carries no `call_id`, it comes from a bridge that does not name calls, so there is no live call to scope by, nothing is superseded, and the rest of the sequence is unchanged.
+   When the most recently captured request itself carries no `call_id`, there is no live call to scope by, nothing is superseded, and the rest of the sequence is unchanged.
 
 2. Read the turn.
    The wake key is `inbox:vc-<hash>` and the note is `state/inbox/vc-<hash>.note`, in the ordinary inbox header format with a JSON body:

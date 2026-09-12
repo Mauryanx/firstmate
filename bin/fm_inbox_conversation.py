@@ -42,7 +42,10 @@ capture (transport): {turn_id, request_id, committed_transcript, revision,
     explicit correction_of. Out-of-order completions wait for their predecessor.
     Only committed input enters this interface; provisional events are refused.
     call_id names the live call a turn was spoken on, since one conversation
-    carries every call the same principal places. It is part of the request's
+    carries every call the same principal places. The firstmate-voice bridge
+    stamps it on every capture from the live call's Twilio CallSid, so a capture
+    carrying no call_id is a legacy or non-bridge caller, which the answering
+    procedure treats as a prior call. It is part of the request's
     immutable identity, and accept and audit report it so the owner can tell an
     abandoned turn from an earlier call apart from the live one. It is optional:
     a turn captured without it carries no such field and is ordered, accepted and
