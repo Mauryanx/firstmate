@@ -46,6 +46,22 @@ A later development belongs to a new turn, not to a closed stream.
 Say what is happening and what it means for the ask, never the machinery.
 "Still reading the records" is a progress portion; "waking a worker" is not.
 
+## Ask for what is missing
+
+A turn that does not say enough to be an order, as [`speaking.md`](speaking.md) defines it, is accepted like any other turn and answered with a `kind: question` portion, with no receipt, progress, or answer published for it and no work started on it:
+
+```sh
+FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation publish <<'JSON'
+{"conversation_id":"<cid>","request_id":"<rid>","response_id":"<unique>",
+ "sequence":1,"kind":"question","final":false,"question_binding":"<unique>",
+ "destination":"elevenlabs","speech_text":"..."}
+JSON
+```
+
+A question carries a unique `question_binding` and is published at `final: false`, which is what leaves it open.
+The caller's next turn arrives bound to that question and consumes it at acceptance, so the completed order is answered as that later turn rather than by publishing more against this one.
+Such a turn is not rejected, because rejection is for a turn that should not be run at all, and an incomplete one is waiting to be completed.
+
 ## Reject
 
 A turn that should not be run is declined explicitly, which keeps its transcript and reason without pretending the work was taken up:
