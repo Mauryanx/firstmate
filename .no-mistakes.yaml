@@ -35,6 +35,86 @@ commands:
 
 # Publish each run's test evidence to the orphan no-mistakes/evidence branch linked from the PR.
 # The evidence is not committed to the feature or default branch.
+#
+# Runbook for the gate's live-evidence test agent. Without it the analyzer
+# derives scenarios, proves them with this repo's own suites, and is then
+# refused for reporting a "pass" it never recognized as a live drive
+# (`scenario N result "pass" requires live validation`). The runbook tells the
+# analyzer what this product and these suites actually are, so a genuinely
+# executed scenario can be reported live and an un-executed one still cannot.
+# It narrows and clarifies the gate's live-evidence policy; it never weakens it.
 test:
   evidence:
     store_in_repo: true
+  instructions: |
+    WHAT THE PRODUCT IS HERE.
+    Firstmate is not a service you stand up. It is the bash entry points under
+    bin/ plus the agent-facing contracts in AGENTS.md, .agents/skills/ and
+    docs/. Its end user is an operator, or a supervising agent, who runs
+    bin/fm-*.sh against a firstmate home (FM_HOME) holding data/, state/,
+    config/ and projects/. So driving a scenario end-to-end here means running
+    those real entry points as real processes against a throwaway FM_HOME and
+    reading what they actually did to that home - not importing a function, and
+    not reasoning about the source.
+
+    THE SUITES IN tests/ ARE THAT DRIVE, NOT UNIT TESTS.
+    A tests/<subject>.test.sh script builds a disposable state root and git
+    fixture and then runs the real bin/ entry points as real subprocesses,
+    asserting only what is observable through their public interfaces;
+    asserting implementation source bytes is forbidden in this repo. Run the
+    few scripts that cover your scenarios, by path:
+
+      bin/fm-test-run.sh tests/<subject>.test.sh [more scripts...]
+
+    bin/fm-test-run.sh --help owns the selection and timing mechanics. Do not
+    run the whole suite.
+
+    When such a script executes a scenario, that IS driving the product live in
+    this run: report the scenario "pass" with "live": true and cite the script
+    and the transcript lines it printed. Each "PASS: <behavior>" and
+    "ok - <behavior>" line names the observable behavior that was driven, and
+    the closing "FM_TEST_END ... exit=0 gate_skip=false" proves the script
+    really ran, so that transcript is behavior-level evidence rather than
+    generic pass/fail output. This is the standing rule that an existing
+    automated test which drives a scenario end-to-end may be run as the
+    scenario and cited as its evidence. It is not an exemption from live
+    evidence, so apply it only to a script that actually executed here.
+
+    THE BOUNDARY THAT STAYS REFUSED.
+    Ask of every scenario: did a script execute the real surface as a process
+    in this run, or did it replay a recorded fixture standing in for something
+    this host cannot produce? Only the first is live. A scenario whose verdict
+    depends on a real vendor agent harness rendering in a real terminal pane, a
+    real network or forge call, a real remote host over SSH, or a real
+    credential is NOT proven by the portable suite, which substitutes a fixture
+    or a fake for exactly that. Neither is a scenario covered only by a script
+    that sources a library and feeds it recorded strings: that proves the
+    classifier's logic, not the live surface it was recorded from. Report every
+    such scenario "untested" with "live": false and a reason naming what was
+    missing and how to supply it - never "pass", and never "live": true.
+
+    The runner hands you that reason. A guard that cannot run here prints
+    "skip: live: <what stopped it>" and ends with "gate_skip=true", and that
+    skip line names the exact variable that would turn the guard on. A skipped
+    guard is not a met guarantee, and a fixture replaying a harness's rendered
+    output proves only the assumption recorded in the fixture.
+
+    DO NOT MANUFACTURE LIVE EVIDENCE.
+    Do not set FM_LIVE, or any guard's own control variable, to force a skipped
+    live guard on: those guards submit prompts to real agent harnesses and
+    spend metered operator accounts without explicit authorization. Do not
+    launch a real agent harness, a real second mate, or a real
+    fleet worker for evidence either. bin/fm-spawn.sh, bin/fm-send.sh and
+    bin/fm-teardown.sh deliberately refuse to run from a gate worktree
+    (bin/fm-gate-refuse-lib.sh), and the suites reach them only for their own
+    throwaway fixture homes. Never hand-set FM_GATE_REFUSE_BYPASS, and never
+    point a scenario at the operator's real firstmate home. An honest
+    "untested" is listed on the pull request and costs nothing; a forced or
+    guessed "pass" costs everything.
+
+    AGENT-FACING PROSE IS A REAL SURFACE HERE.
+    A change under .agents/skills/, docs/ or AGENTS.md is usually not
+    "no-surface": in this repo that prose is a contract some script renders or
+    enforces, or that a suite asserts through behavior. Drive the script or
+    suite that consumes it. Reserve "no-surface" for prose with no executing
+    consumer at all, and say in testing_summary which consumer you looked for.

@@ -118,6 +118,8 @@ Never configure a deterministic suite-walk `commands.test` in any repository's n
 Targeted validation belongs to the no-mistakes evidence path, while CI owns broad deterministic regression coverage.
 Firstmate PR #3644 demonstrated the cost: pinning a 75-162-script walk took 32.7 minutes per validation, while removing it restored the 3.6-minute targeted-validation posture.
 
+When the gate's test step refuses a scenario the repo's own suites already execute, use `test.instructions` in `.no-mistakes.yaml`, never a `commands.test`; that config is the single owner of the repository's live-evidence boundary.
+
 ## Repo style rules
 
 - Put one full sentence per line in tracked Markdown.
