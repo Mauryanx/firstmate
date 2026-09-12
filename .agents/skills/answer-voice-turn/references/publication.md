@@ -58,23 +58,18 @@ A rejected request may still be answered with `kind: error` or `kind: question`,
 
 ## A new call supersedes what the last one left saved
 
-One `conversation_id` carries every call, so the turns of a call that ended are still in the conversation, and `accept` takes the oldest `saved` request first.
-Left alone, a question from a call that is long over is dispatched ahead of the person waiting on the line right now.
-`audit` reports each request's `call_id` beside its state:
+Step 1 of [`../SKILL.md`](../SKILL.md) owns the rule for which call is live and which `saved` requests it supersedes.
+`audit` reports each request's `call_id` beside its state, in capture order:
 
 ```sh
 FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation audit <<<'{"conversation_id":"<cid>"}'
 ```
 
-`audit` lists requests in capture order, so the last one is the most recently captured and its `call_id` names the live call.
-Before accepting anything, reject every still-`saved` request whose `call_id` differs from that one, and every one carrying no `call_id` at all:
+A superseded request is rejected with this exact reason:
 
 ```sh
 FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation reject <<<'{"conversation_id":"<cid>","request_id":"<rid>","reason":"prior call ended; superseded"}'
 ```
-
-A request with no `call_id` predates the field rather than belonging to the live call, so it is superseded on the same terms.
-When the most recently captured request itself carries no `call_id`, there is no live call to scope by and nothing is superseded.
 
 Publish nothing against a superseded request.
 The reject-then-question route below exists so someone still on the line hears what went wrong; nobody is on the line of a call that ended, and the reason on the record is what `audit` reports afterwards.
@@ -121,5 +116,6 @@ Refusals are the transport declining to do something unsafe, not transient error
 
 - an ownership refusal means this process does not hold this home's session lock, whether because `FM_HOME` is not explicit, the lock names another live session, or this is a Pi supervision branch; it never means the conversation belongs to an earlier session, because ownership follows the lock and the session holding it takes over every conversation in the home, including requests a restarted session left `saved`;
 - a `correction target not accepted here` or `stale or unknown question binding` refusal from `accept` means the oldest `saved` request is one that can never be accepted, and it blocks every turn behind it until it is rejected; take the reject-then-question route in the reconcile section above;
+- a `not superseded` refusal from `reject` means the request belongs to the most recently captured call, which a redial made live after your `audit`; step 1 of `../SKILL.md` says to re-run `audit` and restart the pass;
 - a sequence or closed-stream refusal means the portion you are publishing does not follow the one already published;
 - an identity refusal means a `request_id` or `response_id` is being reused with different content, and the durable record wins.

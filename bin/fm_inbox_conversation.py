@@ -47,13 +47,17 @@ capture (transport): {turn_id, request_id, committed_transcript, revision,
     abandoned turn from an earlier call apart from the live one. It is optional:
     a turn captured without it carries no such field and is ordered, accepted and
     audited exactly as it was before the field existed. This module records the
-    scope; it never rejects or reorders by it.
+    scope and never reorders by it. The one place it acts on the scope is
+    reject, which refuses the reason 'prior call ended; superseded' for a request
+    spoken on the newest captured call and names that call, so a redial captured
+    while the owner is retiring an earlier call is never retired with it.
 accept (owner): returns the oldest eligible input ONCE, with the prior playback
     context. Acceptance is committed BEFORE returning dispatch:true; a crash at
     this boundary leaves an accepted request with uncertain work state, never an
     automatic second dispatch. Recovery requires owner inspection (audit).
 reject (owner): {request_id, reason}. Declines an unaccepted input explicitly;
     retains its transcript and reason without running it or cancelling work.
+    Refuses reason 'prior call ended; superseded' on the newest captured call.
 publish (owner): {request_id, response_id, sequence, kind, speech_key, final,
     question_binding?}. kind is receipt/progress/question/answer/error; sequence
     starts at 1 per request. IDs are immutable and retries must match exactly.
@@ -107,6 +111,9 @@ import sys
 import time
 
 MAX_SPEECH_CHARS = 1200
+
+
+SUPERSEDED_REASON = 'prior call ended; superseded'
 
 
 class ContractError(Exception):
@@ -384,6 +391,10 @@ class Conversation:
         row = self.j['requests'].get(self.key(self.cid, self.p['request_id']))
         require(row is not None and row['state'] != 'accepted', 'cannot reject unknown or accepted input')
         require(row['state'] != 'rejected' or row['reason'] == self.p['reason'], 'conflicting rejection')
+        if self.p['reason'] == SUPERSEDED_REASON:
+            live = self.rows()[-1][2].get('call_id')
+            require(live is None or self.event(self.key(self.cid, self.p['request_id'])).get('call_id') != live,
+                    'request was spoken on the live call %s; not superseded' % live)
         row.update(state='rejected', reason=self.p['reason'])
         self.save()
         self.recover()

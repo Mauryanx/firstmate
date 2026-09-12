@@ -43,12 +43,16 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
 ## Operating sequence
 
-1. Scope the conversation to the live call before opening any note.
+1. Scope the conversation to the live call before accepting anything.
    The conversation outlives the call: every call the captain places rides the same `conversation_id`, so a turn nobody answered before an earlier call ended is still `saved`, still older than the live one, and `accept` takes the oldest first.
    The drain presents held `vc-` rows oldest first for the same reason, so the note you were woken for can belong to a call that already ended, and it says nothing about which call is live.
+   Open that note only to take its `conversation_id`, using the command in step 2, and do not consult its `call_id`.
+   Then run `audit` on that conversation.
    The live call is the `call_id` of the most recently captured request in the conversation, which is the last request `audit` lists, because `audit` lists requests in capture order.
-   Read that from `audit` first, and then reject every still-`saved` request whose `call_id` differs from it, and every one carrying no `call_id` at all, with the reason `prior call ended; superseded`.
+   Reject every still-`saved` request whose `call_id` differs from it, and every one carrying no `call_id` at all, with the reason `prior call ended; superseded`.
    Do that before accepting anything, so the live turn is the oldest `saved` request and the first `accept` returns it.
+   A `reject` with that reason is refused, naming the live call, when the request belongs to the most recently captured call, which happens when the captain redialled after your `audit` and the bridge captured the new call's turn before your pass finished.
+   On that refusal, re-run `audit` and restart the pass against the new newest `call_id`, so a request of the newest call is never left rejected.
    The commands are in [`references/publication.md`](references/publication.md), which also says why a superseded turn is never spoken to.
    When the most recently captured request carries no `call_id`, it comes from a bridge that does not name calls, so there is no live call to scope by, nothing is superseded, and the rest of the sequence is unchanged.
 
