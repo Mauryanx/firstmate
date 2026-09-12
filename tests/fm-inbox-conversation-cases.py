@@ -404,3 +404,103 @@ assert json.loads(policy_path.read_text())['enabled_by'] == successor_owner
 (pilot / 'state/.lock').write_text(owner + '\n')
 assert owning('audit', cid='live')['requests'][-1]['state'] == 'accepted'
 print('PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused')
+
+# A spoken instruction that does not say what to do, or which project to do it
+# to, is answered with a question naming the missing part. The transport
+# accepts that question as the only portion on the turn, reports it open,
+# consumes it when the caller supplies the missing part as the next turn bound
+# to it, and carries that turn's own reply. Whether the pair is read as one
+# order is speaking.md's rule; the transport interprets nothing.
+run('capture', dict(connection, **dict(capture(4, 't3'),
+                                       committed_transcript='GPT-6 Astra Medium as a test.')))
+assert owning('accept', cid='live')['input']['request_id'] == 'r4'
+missing = dict(conversation_id='live', request_id='r4', destination='elevenlabs')
+run('publish', dict(missing, response_id='live-missing-target', sequence=1,
+                    kind='question', final=False, question_binding='r4-missing-part',
+                    speech_text='I have that as a test of the new model, but not which project it is for. Which one?'))
+asked = [r for r in run('poll', dict(connection))['replies'] if r['request_id'] == 'r4']
+assert [(r['kind'], r['final'], r['question_open']) for r in asked] == [('question', False, True)], asked
+run('capture', dict(connection, **dict(capture(5, 't4', question_binding='r4-missing-part'),
+                                       committed_transcript='Astra.')))
+supplied = owning('accept', cid='live')
+assert supplied['input']['request_id'] == 'r5'
+assert supplied['input']['question_binding'] == 'r4-missing-part'
+run('publish', dict(conversation_id='live', request_id='r5', destination='elevenlabs',
+                    response_id='live-pair-answered', sequence=1, kind='answer', final=True,
+                    speech_text='Started that test of the new model on Astra.'))
+completed = run('poll', dict(connection))['replies']
+assert [(r['request_id'], r['kind'], r['final']) for r in completed if r['kind'] == 'question'
+        ] == [('r4', 'question', False)], completed
+assert not any(r['question_open'] for r in completed), completed
+assert [(r['response_id'], r['kind'], r['final']) for r in completed if r['request_id'] == 'r5'
+        ] == [('live-pair-answered', 'answer', True)], completed
+# The binding is spent for the life of the conversation, so a question on a
+# later turn cannot reuse the name rather than reopening the consumed one.
+run('capture', dict(connection, **dict(capture(6, 't5'), committed_transcript='Is the deploy green?')))
+assert owning('accept', cid='live')['input']['request_id'] == 'r6'
+reused = run('publish', dict(conversation_id='live', request_id='r6', destination='elevenlabs',
+                             response_id='live-reused-binding', sequence=1, kind='question', final=False,
+                             question_binding='r4-missing-part', speech_text='Which one?'), code=2)
+assert 'question binding already used' in reused.stderr, reused
+print('PASS: an instruction missing its target is answered with an open question the bound next turn consumes, '
+      'and the binding it spent is refused to every later question')
+
+# A question the captain never answered stays open after his call ends, and the
+# next call's opening turn is captured bound to it: the transport consumes that
+# binding across calls without complaint, and the accepted request stays
+# accepted, so supersession never retires it. What the record does keep is the
+# call each turn was spoken on, which audit reports beside its state, so the two
+# are visibly from different calls; speaking.md is what forbids pairing them.
+run('capture', dict(connection, **dict(capture(8, 't6'), call_id='CA-first',
+                                       committed_transcript='GPT-6 Astra Medium as a test.')))
+assert owning('accept', cid='live')['input']['request_id'] == 'r8'
+run('publish', dict(conversation_id='live', request_id='r8', destination='elevenlabs',
+                    response_id='live-ended-call-question', sequence=1, kind='question', final=False,
+                    question_binding='r8-missing-part',
+                    speech_text='I have that as a test of the new model, but not which project it is for. Which one?'))
+run('capture', dict(connection, **dict(capture(9, 't8', question_binding='r8-missing-part'),
+                                       call_id='CA-second', committed_transcript='Astra, please.')))
+redialled = owning('accept', cid='live')
+assert redialled['input']['request_id'] == 'r9'
+assert redialled['input']['question_binding'] == 'r8-missing-part'
+spoken_on = {r['request_id']: (r['call_id'], r['state']) for r in owning('audit', cid='live')['requests']}
+assert (spoken_on['r8'], spoken_on['r9']) == (('CA-first', 'accepted'), ('CA-second', 'accepted')), spoken_on
+run('publish', dict(conversation_id='live', request_id='r9', destination='elevenlabs',
+                    response_id='live-new-call-answer', sequence=1, kind='answer', final=True,
+                    speech_text='Astra has two branches waiting on your review.'))
+across = run('poll', dict(connection))['replies']
+assert [(r['response_id'], r['kind'], r['question_open']) for r in across if r['request_id'] == 'r8'
+        ] == [('live-ended-call-question', 'question', False)], across
+assert [(r['response_id'], r['kind'], r['final']) for r in across if r['request_id'] == 'r9'
+        ] == [('live-new-call-answer', 'answer', True)], across
+print("PASS: a question an ended call left open binds the next call's turn all the same, "
+      'and audit still reports which call each of the two was spoken on')
+
+# The reconcile route out of a turn whose predecessor was never captured: reject
+# it, then ask for it again. The turn that answers that question carries the
+# whole order rather than a missing part, and the transport accepts it like any
+# bound turn and keeps its reply on its own request.
+run('capture', dict(connection, **dict(capture(10, 't-lost'), call_id='CA-second',
+                                       committed_transcript='And the same for the other one.')))
+assert owning('accept', cid='live')['dispatch'] is False
+owning('reject', {'request_id': 'r10', 'reason': 'previous turn t-lost was never captured'}, cid='live')
+run('publish', dict(conversation_id='live', request_id='r10', destination='elevenlabs',
+                    response_id='live-say-again', sequence=1, kind='question', final=False,
+                    question_binding='r10-say-again',
+                    speech_text='I lost the turn before this one. Could you say it again?'))
+run('capture', dict(connection, **dict(capture(11, 't9', question_binding='r10-say-again'),
+                                       call_id='CA-second',
+                                       committed_transcript='Run the benchmark on Astra.')))
+resaid = owning('accept', cid='live')
+assert resaid['input']['request_id'] == 'r11'
+assert resaid['input']['question_binding'] == 'r10-say-again'
+assert resaid['input']['committed_transcript'] == 'Run the benchmark on Astra.'
+run('publish', dict(conversation_id='live', request_id='r11', destination='elevenlabs',
+                    response_id='live-resaid-running', sequence=1, kind='answer', final=True,
+                    speech_text='Running the benchmark on Astra now.'))
+reissued = run('poll', dict(connection))['replies']
+assert not any(r['question_open'] for r in reissued), reissued
+assert [(r['response_id'], r['kind'], r['final']) for r in reissued if r['request_id'] == 'r11'
+        ] == [('live-resaid-running', 'answer', True)], reissued
+print('PASS: a rejected turn asked for again is answered by a bound turn carrying the whole order, '
+      'on its own request')
