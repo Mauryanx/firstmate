@@ -407,10 +407,10 @@ print('PASS: the session holding the lock answers what its predecessor left save
 
 # A spoken instruction that does not say what to do, or which project to do it
 # to, is answered with a question naming the missing part. The transport
-# accepts that question as the only portion on the turn, reports it open, and
-# lets the caller supply the missing part as the next turn, bound to it. That
-# bound turn and the turn the question was asked about are one order, so it is
-# answered with the work rather than with a second question.
+# accepts that question as the only portion on the turn, reports it open,
+# consumes it when the caller supplies the missing part as the next turn bound
+# to it, and carries that turn's own reply. Whether the pair is read as one
+# order is speaking.md's rule; the transport interprets nothing.
 run('capture', dict(connection, **dict(capture(4, 't3'),
                                        committed_transcript='GPT-6 Astra Medium as a test.')))
 assert owning('accept', cid='live')['input']['request_id'] == 'r4'
@@ -436,10 +436,33 @@ assert [(r['response_id'], r['kind'], r['final']) for r in completed if r['reque
         ] == [('live-pair-answered', 'answer', True)], completed
 # The binding is spent for the life of the conversation, so a question on a
 # later turn cannot reuse the name rather than reopening the consumed one.
-run('capture', dict(connection, **capture(6, 't5')))
+run('capture', dict(connection, **dict(capture(6, 't5'), committed_transcript='Is the deploy green?')))
 assert owning('accept', cid='live')['input']['request_id'] == 'r6'
 reused = run('publish', dict(conversation_id='live', request_id='r6', destination='elevenlabs',
                              response_id='live-reused-binding', sequence=1, kind='question', final=False,
                              question_binding='r4-missing-part', speech_text='Which one?'), code=2)
 assert 'question binding already used' in reused.stderr, reused
-print('PASS: an instruction missing its target is answered with an open question, and the bound turn completing it is answered with the work')
+# An ordinary clarifying question about work Firstmate proposed takes the same
+# binding route, and the caller's "Yes." consumes it at acceptance exactly as a
+# missing-part answer does: the transport draws no distinction, so only
+# speaking.md decides that this answer settles a decision rather than becoming
+# an order. What is asserted here is the shape the transport does keep - the
+# answer lands on its own request and leaves no question open.
+run('publish', dict(conversation_id='live', request_id='r6', destination='elevenlabs',
+                    response_id='live-clarify', sequence=1, kind='question', final=False,
+                    question_binding='r6-rollback',
+                    speech_text='It is green, but slower than the last one. Should I roll it back?'))
+run('capture', dict(connection, **dict(capture(7, 't6', question_binding='r6-rollback'),
+                                       committed_transcript='Yes.')))
+agreed = owning('accept', cid='live')
+assert agreed['input']['request_id'] == 'r7'
+assert agreed['input']['question_binding'] == 'r6-rollback'
+run('publish', dict(conversation_id='live', request_id='r7', destination='elevenlabs',
+                    response_id='live-decision-recorded', sequence=1, kind='answer', final=True,
+                    speech_text='Noted, and the rollback is recorded as your call.'))
+settled = run('poll', dict(connection))['replies']
+assert not any(r['question_open'] for r in settled), settled
+assert [(r['response_id'], r['kind'], r['final']) for r in settled if r['request_id'] == 'r7'
+        ] == [('live-decision-recorded', 'answer', True)], settled
+print('PASS: an instruction missing its target is answered with an open question the bound next turn consumes, '
+      'and a clarifying question takes the same route with its own reply')
