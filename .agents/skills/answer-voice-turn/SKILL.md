@@ -43,12 +43,14 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
 ## Operating sequence
 
-1. Scope the conversation to the call in front of you.
+1. Scope the conversation to the live call before opening any note.
    The conversation outlives the call: every call the captain places rides the same `conversation_id`, so a turn nobody answered before an earlier call ended is still `saved`, still older than the live one, and `accept` takes the oldest first.
-   When the turn you were woken for carries a `call_id` that no accepted or rejected request in this conversation carries, reject every still-`saved` request whose `call_id` is different, and every one carrying no `call_id` at all, with the reason `prior call ended; superseded`.
+   The drain presents held `vc-` rows oldest first for the same reason, so the note you were woken for can belong to a call that already ended, and it says nothing about which call is live.
+   The live call is the `call_id` of the most recently captured request in the conversation, which is the last request `audit` lists, because `audit` lists requests in capture order.
+   Read that from `audit` first, and then reject every still-`saved` request whose `call_id` differs from it, and every one carrying no `call_id` at all, with the reason `prior call ended; superseded`.
    Do that before accepting anything, so the live turn is the oldest `saved` request and the first `accept` returns it.
    The commands are in [`references/publication.md`](references/publication.md), which also says why a superseded turn is never spoken to.
-   A turn that carries no `call_id` of its own comes from a bridge that does not name calls, so there is nothing to supersede and the rest of the sequence is unchanged.
+   When the most recently captured request carries no `call_id`, it comes from a bridge that does not name calls, so there is no live call to scope by, nothing is superseded, and the rest of the sequence is unchanged.
 
 2. Read the turn.
    The wake key is `inbox:vc-<hash>` and the note is `state/inbox/vc-<hash>.note`, in the ordinary inbox header format with a JSON body:

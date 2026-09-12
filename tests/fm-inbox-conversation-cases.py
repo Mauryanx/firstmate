@@ -224,25 +224,40 @@ def spoke(n, previous=None, code=0, **kwargs):
     return run('capture', dict(scoped, **capture(n, previous, **kwargs)), code)
 
 
-def supersede(call_id, cid='calls'):
-    """Retire what earlier calls left saved, as the first turn of a new call does."""
+def scope_to_live_call(cid='calls'):
+    """Retire what earlier calls left saved, as the owner does before accepting.
+
+    The live call is the call of the most recently captured request, read from
+    audit before any note is opened; the wake row presented first is not consulted.
+    """
     records = owning('audit', cid=cid)['requests']
-    assert call_id not in [r['call_id'] for r in records if r['state'] != 'saved']
-    for record in records:
-        if record['state'] == 'saved' and record['call_id'] != call_id:
-            owning('reject', {'request_id': record['request_id'],
-                              'reason': 'prior call ended; superseded'}, cid=cid)
-    return [r['request_id'] for r in owning('audit', cid=cid)['requests'] if r['state'] == 'rejected']
+    live = records[-1]['call_id']
+    if live is not None:
+        for record in records:
+            if record['state'] == 'saved' and record['call_id'] != live:
+                owning('reject', {'request_id': record['request_id'],
+                                  'reason': 'prior call ended; superseded'}, cid=cid)
+    return live, [r['request_id'] for r in owning('audit', cid=cid)['requests'] if r['state'] == 'rejected']
 
 
+def saved(cid='calls'):
+    return [r for r in owning('audit', cid=cid)['requests'] if r['state'] == 'saved']
+
+
+# The 2026-09-12 shape: the captain hangs up before any turn of the first call is
+# accepted, then places a second call. The drain wakes the owner for the oldest
+# held row, r1, whose call is the ended one; scoping by that row would reject the
+# live caller. Scoping by the newest capture answers r4 and retires r1 to r3.
 for n, previous in ((1, None), (2, 't1'), (3, 't2')):
     spoke(n, previous, call_id='CA-ended')
 spoke(4, 't3', call_id='CA-live')
 assert [r['call_id'] for r in owning('audit', cid='calls')['requests']] == ['CA-ended'] * 3 + ['CA-live']
-assert supersede('CA-live') == ['r1', 'r2', 'r3']
+assert saved()[0]['call_id'] == 'CA-ended'
+assert scope_to_live_call() == ('CA-live', ['r1', 'r2', 'r3'])
 live = owning('accept', cid='calls')
 assert live['input']['request_id'] == 'r4' and live['input']['call_id'] == 'CA-live'
 assert owning('accept', cid='calls')['dispatch'] is False
+assert [r['reason'] for r in owning('audit', cid='calls')['requests'][:3]] == ['prior call ended; superseded'] * 3
 # A turn captured without a call_id is saved, ordered and accepted exactly as it
 # was before the field existed, and the next call supersedes it on the same terms.
 spoke(5, 't4')
@@ -252,16 +267,26 @@ assert owning('audit', cid='calls')['requests'][-1]['call_id'] is None
 spoke(5, 't4')
 spoke(5, 't4', call_id='CA-third', code=2)
 spoke(6, 't5', call_id='CA-third')
-assert supersede('CA-third')[-1] == 'r5'
+assert scope_to_live_call() == ('CA-third', ['r1', 'r2', 'r3', 'r5'])
 assert owning('accept', cid='calls')['input']['request_id'] == 'r6'
 assert owning('accept', cid='calls')['dispatch'] is False
-# The call a turn was spoken on is part of its immutable identity, not a label.
+# A later turn of the same call supersedes nothing.
 spoke(7, 't6', call_id='CA-third')
+assert scope_to_live_call() == ('CA-third', ['r1', 'r2', 'r3', 'r5'])
+# The call a turn was spoken on is part of its immutable identity, not a label.
 spoke(7, 't6', call_id='CA-third')
 spoke(7, 't6', call_id='CA-relabelled', code=2)
 spoke(8, 't7', call_id=5, code=2)
-assert [r['request_id'] for r in owning('audit', cid='calls')['requests'] if r['state'] == 'saved'] == ['r7']
-print('PASS: a new call supersedes what earlier calls left saved, including a turn captured with no call')
+assert [r['request_id'] for r in saved()] == ['r7']
+# When the newest capture names no call there is no live call to scope by, so a
+# saved turn from a named call is left alone and handling proceeds oldest first.
+spoke(9, 't7')
+assert scope_to_live_call() == (None, ['r1', 'r2', 'r3', 'r5'])
+assert [r['request_id'] for r in saved()] == ['r7', 'r9']
+assert owning('accept', cid='calls')['input']['request_id'] == 'r7'
+assert owning('accept', cid='calls')['input']['request_id'] == 'r9'
+assert owning('accept', cid='calls')['dispatch'] is False
+print('PASS: the newest capture names the live call; a call nobody answered is superseded, a nameless one supersedes nothing')
 
 # Live publication uses the same owner seam, never a transport-supplied author.
 pilot = temp / 'pilot'
