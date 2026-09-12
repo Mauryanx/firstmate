@@ -1,0 +1,154 @@
+home: /tmp/fm-voice-drive.69EpPe/home   live ElevenLabs publication pilot enabled, conversation "voice" bound
+
+==============================================================================
+S1/S2  The 2026-09-12 fragment: asked about, not guessed at   [call CA-1001]
+==============================================================================
+
+CAPTAIN   "GPT-6 Astra Medium as a test."
+   $ fm-inbox.sh conversation capture
+     -> turn t1 taken as request r1, state saved
+   $ fm-inbox.sh conversation accept
+     -> dispatch=True request=r1
+
+FIRSTMATE "I have that as a test of the new model, but not which project it is for. Which one?"
+   $ fm-inbox.sh conversation publish
+     -> kind=question final=false question_binding=r1-missing-part
+   $ fm-inbox.sh conversation poll
+     -> r1 replies=[('question', False)]  question_open=['r1']   (no receipt, progress or answer on r1)
+
+CAPTAIN   "Astra."
+   $ fm-inbox.sh conversation capture
+     -> turn t2 taken as request r2, state saved, bound to question r1-missing-part
+   $ fm-inbox.sh conversation accept
+     -> dispatch=True request=r2 question_binding=r1-missing-part
+   $ fm-inbox.sh conversation poll
+     -> r1 question_open=false  (the bound next turn consumed it)
+
+FIRSTMATE "Started that test of the new model on Astra."
+   $ fm-inbox.sh conversation publish
+     -> kind=answer final=true
+   $ fm-inbox.sh conversation poll
+     -> the completed order is answered on r2, its own request: [('answer', True)]
+
+==============================================================================
+S3  Adversarial: a topic-named binding collides the second time the same part is missing
+==============================================================================
+
+CAPTAIN   "Deploy it."
+   $ fm-inbox.sh conversation capture
+     -> turn t3 taken as request r3, state saved
+
+FIRSTMATE "Deploy which project?"
+   $ fm-inbox.sh conversation publish
+     -> kind=question final=false question_binding=missing-project
+
+CAPTAIN   "Astra."
+   $ fm-inbox.sh conversation capture
+     -> turn t4 taken as request r4, state saved, bound to question missing-project
+
+FIRSTMATE "Deploying Astra now."
+   $ fm-inbox.sh conversation publish
+     -> kind=answer final=true
+
+CAPTAIN   "And run it."
+   $ fm-inbox.sh conversation capture
+     -> turn t5 taken as request r5, state saved
+   $ fm-inbox.sh conversation publish
+     -> REFUSED: fm-inbox conversation: question binding already used
+
+FIRSTMATE "Run what, and on which project?"
+   $ fm-inbox.sh conversation publish
+     -> kind=question final=false question_binding=r5-missing-part
+   $ fm-inbox.sh conversation poll
+     -> the request_id-derived binding is open: [('r5', 'r5-missing-part')]
+
+==============================================================================
+S4  Adversarial: the captain answers the same question twice, then the way out
+==============================================================================
+
+CAPTAIN   "The benchmark, on Astra."
+   $ fm-inbox.sh conversation capture
+     -> turn t6 taken as request r6, state saved, bound to question r5-missing-part
+
+FIRSTMATE "Running the benchmark on Astra."
+   $ fm-inbox.sh conversation publish
+     -> kind=answer final=true
+
+CAPTAIN   "On Astra, I said."
+   $ fm-inbox.sh conversation capture
+     -> turn t7 taken as request r7, state saved, bound to question r5-missing-part
+
+CAPTAIN   "Is the deploy green?"
+   $ fm-inbox.sh conversation capture
+     -> turn t8 taken as request r8, state saved
+   $ fm-inbox.sh conversation accept
+     -> REFUSED: fm-inbox conversation: stale or unknown question binding
+   $ fm-inbox.sh conversation audit
+     -> the jam holds the later turn behind it too: [('r7', 'saved'), ('r8', 'saved')]
+   $ fm-inbox.sh conversation reject
+     -> r7 declined explicitly, transcript and reason retained
+
+FIRSTMATE "I lost that one. Could you say it again?"
+   $ fm-inbox.sh conversation publish
+     -> kind=question final=false question_binding=r7-say-again
+   $ fm-inbox.sh conversation accept
+     -> queue drains: dispatch=True request=r8
+
+FIRSTMATE "The deploy is green."
+   $ fm-inbox.sh conversation publish
+     -> kind=answer final=true
+
+CAPTAIN   "Run the benchmark on Astra."
+   $ fm-inbox.sh conversation capture
+     -> turn t9 taken as request r9, state saved, bound to question r7-say-again
+   $ fm-inbox.sh conversation accept
+     -> the whole order said again arrives on its own request r9
+
+FIRSTMATE "Running the benchmark on Astra now."
+   $ fm-inbox.sh conversation publish
+     -> kind=answer final=true
+
+==============================================================================
+S5  A question the captain never answered, and the redial that lands on it   [call CA-2002]
+==============================================================================
+
+CAPTAIN   "The usual, as a test."
+   $ fm-inbox.sh conversation capture
+     -> turn t10 taken as request r10, state saved
+
+FIRSTMATE "Which project, and what should I run there?"
+   $ fm-inbox.sh conversation publish
+     -> kind=question final=false question_binding=r10-missing-part
+
+   ... the captain hangs up without answering. He redials.
+
+CAPTAIN   "Astra."
+   $ fm-inbox.sh conversation capture
+     -> turn t11 taken as request r11, state saved, bound to question r10-missing-part
+   $ fm-inbox.sh conversation accept
+     -> request=r11 question_binding=r10-missing-part
+   $ fm-inbox.sh conversation audit
+     -> r10 was spoken on CA-1001, r11 on CA-2002: the question is stale, so r11 is read on its own merits
+
+FIRSTMATE "I have Astra, but not what to run there. What should I run?"
+   $ fm-inbox.sh conversation publish
+     -> kind=question final=false question_binding=r11-missing-part
+   $ fm-inbox.sh conversation poll
+     -> still a question, never a dispatch: [('r11', 'r11-missing-part')]
+
+==============================================================================
+Every turn accounted for, and nothing was dispatched on a fragment
+==============================================================================
+   r1   accepted  [('question', False)]
+   r2   accepted  [('answer', True)]
+   r3   accepted  [('question', False)]
+   r4   accepted  [('answer', True)]
+   r5   accepted  [('question', False)]
+   r6   accepted  [('answer', True)]
+   r7   rejected  [('question', False)]
+   r8   accepted  [('answer', True)]
+   r9   accepted  [('answer', True)]
+   r10  accepted  [('question', False)]
+   r11  accepted  [('question', False)]
+
+ALL SCENARIOS PASSED against the real transport CLI.
