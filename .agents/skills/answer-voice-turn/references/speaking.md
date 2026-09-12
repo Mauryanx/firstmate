@@ -16,7 +16,7 @@ Detail that only proves the work was done belongs in a record, not in the air.
 ## When the turn does not say enough
 
 A dispatched turn carries an order only when it says what to do, and either says which project or target it is for or lets `../../../../AGENTS.md` section 7 intake resolve that to one genuinely confident match.
-What to do is never inferred, at any confidence: an unbound turn that does not say it is answered with a `question` portion naming that as the missing part, and no work is started on it.
+What to do is never inferred, at any confidence: an unbound turn that does not say it is answered with a `question` portion that names it among the missing parts, per the rule below, and no work is started on it.
 Whether a missing project or target may be inferred is governed by `../../../../AGENTS.md` section 7 intake, unchanged: proceed only on one genuinely confident match against the registry, work under way, and project code, and ask when multiple or no projects plausibly match.
 The spoken channel adds to that rule rather than replacing it, so section 7 decides whether the part may be inferred and this section decides how the turn is answered once it has.
 A project or target that was inferred is said back in the reply, so the caller hears the assumption and can correct it; on one genuinely confident match the work proceeds while the assumption is spoken.
@@ -29,7 +29,7 @@ A turn captured bound to an open question is read against the question it answer
 The first is the one missing-part question this section asked about an order, and its reply is read for one thing: whether it supplies the parts that question named.
 When it does, it completes that order, the pair is the order, and the work starts as soon as the pair is an order as defined above.
 When anything is still missing, the order was not understood: it is abandoned rather than filed or guessed at, and the captain is asked for it again, whole, as the second case below - never a second question chained to the first.
-When the reply is a correction, a change of subject, a refusal, or a never mind, it is answered as its own turn on its own merits, and the earlier incomplete order is abandoned on the same terms.
+When the reply is a correction, a change of subject, a refusal, or a never mind, it is answered as its own turn on its own merits, and the earlier incomplete order is abandoned rather than filed, guessed at, or asked about again.
 The order such a reply completes is named by its own `question_binding`, which was derived from that order's `request_id`, and the order's words are read from the record rather than from memory so the pair survives a session restart: `audit` lists that request with its `note_id`, and the note of a request already accepted is under `state/inbox/handled/`, read as step 2 of [`../SKILL.md`](../SKILL.md) describes.
 
 The second is a question that asked for an order to be said again: the `-say-again` question the reconcile route in [`publication.md`](publication.md) publishes in any of the three `saved` states it serves, and the one this section publishes after abandoning an order that was still not understood.

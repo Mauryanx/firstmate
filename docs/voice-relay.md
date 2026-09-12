@@ -21,6 +21,7 @@ Acceptance is a durable single dispatch claim, not proof that work happened.
 An interrupted claim or a missing playback receipt stays visible for reconciliation instead of automatically repeating an action or a spoken line.
 The regression covers concurrent duplicate capture, out-of-order transcript completion, session ownership, explicit question and correction routing, an instruction that does not say enough being answered with an open question that the caller's next turn either completes, leaves behind by changing the subject, or binds from a later call once the first one ended, whose binding no later question may reuse, a rejected turn asked for again and answered by a turn carrying the whole order, ordered reply portions, supersession of the turns an earlier call left `saved` including a redial captured mid-pass, and crashes on both sides of the return path.
 Device-level latency, recognition fidelity and voice quality need a live client and are established nowhere in this transport.
+Nor is how a turn is read: which question a bound turn answers, and the rule that one order draws one question naming every part that is missing, are prose the answering agent enforces under `.agents/skills/answer-voice-turn/references/speaking.md`, with no transport guard and no case here behind them.
 
 Publication is accountable speech.
 Each published portion records its exact content digest, author identity, destination and turn, and live publication stays refused until the owner has explicitly enabled it for this home under the captain's disclosure authorization.
