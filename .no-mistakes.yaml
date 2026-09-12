@@ -43,6 +43,8 @@ commands:
 # analyzer what this product and these suites actually are, so a genuinely
 # executed scenario can be reported live and an un-executed one still cannot.
 # It narrows and clarifies the gate's live-evidence policy; it never weakens it.
+# Trusted-only: the analyzer reads this runbook from the default-branch copy of
+# this file, so a feature branch cannot alter the active live-evidence policy.
 test:
   evidence:
     store_in_repo: true
@@ -74,9 +76,11 @@ test:
     and the transcript lines it printed. Each "ok - <behavior>" line, and each
     "PASS: <behavior>" line a child contract executable prints through its
     owning .test.sh wrapper, names an observable behavior that was driven, and
-    the closing "FM_TEST_END ... exit=0 gate_skip=false" proves the script
-    really ran, so that transcript is behavior-level evidence rather than
-    generic pass/fail output. This is the standing rule that an existing
+    the closing "FM_TEST_END ... exit=0 ... gate_skip=false" proves the script
+    as a whole ran, so that transcript is behavior-level evidence rather than
+    generic pass/fail output. That closing marker does not prove every case
+    inside the script ran, so cite the transcript line that names your
+    scenario, never the marker alone. This is the standing rule that an existing
     automated test which drives a scenario end-to-end may be run as the
     scenario and cited as its evidence. It is not an exemption from live
     evidence, so apply it only to a script that actually executed here.
@@ -94,13 +98,17 @@ test:
     such scenario "untested" with "live": false and a reason naming what was
     missing and how to supply it - never "pass", and never "live": true.
 
-    The runner hands you that reason. A guard that cannot run here prints
-    "skip: <reason>" as its first meaningful line and ends with
-    "gate_skip=true". An opt-in skip names the variable that would turn the
-    guard on; a capability skip names the tool, harness or host requirement
-    that was unavailable. A skipped guard is not a met guarantee, and a fixture
-    replaying a harness's rendered output proves only the assumption recorded
-    in the fixture.
+    The runner hands you that reason. bin/fm-test-run.sh classifies a script as
+    a gate skip only when its FIRST meaningful line is "skip: <reason>", and
+    only such a script ends with "gate_skip=true". An opt-in skip names the
+    variable that would turn the guard on; a capability skip names the tool,
+    harness or host requirement that was unavailable. A script may also print
+    "skip: <reason>" mid-transcript when one case cannot run here while its
+    other cases do; that leaves gate_skip=false for the script, so read every
+    "skip:" line in the transcript and treat the case it names as untested. A
+    skipped guard or case is not a met guarantee and never licenses a live
+    "pass", and a fixture replaying a harness's rendered output proves only the
+    assumption recorded in the fixture.
 
     DO NOT MANUFACTURE LIVE EVIDENCE.
     Do not set FM_LIVE, or any guard's own control variable, to force a skipped
