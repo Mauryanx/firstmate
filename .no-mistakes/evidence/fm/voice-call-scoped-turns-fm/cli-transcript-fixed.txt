@@ -1,0 +1,416 @@
+$ fm-inbox.sh conversation lab-init <<< {"speech_catalog": {"answer": "Option A is probably faster, but it does not support offline use."}}
+  exit=0
+  stdout: {"lab":true,"network":false}
+
+=== mode: fixed  (bin from /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M29V1DDMJ4ZNAMDPQ8K3YJ1W) ===
+
+### S1: the 2026-09-12 shape - three turns of an ended call sit in front of the live question
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "captain-voice-2026-09-10", "authenticated_principal": "captain"}
+  exit=0
+  stdout: {"conversation_id":"captain-voice-2026-09-10","credential":"h4tDwKVbOQtfRcb4ZQMTzY7N_o-JHpDANAMVf_qYT9E"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "captain-voice-2026-09-10", "credential": "h4tDwKVbOQtfRcb4ZQMTzY7N_o-JHpDANAMVf_qYT9E", "turn_id": "t1", "request_id": "r1", "revision": 1, "previous_turn_id": null, "created_at": "2026-09-12T05:01:00Z", "committed_transcript": "Spoken turn 1", "call_id": "CA-ended"}
+  exit=0
+  stdout: {"request_id":"r1","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "captain-voice-2026-09-10", "credential": "h4tDwKVbOQtfRcb4ZQMTzY7N_o-JHpDANAMVf_qYT9E", "turn_id": "t2", "request_id": "r2", "revision": 1, "previous_turn_id": "t1", "created_at": "2026-09-12T05:02:00Z", "committed_transcript": "Spoken turn 2", "call_id": "CA-ended"}
+  exit=0
+  stdout: {"request_id":"r2","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "captain-voice-2026-09-10", "credential": "h4tDwKVbOQtfRcb4ZQMTzY7N_o-JHpDANAMVf_qYT9E", "turn_id": "t3", "request_id": "r3", "revision": 1, "previous_turn_id": "t2", "created_at": "2026-09-12T05:03:00Z", "committed_transcript": "Spoken turn 3", "call_id": "CA-ended"}
+  exit=0
+  stdout: {"request_id":"r3","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "captain-voice-2026-09-10", "credential": "h4tDwKVbOQtfRcb4ZQMTzY7N_o-JHpDANAMVf_qYT9E", "turn_id": "t4", "request_id": "r4", "revision": 1, "previous_turn_id": "t3", "created_at": "2026-09-12T05:04:00Z", "committed_transcript": "Spoken turn 4", "call_id": "CA-live"}
+  exit=0
+  stdout: {"request_id":"r4","state":"saved"}
+
+  audit of captain-voice-2026-09-10 (capture order):
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"conversation_id":"captain-voice-2026-09-10","replies":[],"requests":[{"call_id":"CA-ended","correction_of":null,"note_id":"vc-9b5989dfca163b5387521e19cf9a99639be0878473c052ddc975a2443a885591","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-0f45900f0ab0e0a364ec54acad44d2acb105ad6c5c13c922cfa59c1b60f422fe","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-20a981e9d82cd9f2704b144ea4e766b52a750fd19c502fd7c349e5628e834159","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"},{"call_id":"CA-live","correction_of":null,"note_id":"vc-14232b72d0ed7a95fc1e80d4ea963bf03723f65b42aa8db53bf718d42c01e31b","previous_turn_id":"t3","question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+    r1  call_id=CA-ended   state=saved    reason=None
+    r2  call_id=CA-ended   state=saved    reason=None
+    r3  call_id=CA-ended   state=saved    reason=None
+    r4  call_id=CA-live    state=saved    reason=None
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"conversation_id":"captain-voice-2026-09-10","replies":[],"requests":[{"call_id":"CA-ended","correction_of":null,"note_id":"vc-9b5989dfca163b5387521e19cf9a99639be0878473c052ddc975a2443a885591","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-0f45900f0ab0e0a364ec54acad44d2acb105ad6c5c13c922cfa59c1b60f422fe","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-20a981e9d82cd9f2704b144ea4e766b52a750fd19c502fd7c349e5628e834159","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"},{"call_id":"CA-live","correction_of":null,"note_id":"vc-14232b72d0ed7a95fc1e80d4ea963bf03723f65b42aa8db53bf718d42c01e31b","previous_turn_id":"t3","question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+CHECK PASS: the oldest saved row (what the drain wakes on) belongs to the ended call
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"conversation_id":"captain-voice-2026-09-10","replies":[],"requests":[{"call_id":"CA-ended","correction_of":null,"note_id":"vc-9b5989dfca163b5387521e19cf9a99639be0878473c052ddc975a2443a885591","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-0f45900f0ab0e0a364ec54acad44d2acb105ad6c5c13c922cfa59c1b60f422fe","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-20a981e9d82cd9f2704b144ea4e766b52a750fd19c502fd7c349e5628e834159","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"},{"call_id":"CA-live","correction_of":null,"note_id":"vc-14232b72d0ed7a95fc1e80d4ea963bf03723f65b42aa8db53bf718d42c01e31b","previous_turn_id":"t3","question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+  step 1: newest captured request names live call_id=CA-live
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"conversation_id":"captain-voice-2026-09-10","replies":[],"requests":[{"call_id":"CA-ended","correction_of":null,"note_id":"vc-9b5989dfca163b5387521e19cf9a99639be0878473c052ddc975a2443a885591","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-0f45900f0ab0e0a364ec54acad44d2acb105ad6c5c13c922cfa59c1b60f422fe","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-20a981e9d82cd9f2704b144ea4e766b52a750fd19c502fd7c349e5628e834159","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"},{"call_id":"CA-live","correction_of":null,"note_id":"vc-14232b72d0ed7a95fc1e80d4ea963bf03723f65b42aa8db53bf718d42c01e31b","previous_turn_id":"t3","question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "captain-voice-2026-09-10", "request_id": "r1", "reason": "prior call ended; superseded"}
+  exit=0
+  stdout: {"request_id":"r1","state":"rejected"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "captain-voice-2026-09-10", "request_id": "r2", "reason": "prior call ended; superseded"}
+  exit=0
+  stdout: {"request_id":"r2","state":"rejected"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "captain-voice-2026-09-10", "request_id": "r3", "reason": "prior call ended; superseded"}
+  exit=0
+  stdout: {"request_id":"r3","state":"rejected"}
+
+CHECK PASS: live call resolved from the newest capture
+
+  audit of captain-voice-2026-09-10 (capture order):
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"conversation_id":"captain-voice-2026-09-10","replies":[],"requests":[{"call_id":"CA-ended","correction_of":null,"note_id":"vc-9b5989dfca163b5387521e19cf9a99639be0878473c052ddc975a2443a885591","previous_turn_id":null,"question_binding":null,"reason":"prior call ended; superseded","request_id":"r1","state":"rejected","turn_id":"t1"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-0f45900f0ab0e0a364ec54acad44d2acb105ad6c5c13c922cfa59c1b60f422fe","previous_turn_id":"t1","question_binding":null,"reason":"prior call ended; superseded","request_id":"r2","state":"rejected","turn_id":"t2"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-20a981e9d82cd9f2704b144ea4e766b52a750fd19c502fd7c349e5628e834159","previous_turn_id":"t2","question_binding":null,"reason":"prior call ended; superseded","request_id":"r3","state":"rejected","turn_id":"t3"},{"call_id":"CA-live","correction_of":null,"note_id":"vc-14232b72d0ed7a95fc1e80d4ea963bf03723f65b42aa8db53bf718d42c01e31b","previous_turn_id":"t3","question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+    r1  call_id=CA-ended   state=rejected reason=prior call ended; superseded
+    r2  call_id=CA-ended   state=rejected reason=prior call ended; superseded
+    r3  call_id=CA-ended   state=rejected reason=prior call ended; superseded
+    r4  call_id=CA-live    state=saved    reason=None
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","call_id":"CA-live","committed_transcript":"Spoken turn 4","conversation_id":"captain-voice-2026-09-10","correction_of":null,"created_at":"2026-09-12T05:04:00Z","previous_turn_id":"t3","question_binding":null,"request_id":"r4","revision":1,"turn_id":"t4"},"playback_context":[]}
+
+CHECK PASS: first accept returns r4 of the live call, not the stale r1
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"dispatch":false}
+
+CHECK PASS: nothing else waits behind the live turn
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"conversation_id":"captain-voice-2026-09-10","replies":[],"requests":[{"call_id":"CA-ended","correction_of":null,"note_id":"vc-9b5989dfca163b5387521e19cf9a99639be0878473c052ddc975a2443a885591","previous_turn_id":null,"question_binding":null,"reason":"prior call ended; superseded","request_id":"r1","state":"rejected","turn_id":"t1"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-0f45900f0ab0e0a364ec54acad44d2acb105ad6c5c13c922cfa59c1b60f422fe","previous_turn_id":"t1","question_binding":null,"reason":"prior call ended; superseded","request_id":"r2","state":"rejected","turn_id":"t2"},{"call_id":"CA-ended","correction_of":null,"note_id":"vc-20a981e9d82cd9f2704b144ea4e766b52a750fd19c502fd7c349e5628e834159","previous_turn_id":"t2","question_binding":null,"reason":"prior call ended; superseded","request_id":"r3","state":"rejected","turn_id":"t3"},{"call_id":"CA-live","correction_of":null,"note_id":"vc-14232b72d0ed7a95fc1e80d4ea963bf03723f65b42aa8db53bf718d42c01e31b","previous_turn_id":"t3","question_binding":null,"reason":null,"request_id":"r4","state":"accepted","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+CHECK PASS: r1-r3 carry the superseded reason on record
+
+  persisted note for r1 (state/inbox/handled):
+    4 handled notes: vc-0f45900f0ab0e0a364ec54acad44d2acb105ad6c5c13c922cfa59c1b60f422fe.note, vc-14232b72d0ed7a95fc1e80d4ea963bf03723f65b42aa8db53bf718d42c01e31b.note, vc-20a981e9d82cd9f2704b144ea4e766b52a750fd19c502fd7c349e5628e834159.note, vc-9b5989dfca163b5387521e19cf9a99639be0878473c052ddc975a2443a885591.note
+
+### S2: the captain redials while the owner is between audit and its rejects
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "redial", "authenticated_principal": "captain"}
+  exit=0
+  stdout: {"conversation_id":"redial","credential":"_Q42_ScydhHBkt0Bk7yxQ3rHhKCg_rl_mp70iE9QRX4"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "redial", "credential": "_Q42_ScydhHBkt0Bk7yxQ3rHhKCg_rl_mp70iE9QRX4", "turn_id": "t4", "request_id": "r4", "revision": 1, "previous_turn_id": null, "created_at": "2026-09-12T05:04:00Z", "committed_transcript": "Spoken turn 4", "call_id": "CA-2"}
+  exit=0
+  stdout: {"request_id":"r4","state":"saved"}
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial"}
+  exit=0
+  stdout: {"conversation_id":"redial","replies":[],"requests":[{"call_id":"CA-2","correction_of":null,"note_id":"vc-2ac4bee12453342f4b263064e0bb031c4920e0b22c8c6c63f5dd15c7a4045782","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+CHECK PASS: audit says the newest call is CA-2 before the pass starts
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial"}
+  exit=0
+  stdout: {"conversation_id":"redial","replies":[],"requests":[{"call_id":"CA-2","correction_of":null,"note_id":"vc-2ac4bee12453342f4b263064e0bb031c4920e0b22c8c6c63f5dd15c7a4045782","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+  owner snapshot: live=CA-2
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "redial", "credential": "_Q42_ScydhHBkt0Bk7yxQ3rHhKCg_rl_mp70iE9QRX4", "turn_id": "t5", "request_id": "r5", "revision": 1, "previous_turn_id": "t4", "created_at": "2026-09-12T05:05:00Z", "committed_transcript": "Spoken turn 5", "call_id": "CA-3"}
+  exit=0
+  stdout: {"request_id":"r5","state":"saved"}
+
+  ...bridge captured r5 on CA-3 after the audit...
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "redial", "request_id": "r5", "reason": "prior call ended; superseded"}
+  exit=2
+  stderr: fm-inbox conversation: request was spoken on the live call CA-3; not superseded
+
+CHECK PASS: rejecting the redial turn as superseded is refused and names CA-3
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial"}
+  exit=0
+  stdout: {"conversation_id":"redial","replies":[],"requests":[{"call_id":"CA-2","correction_of":null,"note_id":"vc-2ac4bee12453342f4b263064e0bb031c4920e0b22c8c6c63f5dd15c7a4045782","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"},{"call_id":"CA-3","correction_of":null,"note_id":"vc-a07387e2e67f398f03ca41dff3ddcc9d6623367e255b6ae9e1c7734799e7db37","previous_turn_id":"t4","question_binding":null,"reason":null,"request_id":"r5","state":"saved","turn_id":"t5"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+CHECK PASS: r5 is still saved after the refusal
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial"}
+  exit=0
+  stdout: {"conversation_id":"redial","replies":[],"requests":[{"call_id":"CA-2","correction_of":null,"note_id":"vc-2ac4bee12453342f4b263064e0bb031c4920e0b22c8c6c63f5dd15c7a4045782","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"},{"call_id":"CA-3","correction_of":null,"note_id":"vc-a07387e2e67f398f03ca41dff3ddcc9d6623367e255b6ae9e1c7734799e7db37","previous_turn_id":"t4","question_binding":null,"reason":null,"request_id":"r5","state":"saved","turn_id":"t5"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+  step 1: newest captured request names live call_id=CA-3
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial"}
+  exit=0
+  stdout: {"conversation_id":"redial","replies":[],"requests":[{"call_id":"CA-2","correction_of":null,"note_id":"vc-2ac4bee12453342f4b263064e0bb031c4920e0b22c8c6c63f5dd15c7a4045782","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"},{"call_id":"CA-3","correction_of":null,"note_id":"vc-a07387e2e67f398f03ca41dff3ddcc9d6623367e255b6ae9e1c7734799e7db37","previous_turn_id":"t4","question_binding":null,"reason":null,"request_id":"r5","state":"saved","turn_id":"t5"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "redial", "request_id": "r4", "reason": "prior call ended; superseded"}
+  exit=0
+  stdout: {"request_id":"r4","state":"rejected"}
+
+CHECK PASS: restarted pass resolves CA-3 as live
+
+  audit of redial (capture order):
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial"}
+  exit=0
+  stdout: {"conversation_id":"redial","replies":[],"requests":[{"call_id":"CA-2","correction_of":null,"note_id":"vc-2ac4bee12453342f4b263064e0bb031c4920e0b22c8c6c63f5dd15c7a4045782","previous_turn_id":null,"question_binding":null,"reason":"prior call ended; superseded","request_id":"r4","state":"rejected","turn_id":"t4"},{"call_id":"CA-3","correction_of":null,"note_id":"vc-a07387e2e67f398f03ca41dff3ddcc9d6623367e255b6ae9e1c7734799e7db37","previous_turn_id":"t4","question_binding":null,"reason":null,"request_id":"r5","state":"saved","turn_id":"t5"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+    r4  call_id=CA-2       state=rejected reason=prior call ended; superseded
+    r5  call_id=CA-3       state=saved    reason=None
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial"}
+  exit=0
+  stdout: {"conversation_id":"redial","replies":[],"requests":[{"call_id":"CA-2","correction_of":null,"note_id":"vc-2ac4bee12453342f4b263064e0bb031c4920e0b22c8c6c63f5dd15c7a4045782","previous_turn_id":null,"question_binding":null,"reason":"prior call ended; superseded","request_id":"r4","state":"rejected","turn_id":"t4"},{"call_id":"CA-3","correction_of":null,"note_id":"vc-a07387e2e67f398f03ca41dff3ddcc9d6623367e255b6ae9e1c7734799e7db37","previous_turn_id":"t4","question_binding":null,"reason":null,"request_id":"r5","state":"saved","turn_id":"t5"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+CHECK PASS: r4 superseded, r5 untouched
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "redial"}
+  exit=0
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","call_id":"CA-3","committed_transcript":"Spoken turn 5","conversation_id":"redial","correction_of":null,"created_at":"2026-09-12T05:05:00Z","previous_turn_id":"t4","question_binding":null,"request_id":"r5","revision":1,"turn_id":"t5"},"playback_context":[]}
+
+CHECK PASS: accept returns the redial turn r5
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "redial"}
+  exit=0
+  stdout: {"dispatch":false}
+
+CHECK PASS: nothing else waits
+
+### S2b: the redial lands after the live call was computed and before the saved rows are listed for rejection; the pass restarts by itself
+  (a redial landing AFTER the last reject and before accept is the accept-window tradeoff declined in review round 3 and is not exercised here)
+
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "redial2", "authenticated_principal": "captain"}
+  exit=0
+  stdout: {"conversation_id":"redial2","credential":"EmgeBw5kFoXoPw4fo65jw9eJm21tT8j52QOhu1PI3Ko"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "redial2", "credential": "EmgeBw5kFoXoPw4fo65jw9eJm21tT8j52QOhu1PI3Ko", "turn_id": "t1", "request_id": "r1", "revision": 1, "previous_turn_id": null, "created_at": "2026-09-12T05:01:00Z", "committed_transcript": "Spoken turn 1", "call_id": "CA-a"}
+  exit=0
+  stdout: {"request_id":"r1","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "redial2", "credential": "EmgeBw5kFoXoPw4fo65jw9eJm21tT8j52QOhu1PI3Ko", "turn_id": "t2", "request_id": "r2", "revision": 1, "previous_turn_id": "t1", "created_at": "2026-09-12T05:02:00Z", "committed_transcript": "Spoken turn 2", "call_id": "CA-b"}
+  exit=0
+  stdout: {"request_id":"r2","state":"saved"}
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial2"}
+  exit=0
+  stdout: {"conversation_id":"redial2","replies":[],"requests":[{"call_id":"CA-a","correction_of":null,"note_id":"vc-38dbb82559ce1d36b1f4aeb523ac91f5198d64b5cb508b78eff1d928e0552759","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":"CA-b","correction_of":null,"note_id":"vc-617a194b8160026113f7aba5067c8cccc4335897b07d28c5541311b4425baa02","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+  step 1: newest captured request names live call_id=CA-b
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "redial2", "credential": "EmgeBw5kFoXoPw4fo65jw9eJm21tT8j52QOhu1PI3Ko", "turn_id": "t3", "request_id": "r3", "revision": 1, "previous_turn_id": "t2", "created_at": "2026-09-12T05:03:00Z", "committed_transcript": "Spoken turn 3", "call_id": "CA-c"}
+  exit=0
+  stdout: {"request_id":"r3","state":"saved"}
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial2"}
+  exit=0
+  stdout: {"conversation_id":"redial2","replies":[],"requests":[{"call_id":"CA-a","correction_of":null,"note_id":"vc-38dbb82559ce1d36b1f4aeb523ac91f5198d64b5cb508b78eff1d928e0552759","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":"CA-b","correction_of":null,"note_id":"vc-617a194b8160026113f7aba5067c8cccc4335897b07d28c5541311b4425baa02","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"},{"call_id":"CA-c","correction_of":null,"note_id":"vc-3d70e3f50008e81c196672d46146519e62b0d2d8b92274325b08670ebce55106","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "redial2", "request_id": "r1", "reason": "prior call ended; superseded"}
+  exit=0
+  stdout: {"request_id":"r1","state":"rejected"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "redial2", "request_id": "r3", "reason": "prior call ended; superseded"}
+  exit=2
+  stderr: fm-inbox conversation: request was spoken on the live call CA-c; not superseded
+
+CHECK PASS: reject refused as not superseded
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial2"}
+  exit=0
+  stdout: {"conversation_id":"redial2","replies":[],"requests":[{"call_id":"CA-a","correction_of":null,"note_id":"vc-38dbb82559ce1d36b1f4aeb523ac91f5198d64b5cb508b78eff1d928e0552759","previous_turn_id":null,"question_binding":null,"reason":"prior call ended; superseded","request_id":"r1","state":"rejected","turn_id":"t1"},{"call_id":"CA-b","correction_of":null,"note_id":"vc-617a194b8160026113f7aba5067c8cccc4335897b07d28c5541311b4425baa02","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"},{"call_id":"CA-c","correction_of":null,"note_id":"vc-3d70e3f50008e81c196672d46146519e62b0d2d8b92274325b08670ebce55106","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+  step 1: newest captured request names live call_id=CA-c
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial2"}
+  exit=0
+  stdout: {"conversation_id":"redial2","replies":[],"requests":[{"call_id":"CA-a","correction_of":null,"note_id":"vc-38dbb82559ce1d36b1f4aeb523ac91f5198d64b5cb508b78eff1d928e0552759","previous_turn_id":null,"question_binding":null,"reason":"prior call ended; superseded","request_id":"r1","state":"rejected","turn_id":"t1"},{"call_id":"CA-b","correction_of":null,"note_id":"vc-617a194b8160026113f7aba5067c8cccc4335897b07d28c5541311b4425baa02","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"},{"call_id":"CA-c","correction_of":null,"note_id":"vc-3d70e3f50008e81c196672d46146519e62b0d2d8b92274325b08670ebce55106","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "redial2", "request_id": "r2", "reason": "prior call ended; superseded"}
+  exit=0
+  stdout: {"request_id":"r2","state":"rejected"}
+
+CHECK PASS: pass restarted and resolved CA-c
+
+  audit of redial2 (capture order):
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial2"}
+  exit=0
+  stdout: {"conversation_id":"redial2","replies":[],"requests":[{"call_id":"CA-a","correction_of":null,"note_id":"vc-38dbb82559ce1d36b1f4aeb523ac91f5198d64b5cb508b78eff1d928e0552759","previous_turn_id":null,"question_binding":null,"reason":"prior call ended; superseded","request_id":"r1","state":"rejected","turn_id":"t1"},{"call_id":"CA-b","correction_of":null,"note_id":"vc-617a194b8160026113f7aba5067c8cccc4335897b07d28c5541311b4425baa02","previous_turn_id":"t1","question_binding":null,"reason":"prior call ended; superseded","request_id":"r2","state":"rejected","turn_id":"t2"},{"call_id":"CA-c","correction_of":null,"note_id":"vc-3d70e3f50008e81c196672d46146519e62b0d2d8b92274325b08670ebce55106","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+    r1  call_id=CA-a       state=rejected reason=prior call ended; superseded
+    r2  call_id=CA-b       state=rejected reason=prior call ended; superseded
+    r3  call_id=CA-c       state=saved    reason=None
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "redial2"}
+  exit=0
+  stdout: {"conversation_id":"redial2","replies":[],"requests":[{"call_id":"CA-a","correction_of":null,"note_id":"vc-38dbb82559ce1d36b1f4aeb523ac91f5198d64b5cb508b78eff1d928e0552759","previous_turn_id":null,"question_binding":null,"reason":"prior call ended; superseded","request_id":"r1","state":"rejected","turn_id":"t1"},{"call_id":"CA-b","correction_of":null,"note_id":"vc-617a194b8160026113f7aba5067c8cccc4335897b07d28c5541311b4425baa02","previous_turn_id":"t1","question_binding":null,"reason":"prior call ended; superseded","request_id":"r2","state":"rejected","turn_id":"t2"},{"call_id":"CA-c","correction_of":null,"note_id":"vc-3d70e3f50008e81c196672d46146519e62b0d2d8b92274325b08670ebce55106","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+CHECK PASS: both earlier calls superseded; the redial stays saved
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "redial2"}
+  exit=0
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","call_id":"CA-c","committed_transcript":"Spoken turn 3","conversation_id":"redial2","correction_of":null,"created_at":"2026-09-12T05:03:00Z","previous_turn_id":"t2","question_binding":null,"request_id":"r3","revision":1,"turn_id":"t3"},"playback_context":[]}
+
+CHECK PASS: accept returns r3 of CA-c
+
+### S3: back-compat - the newest capture carries no call_id, so nothing is superseded and order is oldest-first
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "legacy", "authenticated_principal": "captain"}
+  exit=0
+  stdout: {"conversation_id":"legacy","credential":"ztsQ-5A2ar3CqAeg0a-ekYAXKA-5rI_DqS38Lqdtq2A"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "legacy", "credential": "ztsQ-5A2ar3CqAeg0a-ekYAXKA-5rI_DqS38Lqdtq2A", "turn_id": "t1", "request_id": "r1", "revision": 1, "previous_turn_id": null, "created_at": "2026-09-12T05:01:00Z", "committed_transcript": "Spoken turn 1", "call_id": "CA-named"}
+  exit=0
+  stdout: {"request_id":"r1","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "legacy", "credential": "ztsQ-5A2ar3CqAeg0a-ekYAXKA-5rI_DqS38Lqdtq2A", "turn_id": "t2", "request_id": "r2", "revision": 1, "previous_turn_id": "t1", "created_at": "2026-09-12T05:02:00Z", "committed_transcript": "Spoken turn 2"}
+  exit=0
+  stdout: {"request_id":"r2","state":"saved"}
+
+  audit of legacy (capture order):
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "legacy"}
+  exit=0
+  stdout: {"conversation_id":"legacy","replies":[],"requests":[{"call_id":"CA-named","correction_of":null,"note_id":"vc-c7b7f95135ffd373d334965dcaf60b8de444838bba537be5556ad917e7110df4","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":null,"correction_of":null,"note_id":"vc-0662de1cf8d5f0b4255e7f92cd8c050ff338042e849d1129af60db353ea4d480","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+    r1  call_id=CA-named   state=saved    reason=None
+    r2  call_id=None       state=saved    reason=None
+
+CHECK PASS: persisted note body of a nameless capture has no call_id key at all (identity unchanged from pre-field release)
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "legacy"}
+  exit=0
+  stdout: {"conversation_id":"legacy","replies":[],"requests":[{"call_id":"CA-named","correction_of":null,"note_id":"vc-c7b7f95135ffd373d334965dcaf60b8de444838bba537be5556ad917e7110df4","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":null,"correction_of":null,"note_id":"vc-0662de1cf8d5f0b4255e7f92cd8c050ff338042e849d1129af60db353ea4d480","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+CHECK PASS: audit reports call_id null for the nameless newest request
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "legacy"}
+  exit=0
+  stdout: {"conversation_id":"legacy","replies":[],"requests":[{"call_id":"CA-named","correction_of":null,"note_id":"vc-c7b7f95135ffd373d334965dcaf60b8de444838bba537be5556ad917e7110df4","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":null,"correction_of":null,"note_id":"vc-0662de1cf8d5f0b4255e7f92cd8c050ff338042e849d1129af60db353ea4d480","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+  step 1: newest captured request names live call_id=None
+  step 1: newest carries no call_id; nothing superseded
+
+CHECK PASS: no live call to scope by
+
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "legacy"}
+  exit=0
+  stdout: {"conversation_id":"legacy","replies":[],"requests":[{"call_id":"CA-named","correction_of":null,"note_id":"vc-c7b7f95135ffd373d334965dcaf60b8de444838bba537be5556ad917e7110df4","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":null,"correction_of":null,"note_id":"vc-0662de1cf8d5f0b4255e7f92cd8c050ff338042e849d1129af60db353ea4d480","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+CHECK PASS: nothing rejected
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "legacy"}
+  exit=0
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","call_id":"CA-named","committed_transcript":"Spoken turn 1","conversation_id":"legacy","correction_of":null,"created_at":"2026-09-12T05:01:00Z","previous_turn_id":null,"question_binding":null,"request_id":"r1","revision":1,"turn_id":"t1"},"playback_context":[]}
+
+CHECK PASS: accept still returns oldest first (r1)
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "legacy"}
+  exit=0
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Spoken turn 2","conversation_id":"legacy","correction_of":null,"created_at":"2026-09-12T05:02:00Z","previous_turn_id":"t1","question_binding":null,"request_id":"r2","revision":1,"turn_id":"t2"},"playback_context":[]}
+
+CHECK PASS: then r2
+
+  the nameless newest turn: reject with the superseded reason refuses nothing (no live call), so it is simply rejected
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "legacy", "credential": "ztsQ-5A2ar3CqAeg0a-ekYAXKA-5rI_DqS38Lqdtq2A", "turn_id": "t3", "request_id": "r3", "revision": 1, "previous_turn_id": "t2", "created_at": "2026-09-12T05:03:00Z", "committed_transcript": "Spoken turn 3", "call_id": "CA-x"}
+  exit=0
+  stdout: {"request_id":"r3","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "legacy", "credential": "ztsQ-5A2ar3CqAeg0a-ekYAXKA-5rI_DqS38Lqdtq2A", "turn_id": "t4", "request_id": "r4", "revision": 1, "previous_turn_id": "t3", "created_at": "2026-09-12T05:04:00Z", "committed_transcript": "Spoken turn 4"}
+  exit=0
+  stdout: {"request_id":"r4","state":"saved"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "legacy", "request_id": "r4", "reason": "prior call ended; superseded"}
+  exit=0
+  stdout: {"request_id":"r4","state":"rejected"}
+
+CHECK PASS: nameless newest turn is not protected by the refusal
+
+### S4: adversarial edges of the refusal and of call_id identity
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "edges", "authenticated_principal": "captain"}
+  exit=0
+  stdout: {"conversation_id":"edges","credential":"Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "edges", "credential": "Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg", "turn_id": "t1", "request_id": "r1", "revision": 1, "previous_turn_id": null, "created_at": "2026-09-12T05:01:00Z", "committed_transcript": "Spoken turn 1", "call_id": "CA-1"}
+  exit=0
+  stdout: {"request_id":"r1","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "edges", "credential": "Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg", "turn_id": "t2", "request_id": "r2", "revision": 1, "previous_turn_id": "t1", "created_at": "2026-09-12T05:02:00Z", "committed_transcript": "Spoken turn 2", "call_id": "CA-2"}
+  exit=0
+  stdout: {"request_id":"r2","state":"saved"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "edges", "request_id": "r2", "reason": "prior call ended; superseded"}
+  exit=2
+  stderr: fm-inbox conversation: request was spoken on the live call CA-2; not superseded
+
+CHECK PASS: the live call turn cannot be retired as superseded
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "edges", "request_id": "r2", "reason": "prior call ended; superseded "}
+  exit=0
+  stdout: {"request_id":"r2","state":"rejected"}
+
+CHECK PASS: REGRESSION PROBE: a reason differing by trailing whitespace is NOT refused (exact-string match)
+
+  audit of edges (capture order):
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "edges"}
+  exit=0
+  stdout: {"conversation_id":"edges","replies":[],"requests":[{"call_id":"CA-1","correction_of":null,"note_id":"vc-c8f34fc73dd586dfd257604710420e07aff3c6ae845ab85ce451db6b06e06d49","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"call_id":"CA-2","correction_of":null,"note_id":"vc-819ae8a77460fbde9bcff4b86e44a8c95dba8fdc40b71d4e98bc30c35a676af0","previous_turn_id":"t1","question_binding":null,"reason":"prior call ended; superseded ","request_id":"r2","state":"rejected","turn_id":"t2"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+    r1  call_id=CA-1       state=saved    reason=None
+    r2  call_id=CA-2       state=rejected reason=prior call ended; superseded 
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "edges", "request_id": "r1", "reason": "prior call ended; superseded"}
+  exit=0
+  stdout: {"request_id":"r1","state":"rejected"}
+
+CHECK PASS: the earlier call turn is superseded normally
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "edges", "credential": "Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg", "turn_id": "t3", "request_id": "r3", "revision": 1, "previous_turn_id": "t2", "created_at": "2026-09-12T05:03:00Z", "committed_transcript": "Spoken turn 3", "call_id": "CA-2"}
+  exit=0
+  stdout: {"request_id":"r3","state":"saved"}
+
+$ fm-inbox.sh conversation reject <<< {"conversation_id": "edges", "request_id": "r3", "reason": "say that again"}
+  exit=0
+  stdout: {"request_id":"r3","state":"rejected"}
+
+CHECK PASS: a live-call turn can still be rejected for its own reason
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "edges", "credential": "Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg", "turn_id": "t4", "request_id": "r4", "revision": 1, "previous_turn_id": "t3", "created_at": "2026-09-12T05:04:00Z", "committed_transcript": "Spoken turn 4", "call_id": "CA-2"}
+  exit=0
+  stdout: {"request_id":"r4","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "edges", "credential": "Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg", "turn_id": "t4", "request_id": "r4", "revision": 1, "previous_turn_id": "t3", "created_at": "2026-09-12T05:04:00Z", "committed_transcript": "Spoken turn 4", "call_id": "CA-2"}
+  exit=0
+  stdout: {"request_id":"r4","state":"saved"}
+
+CHECK PASS: exact retry of a capture is idempotent
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "edges", "credential": "Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg", "turn_id": "t4", "request_id": "r4", "revision": 1, "previous_turn_id": "t3", "created_at": "2026-09-12T05:04:00Z", "committed_transcript": "Spoken turn 4", "call_id": "CA-relabelled"}
+  exit=2
+  stderr: fm-inbox conversation: request ID reused with different input
+
+CHECK PASS: retry with a different call_id is refused: call_id is immutable identity
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "edges", "credential": "Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg", "turn_id": "t5", "request_id": "r5", "revision": 1, "previous_turn_id": "t4", "created_at": "2026-09-12T05:05:00Z", "committed_transcript": "Spoken turn 5", "call_id": 5}
+  exit=2
+  stderr: fm-inbox conversation: invalid call_id
+
+CHECK PASS: non-identifier call_id refused
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "edges", "credential": "Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg", "turn_id": "t5", "request_id": "r5", "revision": 1, "previous_turn_id": "t4", "created_at": "2026-09-12T05:05:00Z", "committed_transcript": "Spoken turn 5", "call_id": ""}
+  exit=2
+  stderr: fm-inbox conversation: invalid call_id
+
+CHECK PASS: empty call_id refused
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "edges", "credential": "Sb5y4gJ3cUkg4atyaO-Mbast3vuy3LaGCIrEcPe8iIg", "turn_id": "t5", "request_id": "r5", "revision": 1, "previous_turn_id": "t4", "created_at": "2026-09-12T05:05:00Z", "committed_transcript": "Spoken turn 5", "call_id": null}
+  exit=0
+  stdout: {"request_id":"r5","state":"saved"}
+
+CHECK PASS: explicit null call_id is treated as absent
+
+  audit of edges (capture order):
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "edges"}
+  exit=0
+  stdout: {"conversation_id":"edges","replies":[],"requests":[{"call_id":"CA-1","correction_of":null,"note_id":"vc-c8f34fc73dd586dfd257604710420e07aff3c6ae845ab85ce451db6b06e06d49","previous_turn_id":null,"question_binding":null,"reason":"prior call ended; superseded","request_id":"r1","state":"rejected","turn_id":"t1"},{"call_id":"CA-2","correction_of":null,"note_id":"vc-819ae8a77460fbde9bcff4b86e44a8c95dba8fdc40b71d4e98bc30c35a676af0","previous_turn_id":"t1","question_binding":null,"reason":"prior call ended; superseded ","request_id":"r2","state":"rejected","turn_id":"t2"},{"call_id":"CA-2","correction_of":null,"note_id":"vc-95a699dca6989e2362636571792bb26066a4cfb770dc9da2fdb82d5dae21f025","previous_turn_id":"t2","question_binding":null,"reason":"say that again","request_id":"r3","state":"rejected","turn_id":"t3"},{"call_id":"CA-2","correction_of":null,"note_id":"vc-6d0c1dea4390065ddd97e979fa16f728ac9e38df9eb4224622f850dc925a0990","previous_turn_id":"t3","question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"},{"call_id":null,"correction_of":null,"note_id":"vc-0004c039875244d75eed09aabfd79f89bd542362f0b4346d92b2617acadc3769","previous_turn_id":"t4","question_binding":null,"reason":null,"request_id":"r5","state":"saved","turn_id":"t5"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+    r1  call_id=CA-1       state=rejected reason=prior call ended; superseded
+    r2  call_id=CA-2       state=rejected reason=prior call ended; superseded 
+    r3  call_id=CA-2       state=rejected reason=say that again
+    r4  call_id=CA-2       state=saved    reason=None
+    r5  call_id=None       state=saved    reason=None
+
+=== ALL CHECKS PASSED ===

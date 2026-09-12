@@ -1,0 +1,49 @@
+$ fm-inbox.sh conversation lab-init <<< {"speech_catalog": {"answer": "Option A is probably faster, but it does not support offline use."}}
+  exit=0
+  stdout: {"lab":true,"network":false}
+
+=== mode: base  (bin from /tmp/nm-voice-base) ===
+
+### S1: the 2026-09-12 shape - three turns of an ended call sit in front of the live question
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "captain-voice-2026-09-10", "authenticated_principal": "captain"}
+  exit=0
+  stdout: {"conversation_id":"captain-voice-2026-09-10","credential":"ULGLRcuedgNwQun0zkb4FC4OsgSLycxQyQ8b20SdVxE"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "captain-voice-2026-09-10", "credential": "ULGLRcuedgNwQun0zkb4FC4OsgSLycxQyQ8b20SdVxE", "turn_id": "t1", "request_id": "r1", "revision": 1, "previous_turn_id": null, "created_at": "2026-09-12T05:01:00Z", "committed_transcript": "Spoken turn 1", "call_id": "CA-ended"}
+  exit=2
+  stderr: fm-inbox conversation: unsupported input fields
+
+CHECK PASS: BASE: the bridge cannot even record call_id
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "captain-voice-2026-09-10", "credential": "ULGLRcuedgNwQun0zkb4FC4OsgSLycxQyQ8b20SdVxE", "turn_id": "t1", "request_id": "r1", "revision": 1, "previous_turn_id": null, "created_at": "2026-09-12T05:01:00Z", "committed_transcript": "Spoken turn 1"}
+  exit=0
+  stdout: {"request_id":"r1","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "captain-voice-2026-09-10", "credential": "ULGLRcuedgNwQun0zkb4FC4OsgSLycxQyQ8b20SdVxE", "turn_id": "t2", "request_id": "r2", "revision": 1, "previous_turn_id": "t1", "created_at": "2026-09-12T05:02:00Z", "committed_transcript": "Spoken turn 2"}
+  exit=0
+  stdout: {"request_id":"r2","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "captain-voice-2026-09-10", "credential": "ULGLRcuedgNwQun0zkb4FC4OsgSLycxQyQ8b20SdVxE", "turn_id": "t3", "request_id": "r3", "revision": 1, "previous_turn_id": "t2", "created_at": "2026-09-12T05:03:00Z", "committed_transcript": "Spoken turn 3"}
+  exit=0
+  stdout: {"request_id":"r3","state":"saved"}
+
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "captain-voice-2026-09-10", "credential": "ULGLRcuedgNwQun0zkb4FC4OsgSLycxQyQ8b20SdVxE", "turn_id": "t4", "request_id": "r4", "revision": 1, "previous_turn_id": "t3", "created_at": "2026-09-12T05:04:00Z", "committed_transcript": "Spoken turn 4"}
+  exit=0
+  stdout: {"request_id":"r4","state":"saved"}
+
+  audit of captain-voice-2026-09-10 (capture order):
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"conversation_id":"captain-voice-2026-09-10","replies":[],"requests":[{"correction_of":null,"note_id":"vc-9b5989dfca163b5387521e19cf9a99639be0878473c052ddc975a2443a885591","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"saved","turn_id":"t1"},{"correction_of":null,"note_id":"vc-0f45900f0ab0e0a364ec54acad44d2acb105ad6c5c13c922cfa59c1b60f422fe","previous_turn_id":"t1","question_binding":null,"reason":null,"request_id":"r2","state":"saved","turn_id":"t2"},{"correction_of":null,"note_id":"vc-20a981e9d82cd9f2704b144ea4e766b52a750fd19c502fd7c349e5628e834159","previous_turn_id":"t2","question_binding":null,"reason":null,"request_id":"r3","state":"saved","turn_id":"t3"},{"correction_of":null,"note_id":"vc-14232b72d0ed7a95fc1e80d4ea963bf03723f65b42aa8db53bf718d42c01e31b","previous_turn_id":"t3","question_binding":null,"reason":null,"request_id":"r4","state":"saved","turn_id":"t4"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+    r1  call_id=None       state=saved    reason=None
+    r2  call_id=None       state=saved    reason=None
+    r3  call_id=None       state=saved    reason=None
+    r4  call_id=None       state=saved    reason=None
+
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "captain-voice-2026-09-10"}
+  exit=0
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Spoken turn 1","conversation_id":"captain-voice-2026-09-10","correction_of":null,"created_at":"2026-09-12T05:01:00Z","previous_turn_id":null,"question_binding":null,"request_id":"r1","revision":1,"turn_id":"t1"},"playback_context":[]}
+
+CHECK PASS: BASE: first accept returns r1, a turn from the ended call, ahead of the live r4 (the reported failure)
+
