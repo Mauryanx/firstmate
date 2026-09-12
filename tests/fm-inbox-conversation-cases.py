@@ -442,30 +442,8 @@ reused = run('publish', dict(conversation_id='live', request_id='r6', destinatio
                              response_id='live-reused-binding', sequence=1, kind='question', final=False,
                              question_binding='r4-missing-part', speech_text='Which one?'), code=2)
 assert 'question binding already used' in reused.stderr, reused
-# An ordinary clarifying question about work Firstmate proposed takes the same
-# binding route, and the caller's "Yes." consumes it at acceptance exactly as a
-# missing-part answer does: the transport draws no distinction, so only
-# speaking.md decides that this answer settles a decision rather than becoming
-# an order. What is asserted here is the shape the transport does keep - the
-# answer lands on its own request and leaves no question open.
-run('publish', dict(conversation_id='live', request_id='r6', destination='elevenlabs',
-                    response_id='live-clarify', sequence=1, kind='question', final=False,
-                    question_binding='r6-rollback',
-                    speech_text='It is green, but slower than the last one. Should I roll it back?'))
-run('capture', dict(connection, **dict(capture(7, 't6', question_binding='r6-rollback'),
-                                       committed_transcript='Yes.')))
-agreed = owning('accept', cid='live')
-assert agreed['input']['request_id'] == 'r7'
-assert agreed['input']['question_binding'] == 'r6-rollback'
-run('publish', dict(conversation_id='live', request_id='r7', destination='elevenlabs',
-                    response_id='live-decision-recorded', sequence=1, kind='answer', final=True,
-                    speech_text='Noted, and the rollback is recorded as your call.'))
-settled = run('poll', dict(connection))['replies']
-assert not any(r['question_open'] for r in settled), settled
-assert [(r['response_id'], r['kind'], r['final']) for r in settled if r['request_id'] == 'r7'
-        ] == [('live-decision-recorded', 'answer', True)], settled
 print('PASS: an instruction missing its target is answered with an open question the bound next turn consumes, '
-      'and a clarifying question takes the same route with its own reply')
+      'and the binding it spent is refused to every later question')
 
 # A turn bound to a missing-part question need not supply that part: the bridge
 # binds whatever comes next while the question is open, so a change of subject
@@ -473,7 +451,7 @@ print('PASS: an instruction missing its target is answered with an open question
 # that turn answered on its own request, with the consumed question the only
 # reply the abandoned order carries. Which of the two a bound turn is stays
 # speaking.md's reading; the transport interprets nothing.
-run('capture', dict(connection, **dict(capture(8, 't7'),
+run('capture', dict(connection, **dict(capture(8, 't6'),
                                        committed_transcript='The Sonnet run, five thousand samples.')))
 assert owning('accept', cid='live')['input']['request_id'] == 'r8'
 run('publish', dict(conversation_id='live', request_id='r8', destination='elevenlabs',
@@ -556,3 +534,47 @@ assert [(r['response_id'], r['kind'], r['final']) for r in reissued if r['reques
         ] == [('live-resaid-running', 'answer', True)], reissued
 print('PASS: a rejected turn asked for again is answered by a bound turn carrying the whole order, '
       'on its own request')
+
+# One order gets one missing-part question, and the transport holds that: a
+# fragment missing both its action and its project is asked about once, and a
+# second question derived from the same request is refused, so no chain of
+# questions can form against it. When the reply still leaves the order short,
+# the order is asked for again whole on the reply's own request, and the
+# fragment keeps only the single question it was asked about.
+run('capture', dict(connection, **dict(capture(14, 't13'), call_id='CA-second',
+                                       committed_transcript='The usual, as a test.')))
+assert owning('accept', cid='live')['input']['request_id'] == 'r14'
+run('publish', dict(conversation_id='live', request_id='r14', destination='elevenlabs',
+                    response_id='live-both-missing', sequence=1, kind='question', final=False,
+                    question_binding='r14-missing-part',
+                    speech_text='I have that as a test, but not which project it is for or what to run. Which project, and what should I run?'))
+run('capture', dict(connection, **dict(capture(15, 't14', question_binding='r14-missing-part'),
+                                       call_id='CA-second', committed_transcript='Astra.')))
+short = owning('accept', cid='live')
+assert short['input']['request_id'] == 'r15'
+assert short['input']['question_binding'] == 'r14-missing-part'
+chained = run('publish', dict(conversation_id='live', request_id='r15', destination='elevenlabs',
+                              response_id='live-chained-question', sequence=1, kind='question', final=False,
+                              question_binding='r14-missing-part',
+                              speech_text='And what should I run?'), code=2)
+assert 'question binding already used' in chained.stderr, chained
+run('publish', dict(conversation_id='live', request_id='r15', destination='elevenlabs',
+                    response_id='live-ask-again', sequence=1, kind='question', final=False,
+                    question_binding='r15-say-again',
+                    speech_text='I did not get that order. Could you give it again, whole?'))
+run('capture', dict(connection, **dict(capture(16, 't15', question_binding='r15-say-again'),
+                                       call_id='CA-second',
+                                       committed_transcript='Run the benchmark on Astra as a test.')))
+whole = owning('accept', cid='live')
+assert whole['input']['request_id'] == 'r16'
+assert whole['input']['committed_transcript'] == 'Run the benchmark on Astra as a test.'
+run('publish', dict(conversation_id='live', request_id='r16', destination='elevenlabs',
+                    response_id='live-whole-order', sequence=1, kind='answer', final=True,
+                    speech_text='Running the benchmark on Astra as a test now.'))
+chain = run('poll', dict(connection))['replies']
+assert [(r['request_id'], r['question_binding']) for r in chain if r['request_id'] in ('r14', 'r15', 'r16')
+        ] == [('r14', 'r14-missing-part'), ('r15', 'r15-say-again'),
+              ('r16', None)], chain
+assert not any(r['question_open'] for r in chain), chain
+print('PASS: a second question derived from the same order is refused, so the order short of its parts '
+      'is asked for again whole rather than chained')
