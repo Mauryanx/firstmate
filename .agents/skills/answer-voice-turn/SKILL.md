@@ -99,8 +99,8 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
 Load the one you need; both are resources of this skill, not separate skills.
 
-- [`references/publication.md`](references/publication.md) - the accept, publish, reject, and reconcile commands, ordered progress portions, and what each refusal means.
-- [`references/speaking.md`](references/speaking.md) - composing an answer meant for the ear, and the disclosure boundary on published speech.
+- [`references/publication.md`](references/publication.md) - the accept, publish, reject, and reconcile commands, ordered progress portions, the question portion that asks for a missing part, and what each refusal means.
+- [`references/speaking.md`](references/speaking.md) - composing an answer meant for the ear, what a turn must say to be an order and how a reply bound to a question is read, and the disclosure boundary on published speech.
 
 ## What the conversation already guarantees
 
