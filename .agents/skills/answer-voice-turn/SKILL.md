@@ -77,7 +77,7 @@ Only accepting the request and publishing a reply against its `request_id` produ
 
 4. Do the work as an ordinary turn.
    Answer from durable records where the answer already exists; dispatch a worker where it does not.
-   A turn that does not say what to do, or whose project or target `AGENTS.md` section 7 intake cannot resolve to one confident match, is not an order yet: ask for the missing part under [`references/speaking.md`](references/speaking.md) rather than dispatching a guess.
+   A turn that does not say enough to be an order, as [`references/speaking.md`](references/speaking.md) defines it, is asked about rather than dispatched.
    Reading records takes seconds and a dispatch does not, so publish a progress portion before starting anything slow rather than leaving the line quiet.
 
 5. Publish the answer against that `request_id`, which is the step that turns it into speech:
