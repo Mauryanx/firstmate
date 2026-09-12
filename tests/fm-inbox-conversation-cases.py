@@ -408,18 +408,38 @@ print('PASS: the session holding the lock answers what its predecessor left save
 # A spoken instruction that does not say what to do, or which project to do it
 # to, is answered with a question naming the missing part. The transport
 # accepts that question as the only portion on the turn, reports it open, and
-# lets the caller supply the missing part as the next turn, bound to it.
+# lets the caller supply the missing part as the next turn, bound to it. That
+# bound turn and the turn the question was asked about are one order, so it is
+# answered with the work rather than with a second question.
 run('capture', dict(connection, **dict(capture(4, 't3'),
                                        committed_transcript='GPT-6 Astra Medium as a test.')))
 assert owning('accept', cid='live')['input']['request_id'] == 'r4'
 missing = dict(conversation_id='live', request_id='r4', destination='elevenlabs')
 run('publish', dict(missing, response_id='live-missing-target', sequence=1,
-                    kind='question', final=False, question_binding='which-project',
+                    kind='question', final=False, question_binding='r4-missing-part',
                     speech_text='I have that as a test of the new model, but not which project it is for. Which one?'))
 asked = [r for r in run('poll', dict(connection))['replies'] if r['request_id'] == 'r4']
 assert [(r['kind'], r['final'], r['question_open']) for r in asked] == [('question', False, True)], asked
-run('capture', dict(connection, **capture(5, 't4', question_binding='which-project')))
+run('capture', dict(connection, **dict(capture(5, 't4', question_binding='r4-missing-part'),
+                                       committed_transcript='Astra.')))
 supplied = owning('accept', cid='live')
 assert supplied['input']['request_id'] == 'r5'
-assert supplied['input']['question_binding'] == 'which-project'
-print('PASS: an instruction missing its target is answered with an open question that the next bound turn completes')
+assert supplied['input']['question_binding'] == 'r4-missing-part'
+run('publish', dict(conversation_id='live', request_id='r5', destination='elevenlabs',
+                    response_id='live-pair-answered', sequence=1, kind='answer', final=True,
+                    speech_text='Started that test of the new model on Astra.'))
+completed = run('poll', dict(connection))['replies']
+assert [(r['request_id'], r['kind'], r['final']) for r in completed if r['kind'] == 'question'
+        ] == [('r4', 'question', False)], completed
+assert not any(r['question_open'] for r in completed), completed
+assert [(r['response_id'], r['kind'], r['final']) for r in completed if r['request_id'] == 'r5'
+        ] == [('live-pair-answered', 'answer', True)], completed
+# The binding is spent for the life of the conversation, so a question on a
+# later turn cannot reuse the name rather than reopening the consumed one.
+run('capture', dict(connection, **capture(6, 't5')))
+assert owning('accept', cid='live')['input']['request_id'] == 'r6'
+reused = run('publish', dict(conversation_id='live', request_id='r6', destination='elevenlabs',
+                             response_id='live-reused-binding', sequence=1, kind='question', final=False,
+                             question_binding='r4-missing-part', speech_text='Which one?'), code=2)
+assert 'question binding already used' in reused.stderr, reused
+print('PASS: an instruction missing its target is answered with an open question, and the bound turn completing it is answered with the work')

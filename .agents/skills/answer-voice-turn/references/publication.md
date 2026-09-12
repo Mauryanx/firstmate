@@ -53,13 +53,14 @@ A turn that does not say enough to be an order, as [`speaking.md`](speaking.md) 
 ```sh
 FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation publish <<'JSON'
 {"conversation_id":"<cid>","request_id":"<rid>","response_id":"<unique>",
- "sequence":1,"kind":"question","final":false,"question_binding":"<unique>",
+ "sequence":1,"kind":"question","final":false,"question_binding":"<rid>-missing-part",
  "destination":"elevenlabs","speech_text":"..."}
 JSON
 ```
 
-A question carries a unique `question_binding` and stays open until the caller's next turn arrives bound to it and consumes it at acceptance; `final` governs only whether more portions may follow on this request, not whether the question is open.
-The completed order is answered as that later turn rather than by publishing more against this one.
+A question carries a `question_binding` that must be unique for the life of the conversation rather than only for this call, so derive it from the `request_id` being asked about instead of from the topic: a binding named for what was missing collides the next time the same part is missing, and `publish` refuses it.
+The question stays open until the caller's next turn arrives bound to it and consumes it at acceptance; `final` governs only whether more portions may follow on this request, not whether the question is open.
+The completed order is answered as that later turn, read together with this one as [`speaking.md`](speaking.md) defines, rather than by publishing more against this one.
 Such a turn is not rejected, because rejection is for a turn that should not be run at all, and an incomplete one is waiting to be completed.
 
 ## Reject
@@ -116,7 +117,7 @@ The only route the transport allows in all three states is to reject the request
 FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation reject <<<'{"conversation_id":"<cid>","request_id":"<rid>","reason":"previous turn <turn> was never captured"}'
 FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation publish <<'JSON'
 {"conversation_id":"<cid>","request_id":"<rid>","response_id":"<unique>",
- "sequence":1,"kind":"question","final":false,"question_binding":"<unique>",
+ "sequence":1,"kind":"question","final":false,"question_binding":"<rid>-say-again",
  "destination":"elevenlabs","speech_text":"I lost the turn before this one. Could you say it again?"}
 JSON
 ```
@@ -132,6 +133,7 @@ Refusals are the transport declining to do something unsafe, not transient error
 
 - an ownership refusal means this process does not hold this home's session lock, whether because `FM_HOME` is not explicit, the lock names another live session, or this is a Pi supervision branch; it never means the conversation belongs to an earlier session, because ownership follows the lock and the session holding it takes over every conversation in the home, including requests a restarted session left `saved`;
 - a `correction target not accepted here` or `stale or unknown question binding` refusal from `accept` means the oldest `saved` request is one that can never be accepted, and it blocks every turn behind it until it is rejected; take the reject-then-question route in the reconcile section above;
+- a `question binding already used` refusal from `publish` means some earlier reply in this conversation already carries that `question_binding`, which holds for the life of the conversation and not just this call; publish the question with a binding derived from its `request_id`;
 - a `not superseded` refusal from `reject` means the request belongs to the most recently captured call, which a redial made live after your `audit`; step 1 of `../SKILL.md` says to re-run `audit` and restart the pass;
 - a sequence or closed-stream refusal means the portion you are publishing does not follow the one already published;
 - an identity refusal means a `request_id` or `response_id` is being reused with different content, and the durable record wins.
