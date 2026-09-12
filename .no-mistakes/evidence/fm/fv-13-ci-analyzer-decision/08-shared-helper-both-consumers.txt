@@ -1,0 +1,6 @@
+# the same shared helper backs the ci.yml timeout case in tests/fm-test-run.test.sh
+$ bash -c ". tests/lib.sh; fm_yaml_to_json .github/workflows/ci.yml | head -c 120"
+{"name": "CI", "true": {"push": {"branches": ["main"]}, "pull_request": {"branches": ["main"]}}, "permissions": {"conten
+
+$ PYTHONPATH=<shadow> bash -c ". tests/lib.sh; fm_yaml_to_json .github/workflows/ci.yml; echo rc=$?"
+rc=127

@@ -1,0 +1,63 @@
+### A. test.instructions key removed (regression that reopens the analyzer refusal)
+--- parsed .no-mistakes.yaml ---
+commands: {'lint': 'bin/fm-lint.sh'}
+test keys: ['evidence']
+test.instructions: NoneType None
+$ bin/fm-test-run.sh tests/fm-nm-test-contract.test.sh
+FM_TEST_BEGIN 2026-09-12T17:34:42Z tests/fm-nm-test-contract.test.sh family=unclassified expected_gate_skip=none
+ok - no-mistakes does not configure commands.test
+not ok - test.instructions must stay present and non-empty so the test analyzer keeps its live-evidence runbook; test.instructions is NoneType rather than a string
+FM_TEST_END 2026-09-12T17:34:42Z tests/fm-nm-test-contract.test.sh exit=1 duration_ms=624 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=1 skipped_gate=0 duration_ms=796
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=624 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-nm-test-contract.test.sh duration_ms=624
+exit=1
+
+### B. test.instructions present but whitespace-only
+--- parsed .no-mistakes.yaml ---
+commands: {'lint': 'bin/fm-lint.sh'}
+test keys: ['evidence', 'instructions']
+test.instructions: str '   \n  \n'
+$ bin/fm-test-run.sh tests/fm-nm-test-contract.test.sh
+FM_TEST_BEGIN 2026-09-12T17:34:43Z tests/fm-nm-test-contract.test.sh family=unclassified expected_gate_skip=none
+ok - no-mistakes does not configure commands.test
+not ok - test.instructions must stay present and non-empty so the test analyzer keeps its live-evidence runbook; test.instructions is empty
+FM_TEST_END 2026-09-12T17:34:43Z tests/fm-nm-test-contract.test.sh exit=1 duration_ms=709 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=1 skipped_gate=0 duration_ms=887
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=709 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-nm-test-contract.test.sh duration_ms=709
+exit=1
+
+### C. test.instructions replaced by a YAML list
+--- parsed .no-mistakes.yaml ---
+commands: {'lint': 'bin/fm-lint.sh'}
+test keys: ['evidence', 'instructions']
+test.instructions: list ['read the runbook']
+$ bin/fm-test-run.sh tests/fm-nm-test-contract.test.sh
+FM_TEST_BEGIN 2026-09-12T17:34:44Z tests/fm-nm-test-contract.test.sh family=unclassified expected_gate_skip=none
+ok - no-mistakes does not configure commands.test
+not ok - test.instructions must stay present and non-empty so the test analyzer keeps its live-evidence runbook; test.instructions is list rather than a string
+FM_TEST_END 2026-09-12T17:34:44Z tests/fm-nm-test-contract.test.sh exit=1 duration_ms=591 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=1 skipped_gate=0 duration_ms=770
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=591 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-nm-test-contract.test.sh duration_ms=591
+exit=1
+
+### E. restored file passes again
+FM_TEST_BEGIN 2026-09-12T17:34:45Z tests/fm-nm-test-contract.test.sh family=unclassified expected_gate_skip=none
+ok - no-mistakes does not configure commands.test
+ok - no-mistakes carries a non-empty test.instructions runbook
+FM_TEST_END 2026-09-12T17:34:45Z tests/fm-nm-test-contract.test.sh exit=0 duration_ms=687 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=877
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=687 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-nm-test-contract.test.sh duration_ms=687
+exit=0
+### D. a deterministic commands.test is reintroduced
+$ bin/fm-test-run.sh tests/fm-nm-test-contract.test.sh
+FM_TEST_BEGIN 2026-09-12T17:34:57Z tests/fm-nm-test-contract.test.sh family=unclassified expected_gate_skip=none
+not ok - commands.test must be absent or empty so Test stays intent-targeted; got: 'bin/fm-test-run.sh --all'
+FM_TEST_END 2026-09-12T17:34:57Z tests/fm-nm-test-contract.test.sh exit=1 duration_ms=379 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=1 skipped_gate=0 duration_ms=574
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=379 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-nm-test-contract.test.sh duration_ms=379
+exit=1
