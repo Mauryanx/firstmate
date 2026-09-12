@@ -71,8 +71,9 @@ test:
 
     When such a script executes a scenario, that IS driving the product live in
     this run: report the scenario "pass" with "live": true and cite the script
-    and the transcript lines it printed. Each "PASS: <behavior>" and
-    "ok - <behavior>" line names the observable behavior that was driven, and
+    and the transcript lines it printed. Each "ok - <behavior>" line, and each
+    "PASS: <behavior>" line a child contract executable prints through its
+    owning .test.sh wrapper, names an observable behavior that was driven, and
     the closing "FM_TEST_END ... exit=0 gate_skip=false" proves the script
     really ran, so that transcript is behavior-level evidence rather than
     generic pass/fail output. This is the standing rule that an existing
@@ -94,10 +95,12 @@ test:
     missing and how to supply it - never "pass", and never "live": true.
 
     The runner hands you that reason. A guard that cannot run here prints
-    "skip: live: <what stopped it>" and ends with "gate_skip=true", and that
-    skip line names the exact variable that would turn the guard on. A skipped
-    guard is not a met guarantee, and a fixture replaying a harness's rendered
-    output proves only the assumption recorded in the fixture.
+    "skip: <reason>" as its first meaningful line and ends with
+    "gate_skip=true". An opt-in skip names the variable that would turn the
+    guard on; a capability skip names the tool, harness or host requirement
+    that was unavailable. A skipped guard is not a met guarantee, and a fixture
+    replaying a harness's rendered output proves only the assumption recorded
+    in the fixture.
 
     DO NOT MANUFACTURE LIVE EVIDENCE.
     Do not set FM_LIVE, or any guard's own control variable, to force a skipped

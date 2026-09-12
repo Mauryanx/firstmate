@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Contract: parsed .no-mistakes.yaml must leave commands.test absent or empty.
+# Contract: parsed .no-mistakes.yaml must leave commands.test absent or empty
+# and must carry a non-empty test.instructions runbook.
 set -u
 
 # shellcheck source=tests/lib.sh
@@ -23,4 +24,31 @@ puts (val.nil? || val == false || val == "") ? "" : val.inspect
   pass "no-mistakes does not configure commands.test"
 }
 
+test_nm_carries_a_test_instructions_runbook() {
+  command -v ruby >/dev/null 2>&1 \
+    || fail "ruby is required to parse .no-mistakes.yaml for this contract"
+  local status
+  status=$(ruby -ryaml -e '
+doc = YAML.load_file(ARGV[0]) || {}
+test = doc["test"]
+if !test.is_a?(Hash)
+  puts "test is not a mapping"
+else
+  val = test["instructions"]
+  if !val.is_a?(String)
+    puts "test.instructions is #{val.class} rather than a string"
+  elsif val.strip.empty?
+    puts "test.instructions is empty"
+  else
+    puts "ok"
+  end
+end
+' "$NM") || fail "failed to parse .no-mistakes.yaml as YAML"
+  if [ "$status" != ok ]; then
+    fail "test.instructions must stay present and non-empty so the test analyzer keeps its live-evidence runbook; $status"
+  fi
+  pass "no-mistakes carries a non-empty test.instructions runbook"
+}
+
 test_nm_has_no_deterministic_test_command
+test_nm_carries_a_test_instructions_runbook
