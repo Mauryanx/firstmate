@@ -1,0 +1,8 @@
+$ hostname
+hermes-1
+$ herdr --version
+herdr 0.9.0
+
+Read-only client-version check of the real Herdr binary at /home/firstmate/.local/bin/herdr
+on Hermes, the host this gate runs on. Corroborates the record's Hermes line that the
+host is on a 0.9.0 client. No server was started and no operator session was touched.

@@ -1,0 +1,17 @@
+# Real consumer of the changed docs: bin/fm-doc-audience-check.sh
+# (validates every tracked markdown surface's local links AND #anchors)
+
+$ bin/fm-doc-audience-check.sh   # worktree at target commit 549f7a7
+fm-doc-audience-check: ok surfaces=100 local_links=393
+rc=0
+
+--- adversarial A: rename the new 0.9.0 record heading so the new pointer's anchor no longer exists ---
+$ sed -i 's/^### Herdr 0.9.0 compatibility and federation$/### Herdr 0.9.0 compatibility and federation notes/' docs/verification/runtime-backends.md
+$ bin/fm-doc-audience-check.sh --root <temp copy>
+fm-doc-audience-check: unresolved local anchor in docs/herdr-backend.md: verification/runtime-backends.md#herdr-090-compatibility-and-federation
+rc=1
+
+--- adversarial B: repoint the new pointer at a file that does not exist ---
+$ bin/fm-doc-audience-check.sh --root <temp copy>
+fm-doc-audience-check: unresolved local link in docs/herdr-backend.md: verification/runtime-backends-090.md#herdr-090-compatibility-and-federation
+rc=1
