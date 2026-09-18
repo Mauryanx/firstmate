@@ -149,6 +149,9 @@ if [ "${1:-}" = --provider ]; then
   # Per-account Codex read: quota-axi reports the account named by CODEX_HOME.
   [ "${2:-}" = codex ] && [ "${3:-}" = --json ] || exit 2
   printf '%s\n' "$CODEX_HOME" >> "${QUOTA_AXI_CALLS%.calls}.codex-homes"
+  if [ -n "${QUOTA_AXI_HANG_ACCOUNT:-}" ] && [ "$(basename "${CODEX_HOME:?}")" = "$QUOTA_AXI_HANG_ACCOUNT" ]; then
+    sleep 60
+  fi
   account_fixture="${QUOTA_AXI_ACCOUNT_DIR:-/nonexistent}/$(basename "${CODEX_HOME:?}").json"
   [ -f "$account_fixture" ] || exit 1
   cat "$account_fixture"
@@ -411,6 +414,42 @@ assert_contains "$out" '  status: clear' "account-free profiles still resolve"
 assert_not_contains "$out" '--codex-home' "a profile without codexHome never fabricates an account"
 assert_absent "$LOG/quota-axi.codex-homes" "no codexHome profile means no per-account quota read"
 pass "the Codex account axis survives typed resolution: identity, per-account quota, and carry-through"
+
+# --- per-account reads are limited to reachable homes and hard bounded ---------
+UNREACHABLE_DEFAULT="$TMP_ROOT/unreachable-default.json"
+printf '%s\n' '{"rules":[{"when":"A simple bug fix with a stated root cause.","use":{"harness":"claude","model":"sonnet","effort":"high"}}],"default":[{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-1"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-3"}]}' > "$UNREACHABLE_DEFAULT"
+cp "$UNREACHABLE_DEFAULT" "$RULES"
+cat > "$RESPONSE" <<'JSON'
+{"model":"jev-1.13.0","answers":{"rule":{"type":"choice","choice":"rule_1","confidence":0.97,"probabilities":{"rule_1":0.97,"default":0.03}}},"usage":{"input_tokens":100,"output_tokens":60}}
+JSON
+reset_log
+run_with_home code out err "$CODEX_HOME_ROOT" "$BRIEF"
+assert_contains "$out" "  profile: --harness 'claude' --model 'sonnet' --effort 'high'" "a floorless matched rule resolves from its own use profiles"
+assert_absent "$LOG/quota-axi.codex-homes" "default accounts a floorless matched rule can never reach are not read"
+
+FALL_THROUGH_DEFAULT="$TMP_ROOT/fall-through-default.json"
+printf '%s\n' '{"rules":[{"when":"A simple bug fix with a stated root cause.","floor":{"scope":"model:fable","min_percent":20,"provider":"claude"},"use":{"harness":"claude","model":"fable","effort":"xhigh"}}],"default":[{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-1"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-3"}]}' > "$FALL_THROUGH_DEFAULT"
+cp "$FALL_THROUGH_DEFAULT" "$RULES"
+reset_log
+run_with_home code out err "$CODEX_HOME_ROOT" "$BRIEF"
+assert_contains "$out" '  note: rule rule_1 floor model:fable below 20%: fall through to default' "the rule floor still falls through to default"
+assert_equals '2' "$(wc -l < "$LOG/quota-axi.codex-homes" | tr -d ' ')" "default accounts a rule floor can fall through to are read"
+assert_contains "$out" "  profile: --harness 'codex' --model 'gpt-5.5' --codex-home '~/.codex-3'" "the fall-through default still selects on per-account quota"
+
+HANGING_ACCOUNTS="$TMP_ROOT/hanging-account.json"
+printf '%s\n' '{"rules":[{"when":"A simple bug fix with a stated root cause.","use":[{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-2"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-3"}]}]}' > "$HANGING_ACCOUNTS"
+cp "$HANGING_ACCOUNTS" "$RULES"
+reset_log
+started=$SECONDS
+QUOTA_AXI_HANG_ACCOUNT=.codex-2 run_with_home code out err "$CODEX_HOME_ROOT" "$BRIEF"
+elapsed=$(( SECONDS - started ))
+expect_code 0 "$code" "a stalled per-account quota read still exits 0"
+[ "$elapsed" -lt 30 ] || fail "a stalled per-account quota read is bounded (took ${elapsed}s)"
+assert_contains "$out" 'candidate: codex:gpt-5.5@~/.codex-2  provider=codex  -> eligible, unranked: codex account ~/.codex-2 quota unreadable: disclosed uncertainty' "a bounded-out account is disclosed, never ranked"
+assert_contains "$out" "  profile: --harness 'codex' --model 'gpt-5.5' --codex-home '~/.codex-3'" "a stalled account never blocks the answer the readable accounts support"
+
+cp "$BASE_RULES" "$RULES"
+pass "per-account Codex reads cover only reachable homes and survive a stalled account"
 
 # --- ambiguous: fixed confidence floor -----------------------------------------
 reset_log

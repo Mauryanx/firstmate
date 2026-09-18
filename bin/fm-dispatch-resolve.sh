@@ -23,9 +23,9 @@
 #   `provider` and `floor`, the quota rows from ONE quota-axi --json snapshot,
 #   and the spendPriority argmax over the eligible candidates. A profile that
 #   declares the Codex account axis `codexHome` is bounded by that account's own
-#   quota instead, read once per distinct home through
-#   fm_quota_axi_read_codex_home, because the account-wide snapshot cannot tell
-#   two ChatGPT accounts apart. The model never
+#   quota instead, because the account-wide snapshot cannot tell two ChatGPT
+#   accounts apart: every home this answer can still reach is read once through
+#   fm_quota_axi_read_codex_home under a five-second bound. The model never
 #   sees quota, catalogs, approvals, `why`, or `use`. With no rules, it returns
 #   a non-clear result so firstmate keeps using the existing intake.
 #   docs/configuration.md "Crew dispatch profiles" owns the declared fields and
@@ -72,11 +72,14 @@ CONFIG="${FM_CONFIG_OVERRIDE:-$FM_HOME/config}"
 . "$SCRIPT_DIR/fm-env-lib.sh"
 # shellcheck source=bin/fm-timing-lib.sh
 . "$SCRIPT_DIR/fm-timing-lib.sh"
+# shellcheck source=bin/fm-timeout-lib.sh
+. "$SCRIPT_DIR/fm-timeout-lib.sh"
 
 CONFIDENCE_FLOOR=0.6
 TS_MODEL=jev-latest
 TS_BASE=https://api.typesafe.ai
 TS_TIMEOUT=5
+ACCOUNT_QUOTA_TIMEOUT=5
 DEFAULT_WHEN="No listed rule applies to this task."
 
 die() { printf 'error: %s\n' "$1" >&2; exit 2; }
@@ -273,15 +276,17 @@ fm_quota_json_valid < "$QUOTA" || emit_error "quota-axi --json returned an inval
 # ---- per-account Codex quota: one read per distinct reachable codexHome --------
 # The account-wide snapshot above reports the ambient CODEX_HOME only, so it
 # cannot tell two ChatGPT accounts apart. Each home named by a profile this
-# answer can reach is read once with that home exported, and that read bounds
-# only the candidates carrying it.
+# answer can still reach - the matched rule use profiles, plus default only
+# where the answer can fall through to it - is read once with that home
+# exported under a hard bound, and that read bounds only the candidates
+# carrying it.
 ACCOUNTS='{}'
 while IFS= read -r -d '' codex_home; do
   [ -n "$codex_home" ] || continue
   if ! fm_codex_home_validate "$codex_home"; then
     ACCOUNTS=$(jq -c --arg h "$codex_home" --arg reason "$FM_CODEX_HOME_ERROR" \
       '. + {($h): {refused: $reason}}' <<<"$ACCOUNTS") || emit_error "codex account bookkeeping failed"
-  elif fm_quota_axi_read_codex_home "$codex_home" --json > "$ACCOUNT_QUOTA" 2>/dev/null &&
+  elif fm_quota_axi_read_codex_home --timeout "$ACCOUNT_QUOTA_TIMEOUT" "$codex_home" --json > "$ACCOUNT_QUOTA" 2>/dev/null &&
     fm_quota_json_valid < "$ACCOUNT_QUOTA"; then
     ACCOUNTS=$(jq -c --arg h "$codex_home" --slurpfile snapshot "$ACCOUNT_QUOTA" \
       '. + {($h): {snapshot: $snapshot[0]}}' <<<"$ACCOUNTS") || emit_error "codex account bookkeeping failed"
@@ -295,7 +300,11 @@ done < <(jq -j --slurpfile resp "$RESP_FILE" '
   (if ($choice | type) == "string" and ($choice | test("^rule_[1-9][0-9]*$"))
    then ($choice | ltrimstr("rule_") | tonumber) else null end) as $n |
   (if $n != null and $n <= ((.rules // []) | length) then .rules[$n - 1] else null end) as $rule |
-  ((if $rule == null then [] else profiles($rule.use) end) + profiles(.default // null))
+  (if $rule != null then profiles($rule.use) else [] end) as $use |
+  (if $rule == null then (if $choice == "default" then profiles(.default // null) else [] end)
+   elif ($rule.floor // null) != null then profiles(.default // null)
+   else [] end) as $fall_through |
+  ($use + $fall_through)
   | map(.codexHome // empty) | unique | .[] | . + "\u0000"' "$RULES")
 
 # ---- resolution: declared gates + quota evidence + argmax, all in jq ------------
