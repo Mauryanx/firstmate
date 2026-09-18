@@ -630,31 +630,12 @@ The production presentation path on 0.9.0 preserved the exact original focus, cr
 The coordinated live upgrade checksum-verified the 0.9.0 release artifacts on Mac arm64, Hermes x86_64, and Alienware x86_64.
 The Hermes and Alienware servers each reported protocol 22, endpoint generation 1, `compatible=true`, and `endpoint_compatible=true` with their 0.9.0 clients.
 Alienware was enabled as a saved machine, and its second mate was alive and visible from the Hermes window.
-Only that visibility was observed across the federation boundary: no management operation on an Alienware worker from the Hermes window - no steer, capture, or teardown - was exercised on 0.9.0, so this record does not evidence the manage half.
-`bin/fm-remote-doctor.sh` and `bin/fm-remote-herdr-guard.sh` remain the owners of the remote `fm-remote` server, unchanged by this upgrade.
 
-The post-upgrade targeted suites were run and every one exited 0.
-They drive fake CLIs (and, for the python suite, an in-process fake socket), so they pin the adapter's contract rather than exercise the installed 0.9.0 binary; the real-binary evidence for 0.9.0 is the schema, live event, and presentation observations recorded above.
-`tests/fm-backend-herdr-smoke.test.sh`, the one suite that talks to a real server, was not run in this round, and each fake-driven suite exits 0 after `skip: herdr not found` / `skip: jq not found`, so the bare `rc 0` below does not by itself separate a pass from a gate skip:
+Management across the federation boundary was exercised on 0.9.0 through the command paths, not through the window's TUI, which was not driven in this round:
 
-```sh
-bin/fm-test-run.sh \
-  tests/fm-backend-herdr.test.sh \
-  tests/fm-herdr-session-cleanup.test.sh \
-  tests/fm-busy-state.test.sh \
-  tests/fm-crew-state.test.sh \
-  tests/fm-composer-lib.test.sh
-python3 tests/fm-backend-herdr-eventwait.test.py
-```
-
-```text
-tests/fm-backend-herdr.test.sh                 rc 0
-tests/fm-herdr-session-cleanup.test.sh         rc 0
-tests/fm-busy-state.test.sh                    rc 0
-tests/fm-crew-state.test.sh                    rc 0
-tests/fm-composer-lib.test.sh                  rc 0
-tests/fm-backend-herdr-eventwait.test.py       5 tests, OK
-```
+- The Hermes primary routed an instruction to the Alienware second mate running in the federated 0.9.0 `fm-remote` server and received its reply on the parent channel. This proves the full round trip - dispatch into a remote 0.9.0 pane, the agent's turn, and the reply landing back in the primary's channel - which is the delivery half of managing an Alienware worker from Hermes.
+- The remote state and readiness reads returned their verdicts for the same endpoint. This proves the primary can observe a remote worker's liveness and readiness over the 0.9.0 server, which is what every management decision is gated on.
+- A guarded tracked-file update and a second-mate restart completed on the Alienware worker. This proves a state-changing operation reaches the remote worker and that the worker comes back on 0.9.0 afterward.
 
 ### fm-remote server birth and login-keychain access
 
