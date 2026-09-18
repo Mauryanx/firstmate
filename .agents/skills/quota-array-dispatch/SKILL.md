@@ -35,6 +35,7 @@ Use it only when the brief already fixed the candidate order and every candidate
 It does not replace the reasoning-class, runway-feasibility, or authentication gates above.
 Firstmate can optionally arm `bin/fm-procevent-quota.sh` for a recurring mid-task check that wakes when the tracked provider drops below its configured threshold or its runway becomes `exhausted_now`.
 Arm it for a worker launched with `--codex-home` as `--provider codex --codex-home <that home>`, because a watch without the account axis reads the ambient `~/.codex` account and is no evidence for a worker on another home.
+The opt-in `bin/fm-dispatch-resolve.sh` (`docs/configuration.md` "Typed dispatch resolution") applies the same eligibility gates and `spendPriority` argmax in code after a typed rule match; it never removes this skill's authority, and its `ambiguous`, `escalate`, and `error` outcomes return here.
 
 ## Read the default TOON
 
