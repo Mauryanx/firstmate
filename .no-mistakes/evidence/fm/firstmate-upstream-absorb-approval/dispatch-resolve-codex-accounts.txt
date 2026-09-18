@@ -1,0 +1,42 @@
+== Typed dispatch resolution over the documented six-Codex-account example ==
+   FM_HOME=<throwaway>  config/crew-dispatch.json = docs/examples/crew-dispatch.json
+   ~/.codex 12%  ~/.codex-1 20%  ~/.codex-2 41%  ~/.codex-3 88%  ~/.codex-4 55%  ~/.codex-5 never signed in
+
+--- case 1: every reachable account read on its own quota ---
+$ fm-dispatch-resolve.sh brief.md      # all accounts reachable
+dispatch-resolve:
+  status: clear
+  model: jev-1.13.0   latency_ms: 39   tokens: 812/60
+  rule: default (No listed rule applies to this task.)   confidence: 0.94
+  probabilities: rule_1=0.02 rule_2=0.02 rule_3=0.02 default=0.94
+  note: no rule matched
+  candidate: codex:gpt-5.5@~/.codex  provider=codex  scope=all_models  remaining=12%  spendPriority=-0.94  runway=through_reset  -> eligible
+  candidate: codex:gpt-5.5@~/.codex-1  provider=codex  scope=all_models  remaining=20%  spendPriority=-0.90  runway=through_reset  -> eligible
+  candidate: codex:gpt-5.5@~/.codex-2  provider=codex  scope=all_models  remaining=41%  spendPriority=-0.30  runway=through_reset  -> eligible
+  candidate: codex:gpt-5.5@~/.codex-3  provider=codex  scope=all_models  remaining=88%  spendPriority=0.61  runway=through_reset  -> eligible
+  candidate: codex:gpt-5.5@~/.codex-4  provider=codex  scope=all_models  remaining=55%  spendPriority=0.10  runway=through_reset  -> eligible
+  candidate: codex:gpt-5.5@~/.codex-5  provider=codex  -> not eligible: codex account ~/.codex-5 refused: codex home '/tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-5' has no non-empty auth.json; sign that account in with CODEX_HOME='/tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-5' codex login before dispatching on it
+  candidate: pi:anthropic/claude-sonnet-5  provider=claude  scope=all_models  remaining=79%  spendPriority=-0.46  runway=through_reset  -> eligible
+  profile: --harness 'codex' --model 'gpt-5.5' --effort 'medium' --codex-home '~/.codex-3'
+
+[wall clock: 1s]  [per-account quota-axi reads: /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-1 /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-2 /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-3 /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-4 ]
+
+-- case 2: three accounts stall; the answer still lands under one shared bound --
+$ fm-dispatch-resolve.sh brief.md      # CODEX_HOME reads for .codex-1/.codex-2/.codex-4 hang
+dispatch-resolve:
+  status: clear
+  model: jev-1.13.0   latency_ms: 36   tokens: 812/60
+  rule: default (No listed rule applies to this task.)   confidence: 0.94
+  probabilities: rule_1=0.02 rule_2=0.02 rule_3=0.02 default=0.94
+  note: no rule matched
+  note: 3 eligible candidate(s) unranked (codex)
+  candidate: codex:gpt-5.5@~/.codex  provider=codex  scope=all_models  remaining=12%  spendPriority=-0.94  runway=through_reset  -> eligible
+  candidate: codex:gpt-5.5@~/.codex-1  provider=codex  -> eligible, unranked: codex account ~/.codex-1 quota unreadable: disclosed uncertainty
+  candidate: codex:gpt-5.5@~/.codex-2  provider=codex  -> eligible, unranked: codex account ~/.codex-2 quota unreadable: disclosed uncertainty
+  candidate: codex:gpt-5.5@~/.codex-3  provider=codex  scope=all_models  remaining=88%  spendPriority=0.61  runway=through_reset  -> eligible
+  candidate: codex:gpt-5.5@~/.codex-4  provider=codex  -> eligible, unranked: codex account ~/.codex-4 quota unreadable: disclosed uncertainty
+  candidate: codex:gpt-5.5@~/.codex-5  provider=codex  -> not eligible: codex account ~/.codex-5 refused: codex home '/tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-5' has no non-empty auth.json; sign that account in with CODEX_HOME='/tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-5' codex login before dispatching on it
+  candidate: pi:anthropic/claude-sonnet-5  provider=claude  scope=all_models  remaining=79%  spendPriority=-0.46  runway=through_reset  -> eligible
+  profile: --harness 'codex' --model 'gpt-5.5' --effort 'medium' --codex-home '~/.codex-3'
+
+[wall clock: 6s]  [per-account quota-axi reads: /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-1 /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-2 /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-3 /tmp/tmp.Z2XTJYBG3x/codex-homes/.codex-4 ]

@@ -1,0 +1,13 @@
+== A maintainer edits bin/fm-timeout-lib.sh and asks the runner what to run ==
+
+--- BEFORE this change (bin/fm-test-run.sh at merge commit 005df64) ---
+$ bin/fm-test-run.sh --list --changed --base HEAD | grep -E "dispatch-resolve|procevent-quota"
+tests/fm-procevent-quota.test.sh
+
+--- AFTER this change (bin/fm-test-run.sh at f99c23a) ---
+$ bin/fm-test-run.sh --list --changed --base HEAD | grep -E "dispatch-resolve|procevent-quota"
+tests/fm-procevent-quota.test.sh
+tests/fm-dispatch-resolve.test.sh
+
+The suite holding the resolver per-account timeout regression is now selected
+by the changed-file-informed path CONTRIBUTING.md documents.
