@@ -145,6 +145,15 @@ else
 fi
 printf '%s\n' "$*" >> "${QUOTA_AXI_CALLS:?}"
 [ "${FAKE_QUOTA_FAIL:-0}" = 1 ] && exit 1
+if [ "${1:-}" = --provider ]; then
+  # Per-account Codex read: quota-axi reports the account named by CODEX_HOME.
+  [ "${2:-}" = codex ] && [ "${3:-}" = --json ] || exit 2
+  printf '%s\n' "$CODEX_HOME" >> "${QUOTA_AXI_CALLS%.calls}.codex-homes"
+  account_fixture="${QUOTA_AXI_ACCOUNT_DIR:-/nonexistent}/$(basename "${CODEX_HOME:?}").json"
+  [ -f "$account_fixture" ] || exit 1
+  cat "$account_fixture"
+  exit 0
+fi
 [ "${1:-}" = --json ] || exit 2
 cat "${QUOTA_AXI_FIXTURE:?}"
 SH
@@ -164,6 +173,18 @@ run() {
   local __exit=$1 __out=$2 __err=$3 _out _code
   shift 3
   _out=$(PATH="$FAKEBIN:$BASE_PATH" FM_HOME="$HOME_DIR" "$TOOL" "$@" 2> "$TMP_ROOT/stderr")
+  _code=$?
+  printf -v "$__exit" '%s' "$_code"
+  printf -v "$__out" '%s' "$_out"
+  printf -v "$__err" '%s' "$(cat "$TMP_ROOT/stderr")"
+}
+
+# run_with_home <exit-var> <out-var> <err-var> <home> [args...]: run() with a
+# $HOME whose ~/.codex* directories are the fake Codex accounts.
+run_with_home() {
+  local __exit=$1 __out=$2 __err=$3 __home=$4 _out _code
+  shift 4
+  _out=$(PATH="$FAKEBIN:$BASE_PATH" FM_HOME="$HOME_DIR" HOME="$__home" TYPESAFE_API_KEY="$KEY" "$TOOL" "$@" 2> "$TMP_ROOT/stderr")
   _code=$?
   printf -v "$__exit" '%s' "$_code"
   printf -v "$__out" '%s' "$_out"
@@ -329,6 +350,67 @@ assert_contains "$out" 'candidate: pi:anthropic/claude-sonnet-5  provider=claude
 assert_not_contains "$err" 'malformed rules file' "the documented example reaches resolution"
 cp "$BASE_RULES" "$RULES"
 pass "no-rule fallback, Agy, Gemini, and documented configurations resolve"
+
+# --- Codex account axis: identity, per-account quota, carry-through ------------
+CODEX_HOME_ROOT="$TMP_ROOT/codex-accounts"
+ACCOUNT_FIXTURES="$TMP_ROOT/codex-account-quota"
+mkdir -p "$ACCOUNT_FIXTURES"
+export QUOTA_AXI_ACCOUNT_DIR="$ACCOUNT_FIXTURES"
+write_account_quota() {  # <account-dir-name> <percent-remaining> <spendPriority>
+  mkdir -p "$CODEX_HOME_ROOT/$1"
+  printf '%s\n' '{"tokens":{"access_token":"fake"}}' > "$CODEX_HOME_ROOT/$1/auth.json"
+  cat > "$ACCOUNT_FIXTURES/$1.json" <<JSON
+{
+  "generatedAt": "2030-01-01T00:00:00Z",
+  "schemaVersion": 5,
+  "providers": [
+    { "provider": "codex", "state": { "status": "fresh" }, "quotaSemantics": { "status": "known", "effectiveAvailability": [
+      { "scope": "all_models", "status": "known", "effectivePercentRemaining": $2, "runway": { "status": "through_reset" }, "selection": { "spendPriority": $3 } } ] } }
+  ]
+}
+JSON
+}
+for account in .codex .codex-1 .codex-2 .codex-4 .codex-5; do
+  write_account_quota "$account" 20 -0.9
+done
+write_account_quota .codex-3 88 0.61
+
+cp "$ROOT/docs/examples/crew-dispatch.json" "$RULES"
+cat > "$RESPONSE" <<'JSON'
+{"model":"jev-1.13.0","answers":{"rule":{"type":"choice","choice":"default","confidence":0.9,"probabilities":{"rule_1":0.02,"rule_2":0.02,"rule_3":0.02,"default":0.94}}},"usage":{"input_tokens":812,"output_tokens":60}}
+JSON
+reset_log
+run_with_home code out err "$CODEX_HOME_ROOT" "$BRIEF"
+expect_code 0 "$code" "six documented Codex accounts are six candidates, not a malformed file"
+assert_not_contains "$err" 'malformed rules file' "profiles differing only by codexHome are distinct identities"
+assert_contains "$out" '  status: clear' "the documented multi-account default resolves"
+assert_contains "$out" 'candidate: codex:gpt-5.5@~/.codex-3  provider=codex  scope=all_models  remaining=88%  spendPriority=0.61  runway=through_reset  -> eligible' "each account is ranked on its own quota read"
+assert_contains "$out" 'candidate: codex:gpt-5.5@~/.codex-1  provider=codex  scope=all_models  remaining=20%  spendPriority=-0.9  runway=through_reset  -> eligible' "a second account carries its own evidence"
+assert_contains "$out" "  profile: --harness 'codex' --model 'gpt-5.5' --effort 'medium' --codex-home '~/.codex-3'" "a clear answer carries the selected account as fm-spawn's --codex-home"
+homes=$(cat "$LOG/quota-axi.codex-homes")
+assert_equals '6' "$(printf '%s\n' "$homes" | wc -l | tr -d ' ')" "one per-account quota read per distinct codexHome"
+assert_contains "$homes" '/.codex-3' "the selected account was read under its own CODEX_HOME"
+
+REFUSED_RULES="$TMP_ROOT/refused-account.json"
+printf '%s\n' '{"rules":[{"when":"A simple bug fix with a stated root cause.","use":[{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-9"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-1"}]}]}' > "$REFUSED_RULES"
+cp "$REFUSED_RULES" "$RULES"
+cat > "$RESPONSE" <<'JSON'
+{"model":"jev-1.13.0","answers":{"rule":{"type":"choice","choice":"rule_1","confidence":0.97,"probabilities":{"rule_1":0.97,"default":0.03}}},"usage":{"input_tokens":100,"output_tokens":60}}
+JSON
+reset_log
+run_with_home code out err "$CODEX_HOME_ROOT" "$BRIEF"
+assert_contains "$out" 'candidate: codex:gpt-5.5@~/.codex-9' "an unsigned-in account stays visible as a candidate"
+assert_contains "$out" 'not eligible: codex account ~/.codex-9 refused' "an account fm-spawn would refuse is never ranked on another account quota"
+assert_contains "$out" "  profile: --harness 'codex' --model 'gpt-5.5' --codex-home '~/.codex-1'" "the surviving account is named explicitly, never left to the ambient CODEX_HOME"
+
+cp "$BASE_RULES" "$RULES"
+write_response "$RESPONSE" rule_4 0.9
+reset_log
+TYPESAFE_API_KEY=$KEY run code out err "$BRIEF"
+assert_contains "$out" '  status: clear' "account-free profiles still resolve"
+assert_not_contains "$out" '--codex-home' "a profile without codexHome never fabricates an account"
+assert_absent "$LOG/quota-axi.codex-homes" "no codexHome profile means no per-account quota read"
+pass "the Codex account axis survives typed resolution: identity, per-account quota, and carry-through"
 
 # --- ambiguous: fixed confidence floor -----------------------------------------
 reset_log
@@ -605,12 +687,15 @@ for bad in \
   '{"rules":[{"when":"x","use":{"harness":"claude"},"select":"mystery"}]}|unknown select: mystery' \
   '{"rules":[{"when":"x","use":{"harness":"claude"},"floor":{"scope":"model:fable","min_percent":20}}]}|rule floor needs scope, min_percent 0..100, and provider matching ^[a-z0-9]+(-[a-z0-9]+)*\z' \
   '{"rules":[{"when":"x","use":{"harness":"claude"},"floor":{"scope":"model:fable","min_percent":20,"provider":"CLAUDE"}}]}|rule floor needs scope, min_percent 0..100, and provider matching ^[a-z0-9]+(-[a-z0-9]+)*\z' \
-  '{"rules":[{"when":"x","use":{"harness":"claude","provider":""}}]}|each use profile needs harness; model, effort, and floor must be well formed, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
-  '{"rules":[{"when":"x","use":{"harness":"claude","provider":" claude"}}]}|each use profile needs harness; model, effort, and floor must be well formed, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
-  '{"rules":[{"when":"x","use":{"harness":"claude","provider":"claude\n"}}]}|each use profile needs harness; model, effort, and floor must be well formed, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
-  '{"rules":[{"when":"x","use":{"harness":"codex","floor":{"scope":"all_models","min_percent":20,"provider":"claude"}}}]}|each use profile needs harness; model, effort, and floor must be well formed, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
-  '{"rules":[{"when":"x","use":[{"harness":"codex","model":"gpt-5.5","effort":"high"},{"harness":"codex","model":"gpt-5.5","effort":"high"}]}]}|each rule use must not contain duplicate harness, model, and effort profiles' \
-  '{"rules":[{"when":"x","use":{"harness":"codex"}}],"default":[{"harness":"claude","model":"opus"},{"harness":"claude","model":"opus"}]}|default must not contain duplicate harness, model, and effort profiles' \
+  '{"rules":[{"when":"x","use":{"harness":"claude","provider":""}}]}|each use profile needs harness; model, effort, codexHome, and floor must be well formed, codexHome applies only to harness codex, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
+  '{"rules":[{"when":"x","use":{"harness":"claude","provider":" claude"}}]}|each use profile needs harness; model, effort, codexHome, and floor must be well formed, codexHome applies only to harness codex, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
+  '{"rules":[{"when":"x","use":{"harness":"claude","provider":"claude\n"}}]}|each use profile needs harness; model, effort, codexHome, and floor must be well formed, codexHome applies only to harness codex, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
+  '{"rules":[{"when":"x","use":{"harness":"codex","floor":{"scope":"all_models","min_percent":20,"provider":"claude"}}}]}|each use profile needs harness; model, effort, codexHome, and floor must be well formed, codexHome applies only to harness codex, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
+  '{"rules":[{"when":"x","use":[{"harness":"codex","model":"gpt-5.5","effort":"high"},{"harness":"codex","model":"gpt-5.5","effort":"high"}]}]}|each rule use must not contain duplicate harness, model, effort, and codexHome profiles' \
+  '{"rules":[{"when":"x","use":{"harness":"codex"}}],"default":[{"harness":"claude","model":"opus"},{"harness":"claude","model":"opus"}]}|default must not contain duplicate harness, model, effort, and codexHome profiles' \
+  '{"rules":[{"when":"x","use":[{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-1"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-1"}]}]}|each rule use must not contain duplicate harness, model, effort, and codexHome profiles' \
+  '{"rules":[{"when":"x","use":{"harness":"claude","model":"opus","codexHome":"~/.codex-1"}}]}|each use profile needs harness; model, effort, codexHome, and floor must be well formed, codexHome applies only to harness codex, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
+  '{"rules":[{"when":"x","use":{"harness":"codex","model":"gpt-5.5","codexHome":""}}]}|each use profile needs harness; model, effort, codexHome, and floor must be well formed, codexHome applies only to harness codex, and provider must match ^[a-z0-9]+(-[a-z0-9]+)*\z when present' \
   '{"rules":[{"when":"x","use":{"harness":"spaceship"}}]}|each use profile must name a verified harness' \
   '{"rules":[{"when":"x","use":{"harness":"grok","effort":"max"}}]}|each use profile effort must be supported by its harness and model' \
   '{"rules":[{"when":"x","use":{"harness":"opencode","model":"anthropic/claude-sonnet-4-5"}}]}|use profiles whose harness lacks one authoritative provider family require provider: opencode' \
