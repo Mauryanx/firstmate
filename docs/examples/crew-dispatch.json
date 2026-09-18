@@ -26,6 +26,6 @@
     { "harness": "codex", "model": "gpt-5.5", "effort": "medium", "codexHome": "~/.codex-3" },
     { "harness": "codex", "model": "gpt-5.5", "effort": "medium", "codexHome": "~/.codex-4" },
     { "harness": "codex", "model": "gpt-5.5", "effort": "medium", "codexHome": "~/.codex-5" },
-    { "harness": "pi", "model": "anthropic/claude-sonnet-5", "effort": "medium" }
+    { "harness": "pi", "model": "anthropic/claude-sonnet-5", "effort": "medium", "provider": "claude" }
   ]
 }
