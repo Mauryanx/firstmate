@@ -308,7 +308,7 @@ if [ "${#ACCOUNT_HOMES[@]}" -gt 0 ]; then
     if fm_codex_home_validate "$codex_home"; then
       fm_quota_axi_read_codex_home --timeout "$ACCOUNT_QUOTA_TIMEOUT" "$codex_home" --json \
         > "$ACCOUNT_DIR/$i" 2>/dev/null &
-      ACCOUNT_PIDS[$i]=$!
+      ACCOUNT_PIDS[i]=$!
     else
       ACCOUNTS=$(jq -c --arg h "$codex_home" --arg reason "$FM_CODEX_HOME_ERROR" \
         '. + {($h): {refused: $reason}}' <<<"$ACCOUNTS") || emit_error "codex account bookkeeping failed"
