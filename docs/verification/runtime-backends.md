@@ -613,7 +613,8 @@ Herdr 0.9.0 was verified on 2026-09-18 with protocol 22 and endpoint protocol ge
 The exact API-schema subset Firstmate consumes was byte-identical between 0.8.0 and 0.9.0, with SHA-256 `46491a4ab4cd2c9f9304cb020aa83263e961594a7d7732b5ceace46bca5551a0` for both versions.
 That subset covers `events.subscribe`, the `pane.agent_status_changed` payload, `workspace.move`, the subscription event envelope, and the agent-status enum.
 
-The live-only event path subscribed before reading its baseline and returned an `idle` to `blocked` transition in 0.230 seconds:
+The live-only event path subscribed before reading its baseline and returned a `blocked` edge in 0.230 seconds.
+Herdr's stream is edge-triggered and carries no previous status, so `fm_backend_herdr_normalize_event` leaves the from-status empty and the record evidences a `blocked` edge with no baseline, not a transition out of a known prior status:
 
 ```text
 rc=0
@@ -623,15 +624,18 @@ elapsed=0.230s
 
 A 0.9.0 client cannot operate a 0.8.0 server, and a 0.8.0 client cannot operate a 0.9.0 server.
 The 0.8.0 server predates endpoint generation 1, so each client and server pair must move together rather than relying on Herdr's compatible-server handoff.
-Saved-machine federation must start the upgraded remote server through Herdr's detached remote workflow rather than retain the former hand-started `fm-remote` topology.
 
 The production presentation path on 0.9.0 preserved the exact original focus, created one unfocused projected workspace containing only the task tab and pane, removed that exact pane during cleanup, confirmed the projected workspace absent, and preserved the same focus afterward.
 
 The coordinated live upgrade checksum-verified the 0.9.0 release artifacts on Mac arm64, Hermes x86_64, and Alienware x86_64.
 The Hermes and Alienware servers each reported protocol 22, endpoint generation 1, `compatible=true`, and `endpoint_compatible=true` with their 0.9.0 clients.
 Alienware was enabled as a saved machine, and its second mate was alive and visible from the Hermes window.
+Only that visibility was observed across the federation boundary: no management operation on an Alienware worker from the Hermes window - no steer, capture, or teardown - was exercised on 0.9.0, so this record does not evidence the manage half.
+`bin/fm-remote-doctor.sh` and `bin/fm-remote-herdr-guard.sh` remain the owners of the remote `fm-remote` server, unchanged by this upgrade.
 
-The post-upgrade targeted suites all passed:
+The post-upgrade targeted suites were run and every one exited 0.
+They drive fake CLIs (and, for the python suite, an in-process fake socket), so they pin the adapter's contract rather than exercise the installed 0.9.0 binary; the real-binary evidence for 0.9.0 is the schema, live event, and presentation observations recorded above.
+`tests/fm-backend-herdr-smoke.test.sh`, the one suite that talks to a real server, was not run in this round, and each fake-driven suite exits 0 after `skip: herdr not found` / `skip: jq not found`, so the bare `rc 0` below does not by itself separate a pass from a gate skip:
 
 ```sh
 bin/fm-test-run.sh \
