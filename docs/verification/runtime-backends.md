@@ -607,6 +607,51 @@ The CLI matrix was checked directly:
 All destructive verification used `bin/fm-herdr-lab.sh` with a non-default `fm-lab-` name and a byte-identical default-session tripwire.
 No ambient `herdr server stop` command is a supported test operation.
 
+### Herdr 0.9.0 compatibility and federation
+
+Herdr 0.9.0 was verified on 2026-09-18 with protocol 22 and endpoint protocol generation 1.
+The exact API-schema subset Firstmate consumes was byte-identical between 0.8.0 and 0.9.0, with SHA-256 `46491a4ab4cd2c9f9304cb020aa83263e961594a7d7732b5ceace46bca5551a0` for both versions.
+That subset covers `events.subscribe`, the `pane.agent_status_changed` payload, `workspace.move`, the subscription event envelope, and the agent-status enum.
+
+The live-only event path subscribed before reading its baseline and returned an `idle` to `blocked` transition in 0.230 seconds:
+
+```text
+rc=0
+record=w1:p1<TAB>w1<TAB><empty-from><TAB>blocked<TAB>claude
+elapsed=0.230s
+```
+
+A 0.9.0 client cannot operate a 0.8.0 server, and a 0.8.0 client cannot operate a 0.9.0 server.
+The 0.8.0 server predates endpoint generation 1, so each client and server pair must move together rather than relying on Herdr's compatible-server handoff.
+Saved-machine federation must start the upgraded remote server through Herdr's detached remote workflow rather than retain the former hand-started `fm-remote` topology.
+
+The production presentation path on 0.9.0 preserved the exact original focus, created one unfocused projected workspace containing only the task tab and pane, removed that exact pane during cleanup, confirmed the projected workspace absent, and preserved the same focus afterward.
+
+The coordinated live upgrade checksum-verified the 0.9.0 release artifacts on Mac arm64, Hermes x86_64, and Alienware x86_64.
+The Hermes and Alienware servers each reported protocol 22, endpoint generation 1, `compatible=true`, and `endpoint_compatible=true` with their 0.9.0 clients.
+Alienware was enabled as a saved machine, and its second mate was alive and visible from the Hermes window.
+
+The post-upgrade targeted suites all passed:
+
+```sh
+bin/fm-test-run.sh \
+  tests/fm-backend-herdr.test.sh \
+  tests/fm-herdr-session-cleanup.test.sh \
+  tests/fm-busy-state.test.sh \
+  tests/fm-crew-state.test.sh \
+  tests/fm-composer-lib.test.sh
+python3 tests/fm-backend-herdr-eventwait.test.py
+```
+
+```text
+tests/fm-backend-herdr.test.sh                 rc 0
+tests/fm-herdr-session-cleanup.test.sh         rc 0
+tests/fm-busy-state.test.sh                    rc 0
+tests/fm-crew-state.test.sh                    rc 0
+tests/fm-composer-lib.test.sh                  rc 0
+tests/fm-backend-herdr-eventwait.test.py       5 tests, OK
+```
+
 ### fm-remote server birth and login-keychain access
 
 Measured 2026-09-09 on macOS 26 (Darwin 25.6.0) aarch64 with Claude Code 2.1.266 and Herdr 0.9.0, the guarantee behind `bin/fm-remote-herdr-guard.sh` and the doctor's `herdr-server` check: login-keychain access follows the audit session a process was born into, never the launch shape or the shell.
