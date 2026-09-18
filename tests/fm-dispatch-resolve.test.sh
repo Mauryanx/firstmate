@@ -149,9 +149,10 @@ if [ "${1:-}" = --provider ]; then
   # Per-account Codex read: quota-axi reports the account named by CODEX_HOME.
   [ "${2:-}" = codex ] && [ "${3:-}" = --json ] || exit 2
   printf '%s\n' "$CODEX_HOME" >> "${QUOTA_AXI_CALLS%.calls}.codex-homes"
-  if [ -n "${QUOTA_AXI_HANG_ACCOUNT:-}" ] && [ "$(basename "${CODEX_HOME:?}")" = "$QUOTA_AXI_HANG_ACCOUNT" ]; then
+  for hang in ${QUOTA_AXI_HANG_ACCOUNT:-}; do
+    [ "$(basename "${CODEX_HOME:?}")" = "$hang" ] || continue
     sleep 60
-  fi
+  done
   account_fixture="${QUOTA_AXI_ACCOUNT_DIR:-/nonexistent}/$(basename "${CODEX_HOME:?}").json"
   [ -f "$account_fixture" ] || exit 1
   cat "$account_fixture"
@@ -448,8 +449,27 @@ expect_code 0 "$code" "a stalled per-account quota read still exits 0"
 assert_contains "$out" 'candidate: codex:gpt-5.5@~/.codex-2  provider=codex  -> eligible, unranked: codex account ~/.codex-2 quota unreadable: disclosed uncertainty' "a bounded-out account is disclosed, never ranked"
 assert_contains "$out" "  profile: --harness 'codex' --model 'gpt-5.5' --codex-home '~/.codex-3'" "a stalled account never blocks the answer the readable accounts support"
 
-cp "$BASE_RULES" "$RULES"
 pass "per-account Codex reads cover only reachable homes and survive a stalled account"
+
+MIXED_ACCOUNTS="$TMP_ROOT/mixed-accounts.json"
+printf '%s\n' '{"rules":[{"when":"A simple bug fix with a stated root cause.","use":[{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-9"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-2"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-4"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-5"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-1"},{"harness":"codex","model":"gpt-5.5","codexHome":"~/.codex-3"}]}]}' > "$MIXED_ACCOUNTS"
+cp "$MIXED_ACCOUNTS" "$RULES"
+reset_log
+started=$SECONDS
+QUOTA_AXI_HANG_ACCOUNT='.codex-2 .codex-4 .codex-5' run_with_home code out err "$CODEX_HOME_ROOT" "$BRIEF"
+elapsed=$(( SECONDS - started ))
+expect_code 0 "$code" "three stalled accounts beside readable and refused ones still exit 0"
+[ "$elapsed" -lt 12 ] || fail "every reachable account read shares one aggregate bound, not one bound each (took ${elapsed}s)"
+assert_contains "$out" '  status: clear' "stalled accounts never take the answer the readable ones support"
+assert_contains "$out" 'not eligible: codex account ~/.codex-9 refused' "a refused account keeps its own reason beside stalled siblings"
+for stalled in 2 4 5; do
+  assert_contains "$out" "candidate: codex:gpt-5.5@~/.codex-$stalled  provider=codex  -> eligible, unranked: codex account ~/.codex-$stalled quota unreadable" \
+    "stalled account ~/.codex-$stalled is disclosed on its own evidence"
+done
+assert_contains "$out" 'candidate: codex:gpt-5.5@~/.codex-1  provider=codex  scope=all_models  remaining=20%  spendPriority=-0.9  runway=through_reset  -> eligible' "a readable account keeps its own evidence while three others stall"
+assert_contains "$out" "  profile: --harness 'codex' --model 'gpt-5.5' --codex-home '~/.codex-3'" "the argmax over the readable accounts still answers"
+cp "$BASE_RULES" "$RULES"
+pass "reachable per-account reads share one aggregate bound and keep per-account evidence"
 
 # --- ambiguous: fixed confidence floor -----------------------------------------
 reset_log

@@ -25,7 +25,8 @@
 #   declares the Codex account axis `codexHome` is bounded by that account's own
 #   quota instead, because the account-wide snapshot cannot tell two ChatGPT
 #   accounts apart: every home this answer can still reach is read once through
-#   fm_quota_axi_read_codex_home under a five-second bound. The model never
+#   fm_quota_axi_read_codex_home, all of them together under one five-second
+#   bound however many accounts are declared. The model never
 #   sees quota, catalogs, approvals, `why`, or `use`. With no rules, it returns
 #   a non-clear result so firstmate keeps using the existing intake.
 #   docs/configuration.md "Crew dispatch profiles" owns the declared fields and
@@ -226,8 +227,8 @@ fi
 
 RESP_FILE=$(mktemp) || die "mktemp failed"
 QUOTA=$(mktemp) || { rm -f "$RESP_FILE"; die "mktemp failed"; }
-ACCOUNT_QUOTA=$(mktemp) || { rm -f "$RESP_FILE" "$QUOTA"; die "mktemp failed"; }
-trap 'rm -f "$RULES" "$RESP_FILE" "$QUOTA" "$ACCOUNT_QUOTA"' EXIT
+ACCOUNT_DIR=$(mktemp -d) || { rm -f "$RESP_FILE" "$QUOTA"; die "mktemp failed"; }
+trap 'rm -f "$RULES" "$RESP_FILE" "$QUOTA"; rm -rf "$ACCOUNT_DIR"' EXIT
 LAT_MS=null
 command -v curl >/dev/null 2>&1 || emit_error "curl not installed"
   REQUEST=$(jq -n --rawfile brief "$BRIEF" --arg project "$PROJECT" --arg model "$TS_MODEL" \
@@ -278,22 +279,15 @@ fm_quota_json_valid < "$QUOTA" || emit_error "quota-axi --json returned an inval
 # cannot tell two ChatGPT accounts apart. Each home named by a profile this
 # answer can still reach - the matched rule use profiles, plus default only
 # where the answer can fall through to it - is read once with that home
-# exported under a hard bound, and that read bounds only the candidates
-# carrying it.
+# exported, and that read bounds only the candidates carrying it. The reads
+# are issued together rather than one after another, so the whole account
+# phase costs one ACCOUNT_QUOTA_TIMEOUT however many accounts a rules file
+# declares, and no account's evidence depends on how slow another was.
 ACCOUNTS='{}'
+ACCOUNT_HOMES=()
 while IFS= read -r -d '' codex_home; do
   [ -n "$codex_home" ] || continue
-  if ! fm_codex_home_validate "$codex_home"; then
-    ACCOUNTS=$(jq -c --arg h "$codex_home" --arg reason "$FM_CODEX_HOME_ERROR" \
-      '. + {($h): {refused: $reason}}' <<<"$ACCOUNTS") || emit_error "codex account bookkeeping failed"
-  elif fm_quota_axi_read_codex_home --timeout "$ACCOUNT_QUOTA_TIMEOUT" "$codex_home" --json > "$ACCOUNT_QUOTA" 2>/dev/null &&
-    fm_quota_json_valid < "$ACCOUNT_QUOTA"; then
-    ACCOUNTS=$(jq -c --arg h "$codex_home" --slurpfile snapshot "$ACCOUNT_QUOTA" \
-      '. + {($h): {snapshot: $snapshot[0]}}' <<<"$ACCOUNTS") || emit_error "codex account bookkeeping failed"
-  else
-    ACCOUNTS=$(jq -c --arg h "$codex_home" '. + {($h): {unreadable: true}}' <<<"$ACCOUNTS") ||
-      emit_error "codex account bookkeeping failed"
-  fi
+  ACCOUNT_HOMES+=("$codex_home")
 done < <(jq -j --slurpfile resp "$RESP_FILE" '
   def profiles($v): if ($v | type) == "array" then $v elif ($v | type) == "object" then [$v] else [] end;
   ($resp[0].answers.rule.choice) as $choice |
@@ -306,6 +300,32 @@ done < <(jq -j --slurpfile resp "$RESP_FILE" '
    else [] end) as $fall_through |
   ($use + $fall_through)
   | map(.codexHome // empty) | unique | .[] | . + "\u0000"' "$RULES")
+
+if [ "${#ACCOUNT_HOMES[@]}" -gt 0 ]; then
+  ACCOUNT_PIDS=()
+  for i in "${!ACCOUNT_HOMES[@]}"; do
+    codex_home=${ACCOUNT_HOMES[$i]}
+    if fm_codex_home_validate "$codex_home"; then
+      fm_quota_axi_read_codex_home --timeout "$ACCOUNT_QUOTA_TIMEOUT" "$codex_home" --json \
+        > "$ACCOUNT_DIR/$i" 2>/dev/null &
+      ACCOUNT_PIDS[$i]=$!
+    else
+      ACCOUNTS=$(jq -c --arg h "$codex_home" --arg reason "$FM_CODEX_HOME_ERROR" \
+        '. + {($h): {refused: $reason}}' <<<"$ACCOUNTS") || emit_error "codex account bookkeeping failed"
+    fi
+  done
+  for i in "${!ACCOUNT_HOMES[@]}"; do
+    [ -n "${ACCOUNT_PIDS[$i]:-}" ] || continue
+    codex_home=${ACCOUNT_HOMES[$i]}
+    if wait "${ACCOUNT_PIDS[$i]}" 2>/dev/null && fm_quota_json_valid < "$ACCOUNT_DIR/$i"; then
+      ACCOUNTS=$(jq -c --arg h "$codex_home" --slurpfile snapshot "$ACCOUNT_DIR/$i" \
+        '. + {($h): {snapshot: $snapshot[0]}}' <<<"$ACCOUNTS") || emit_error "codex account bookkeeping failed"
+    else
+      ACCOUNTS=$(jq -c --arg h "$codex_home" '. + {($h): {unreadable: true}}' <<<"$ACCOUNTS") ||
+        emit_error "codex account bookkeeping failed"
+    fi
+  done
+fi
 
 # ---- resolution: declared gates + quota evidence + argmax, all in jq ------------
 RESULT=$(jq -n --arg floor "$CONFIDENCE_FLOOR" --argjson lat "$LAT_MS" --arg none_criterion "$DEFAULT_WHEN" --argjson pmap "$PMAP" \
