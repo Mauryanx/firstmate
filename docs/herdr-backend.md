@@ -2,7 +2,8 @@
 
 Herdr is an agent-native terminal backend with native per-pane agent state and push events.
 Firstmate requires Herdr protocol 14 or newer; broad backend verification covers versions 0.7.1, 0.7.3, 0.7.4, 0.7.5, and 0.8.0, while protocol-16 features remain gated by availability.
-Herdr 0.9.0 is supported on narrower verified coverage than that lane: schema-subset equivalence with 0.8.0, one live `blocked` edge, the presentation path, the coordinated live upgrade across the captain's Mac, Hermes, and Alienware, and the Hermes-to-Alienware federation management round trip, recorded under [Herdr 0.9.0 compatibility and federation](verification/runtime-backends.md#herdr-090-compatibility-and-federation).
+Herdr 0.9.0 is supported on narrower verified coverage than that lane.
+The coordinated-upgrade record under [Herdr 0.9.0 compatibility and federation](verification/runtime-backends.md#herdr-090-compatibility-and-federation) adds schema-subset equivalence with 0.8.0, one live `blocked` edge, the presentation path, the upgrade across the captain's Mac, Hermes, and Alienware, and the Hermes-to-Alienware federation management round trip; other sections of [that record](verification/runtime-backends.md) carry the 0.9.0 evidence measured before it, so consult the file rather than this list.
 Default-on presentation spaces have a higher floor of Herdr 0.8.0 for the reason given under [Presentation spaces](#presentation-spaces).
 Herdr provides the terminal session while Treehouse continues to provide task worktrees.
 [`configuration.md`](configuration.md#runtime-backend-configbackend--fm_backend) owns shared backend selection and metadata semantics.
