@@ -610,10 +610,14 @@ No ambient `herdr server stop` command is a supported test operation.
 ### Herdr 0.9.0 compatibility and federation
 
 Herdr 0.9.0 was verified on 2026-09-18 with protocol 22 and endpoint protocol generation 1.
+The compatibility observations below ran on the captain's Mac (macOS arm64); the federation observations name their host individually.
+
 The exact API-schema subset Firstmate consumes was byte-identical between 0.8.0 and 0.9.0, with SHA-256 `46491a4ab4cd2c9f9304cb020aa83263e961594a7d7732b5ceace46bca5551a0` for both versions.
 That subset covers `events.subscribe`, the `pane.agent_status_changed` payload, `workspace.move`, the subscription event envelope, and the agent-status enum.
+The extraction command that produced those digests was not captured, so re-deriving the subset is the first step of any repeat.
 
 The live-only event path subscribed before reading its baseline and returned a `blocked` edge in 0.230 seconds.
+`fm_backend_herdr_wait_transition` produced the record, against an isolated `fm-lab-` session from `bin/fm-herdr-lab.sh`.
 Herdr's stream is edge-triggered and carries no previous status, so `fm_backend_herdr_normalize_event` leaves the from-status empty and the record evidences a `blocked` edge with no baseline, not a transition out of a known prior status:
 
 ```text
@@ -626,16 +630,21 @@ A 0.9.0 client cannot operate a 0.8.0 server, and a 0.8.0 client cannot operate 
 The 0.8.0 server predates endpoint generation 1, so each client and server pair must move together rather than relying on Herdr's compatible-server handoff.
 
 The production presentation path on 0.9.0 preserved the exact original focus, created one unfocused projected workspace containing only the task tab and pane, removed that exact pane during cleanup, confirmed the projected workspace absent, and preserved the same focus afterward.
+The invocation behind that run was not captured either.
 
-The coordinated live upgrade checksum-verified the 0.9.0 release artifacts on Mac arm64, Hermes x86_64, and Alienware x86_64.
-The Hermes and Alienware servers each reported protocol 22, endpoint generation 1, `compatible=true`, and `endpoint_compatible=true` with their 0.9.0 clients.
-Alienware was enabled as a saved machine, and its second mate was alive and visible from the Hermes window.
+The coordinated live upgrade checksum-verified the 0.9.0 release artifacts on Mac arm64, Hermes x86_64, and Alienware x86_64, and each host was then observed separately:
 
-Management across the federation boundary was exercised on 0.9.0 through the command paths, not through the window's TUI, which was not driven in this round:
+- Captain's Mac: the checksum-verified arm64 artifact was installed at `/Users/mauryan/.local/bin/herdr`, and `/Users/mauryan/.local/bin/herdr --version` returned `herdr 0.9.0`. `herdr --remote hermes-fm --session default` then reconnected successfully without downgrading Hermes. No `status --json` verdict was captured on the Mac, so the running-client evidence there is the version string plus that reconnect.
+- Hermes: `herdr status --json --session default` reported protocol 22, endpoint generation 1, `compatible=true`, and `endpoint_compatible=true` with its 0.9.0 client.
+- Alienware: `ssh alienware-fm ~/.local/bin/herdr status --json --session fm-remote` reported the same four values with its 0.9.0 client.
 
-- The Hermes primary routed an instruction to the Alienware second mate running in the federated 0.9.0 `fm-remote` server and received its reply on the parent channel. This proves the full round trip - dispatch into a remote 0.9.0 pane, the agent's turn, and the reply landing back in the primary's channel - which is the delivery half of managing an Alienware worker from Hermes.
-- The remote state and readiness reads returned their verdicts for the same endpoint. This proves the primary can observe a remote worker's liveness and readiness over the 0.9.0 server, which is what every management decision is gated on.
-- A guarded tracked-file update and a second-mate restart completed on the Alienware worker. This proves a state-changing operation reaches the remote worker and that the worker comes back on 0.9.0 afterward.
+`herdr machine list --json` on Hermes showed Alienware enabled as a saved machine, and its second mate was alive and visible from the Hermes window.
+
+Management across the federation boundary was exercised on 0.9.0 through the command paths below, not through the window's TUI, which was not driven in this round:
+
+- `FM_HOME=<hermes primary home> bin/fm-send.sh alienware-heavy <instruction>` routed an instruction from the Hermes primary to the Alienware second mate running in the federated 0.9.0 `fm-remote` server, and its reply arrived on the parent channel. This proves the full round trip - dispatch into a remote 0.9.0 pane, the agent's turn, and the reply landing back in the primary's channel - which is the delivery half of managing an Alienware worker from Hermes.
+- `bin/fm-on.sh alienware-heavy fm-remote-secondmate-control.sh state alienware-heavy` and `bin/fm-crew-state.sh alienware-heavy` returned their liveness verdicts, and `bin/fm-on.sh alienware-heavy fm-remote-doctor.sh` returned its readiness verdict. This proves the primary can observe a remote worker's liveness and readiness over the 0.9.0 server, which is what every management decision is gated on.
+- `bin/fm-on.sh alienware-heavy fm-remote-secondmate-control.sh update alienware-heavy` completed the guarded tracked-file update, and the second mate restarted afterward. This proves a state-changing operation reaches the remote worker and that the worker comes back on 0.9.0 afterward.
 
 ### fm-remote server birth and login-keychain access
 
