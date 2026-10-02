@@ -87,6 +87,9 @@ triage_log() {
 # Exit after reporting one actionable wake. Tests override this callback.
 wake() {
   local output_status=0
+  # A conversation ring (bin/fm-watch.sh conversation_sentinel) must not start
+  # a second delivery inside this one.
+  trap '' USR1
   case "$1" in
     heartbeat*) echo $(( $(cat "$STATE/.heartbeat-streak" 2>/dev/null || echo 0) + 1 )) > "$STATE/.heartbeat-streak" ;;
     *) echo 0 > "$STATE/.heartbeat-streak" ;;

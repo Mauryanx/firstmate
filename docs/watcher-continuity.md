@@ -48,6 +48,17 @@ No adapter starts a replacement with shell `&`.
 
 The turn-end guard remains the final backstop rather than the normal continuity mechanism and cooperates with the auto-arm in its `--claude` mode.
 
+## Conversation turn latency
+
+A phone or texted turn is filed by the conversation transport as a `check` row keyed `inbox:vc-<id>`, and its sender is waiting for a reply.
+One watcher poll iteration can run for minutes in a busy home, so a row read only at the top of the loop waited out the rest of that iteration.
+Instead, a sentinel child of the watcher looks for an unsurfaced conversation row every `FM_CONVERSATION_RING_SECS` (default one second) and rings the watcher, which closes the cycle with `check: conversation turn queued: <keys>` at its next command boundary.
+The watcher's long waits - the poll sleep, the signal grace, the backend event wait, and a running check - are interruptible, so an idle Firstmate sees the turn within seconds wherever the iteration is.
+Delivery stands down while the watcher holds any state lock and the sentinel rings again, so a lock is never stranded and a locked rewrite is never cut short.
+Each queued row is surfaced once, and its marker is retired after the row leaves the queue; the drain still presents and acknowledges the row as described under "Per-actor acknowledgement".
+A turn that arrives while Firstmate is mid-turn still waits for that turn to end, and every other wake kind keeps its ordinary place in the poll loop.
+`bin/fm-watch.sh` owns the mechanism (`conversation_surface_queued`).
+
 ## Recovery episode acknowledgement
 
 A recovery episode is one generation of `state/.watcher-down`, and it is retired only by the generation-bound acknowledgement the drain prints as `WAKE_ACK_REQUIRED`.
@@ -122,6 +133,7 @@ Only the watcher process touches `state/.last-watcher-beat`; no helper process c
 The same suite covers ordinary same-process session replacement for `/new`, `/resume`, `/fork`, and reload, same-instance shutdown-plus-start, automatic re-arm before any model turn, a fresh extension-module rebind carrying all in-flight actionable closes exactly once, stale prior-generation callbacks, repeated transitions with exactly one live cycle, disappearance of the shutting-down refusal after a valid replacement activates, and terminal quit still refusing late rearm.
 `tests/fm-watch-arm.test.sh` covers durable queue replay, real remote parent-replies ingestion into the authoritative status log, decision-only OPEN DECISIONS recovery, interrupted handling replay, generation-bound acknowledgement, a persistent live successor after recovery, a watcher close inside the handling window that must leave the printed acknowledgement valid, and the self-healing moved-generation acknowledgement that consumes its handled rows and names its remedy.
 `tests/fm-watch-recovery-loop.test.sh` covers the once-per-generation announcement bound with the real Pi extension against a refused handling handshake, and a handling successor that must surface a real crew event instead of going blind.
+`tests/fm-watch-triage.test.sh` drives the real conversation transport against a real watcher: a captured turn closes a cycle whose poll would not return for a minute, interrupts a running check, surfaces once per row, and retires its marker after acknowledgement, while a typed inbox note keeps its ordinary next-poll path.
 `tests/fm-watcher-lock.test.sh` covers verified-successor attach, recovery publication before stale-lock removal, the typed self-eviction failure, bounded and successor-linked lifecycle rows, and a SIGSTOP counterfactual that distinguishes a live PID from a stale beacon before classifying termination.
 `tests/fm-subagent-pretool-check.test.sh` proves Claude retains only the non-status Bash seatbelts.
 `tests/fm-claude-stop-autoarm.test.sh` covers the auto-arm's scope, stale and live session owners, unchanged AFK and need boundaries, single-flight, bounded failure retries, benign live-watcher cycle ends, one-notice failure episodes, exit-2 translation, and host-timeout HUP/TERM/INT translation into the same durable failure handoff.
