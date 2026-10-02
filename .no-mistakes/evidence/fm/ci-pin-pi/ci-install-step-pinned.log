@@ -1,0 +1,22 @@
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+
+added 132 packages in 8s
+
+15 packages are looking for funding
+  run `npm fund` for details
+/tmp/fmpi.isEu/pinned/lib
+└── @earendil-works/pi-coding-agent@0.85.1
+
+npm warn deprecated node-domexception@1.0.0: Use your platform's native DOMException instead
+
+changed 132 packages in 8s
+
+15 packages are looking for funding
+  run `npm fund` for details
+/tmp/fmpi.isEu/pinned/lib
+└── @earendil-works/pi-coding-agent@0.85.1
+
+workflow-level env: {'FM_CI_PI_VERSION': '0.85.1'}
+--- job tests-portable-parallel-1: running step 'Install the Pi package for the Pi extension tests' with bash -e
+--- job tests-portable-serial: running step 'Install the Pi package for the Pi extension tests' with bash -e
+install steps executed: 2
