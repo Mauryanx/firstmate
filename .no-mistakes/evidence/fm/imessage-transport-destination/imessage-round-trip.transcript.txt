@@ -1,0 +1,78 @@
+=== 1. owner enables a v2 policy authorizing elevenlabs + imessage
+
+$ fm-inbox.sh conversation pilot-init <<< '{"publication_policy":"owner-authored-v2","destinations":["elevenlabs","imessage"]}'
+{"destinations":["elevenlabs","imessage"],"pilot":true}
+[exit=0]
+--- state/voice-conversation/policy.json (enabled_by elided):
+{"destinations": ["elevenlabs", "imessage"], "enabled_by": "<pid-identity>", "publication_policy": "owner-authored-v2"}
+=== 2. owner binds the captain's iMessage conversation
+[exit=0]
+{"conversation_id":"imsg-captain","credential":"<cred>"}
+=== 3. iMessage front end (transport peer, holds credential) files the captain's text
+
+$ fm-inbox.sh conversation capture <<< '{"conversation_id":"imsg-captain","credential":"<cred>","turn_id":"t1","request_id":"r1","committed_transcript":"Is the migration branch green?","revision":1,"previous_turn_id":null,"created_at":"2026-10-02T01:00:00Z"}'
+{"request_id":"r1","state":"saved"}
+[exit=0]
+=== 4. Firstmate accepts the turn; result names destination imessage
+
+$ fm-inbox.sh conversation accept <<< '{"conversation_id":"imsg-captain"}'
+{"destination":"imessage","dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Is the migration branch green?","conversation_id":"imsg-captain","correction_of":null,"created_at":"2026-10-02T01:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"r1","revision":1,"turn_id":"t1"},"playback_context":[]}
+[exit=0]
+=== 5. adversarial: Firstmate tries to speak the text reply via ElevenLabs
+
+$ fm-inbox.sh conversation publish <<< '{"conversation_id":"imsg-captain","request_id":"r1","response_id":"a1","sequence":1,"kind":"answer","final":true,"destination":"elevenlabs","speech_text":"Yes, green.","question_binding":null}'
+fm-inbox conversation: conversation is bound to destination imessage; publish there only
+[exit=2]
+=== 6. adversarial: unauthorized destination sms
+
+$ fm-inbox.sh conversation publish <<< '{"conversation_id":"imsg-captain","request_id":"r1","response_id":"a1","sequence":1,"kind":"answer","final":true,"destination":"sms","speech_text":"Yes, green.","question_binding":null}'
+fm-inbox conversation: this publication policy does not authorize destination 'sms'
+[exit=2]
+=== 7. Firstmate publishes the reply as an iMessage
+
+$ fm-inbox.sh conversation publish <<< '{"conversation_id":"imsg-captain","request_id":"r1","response_id":"a1","sequence":1,"kind":"answer","final":true,"destination":"imessage","speech_text":"Yes - the migration branch is green and waiting on your review.","question_binding":null}'
+{"published":true,"response_id":"a1"}
+[exit=0]
+=== 8. iMessage front end collects the reply to text back
+
+$ fm-inbox.sh conversation deliver <<< '{"conversation_id":"imsg-captain","credential":"<cred>","response_id":"a1","generation":"g1"}'
+{"deliver":true,"disclosure":{"author":"linux-starttime=477508214 cmdline-hex=2f746d702f666d2d696d73672d64726976652e486c35744e6b2f636f646578002f746d702f666d2d696d73672d64726976652e486c35744e6b2f64726976652e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d33583244333934425848343858373837365a444244595a002f746d702f666d2d696d73672d64726976652e486c35744e6b2f686f6d65002f746d702f666d2d696d73672d64726976652e486c35744e6b2f7700","destination":"imessage","digest":"1d29f88590b12af338171684e3a645844847277746ab921e492eb4e93e8d4b8e","policy":"owner-authored-v2","published_at":1790904404},"generation":"g1","response_id":"a1","speech_text":"Yes - the migration branch is green and waiting on your review."}
+[exit=0]
+=== 9. adversarial: rebinding the text conversation as a voice call is refused
+
+$ fm-inbox.sh conversation bind <<< '{"conversation_id":"imsg-captain","authenticated_principal":"captain","destination":"elevenlabs"}'
+fm-inbox conversation: conversation already bound to destination imessage
+[exit=2]
+=== 10. a voice call in the same v2 home stays unchanged (no destination field)
+
+$ fm-inbox.sh conversation bind <<< '{"conversation_id":"call","authenticated_principal":"captain"}'
+{"conversation_id":"call","credential":"Y866veQv8rpoam8iKrPBsFTuxkg-lsIvftv1Gc5WRt8"}
+[exit=0]
+=== 11. audit of the text conversation
+
+$ fm-inbox.sh conversation audit <<< '{"conversation_id":"imsg-captain"}'
+{"conversation_id":"imsg-captain","destination":"imessage","replies":[{"delivery":{"generation":"g1","position_ms":0,"state":"unknown"},"disclosure":{"author":"linux-starttime=477508214 cmdline-hex=2f746d702f666d2d696d73672d64726976652e486c35744e6b2f636f646578002f746d702f666d2d696d73672d64726976652e486c35744e6b2f64726976652e7368002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d33583244333934425848343858373837365a444244595a002f746d702f666d2d696d73672d64726976652e486c35744e6b2f686f6d65002f746d702f666d2d696d73672d64726976652e486c35744e6b2f7700","destination":"imessage","digest":"1d29f88590b12af338171684e3a645844847277746ab921e492eb4e93e8d4b8e","policy":"owner-authored-v2","published_at":1790904404},"final":true,"request_id":"r1","response_id":"a1"}],"requests":[{"call_id":null,"correction_of":null,"note_id":"vc-5602fa8aa17f37c88cb279163aa9a7cf1aaf38e08a8eb0a44dad27ea60411069","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"r1","state":"accepted","turn_id":"t1"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+[exit=0]
+--- journal conversation records (credential/owner elided):
+{
+ "call": {
+  "credential": "<cred>",
+  "owner": "<pid-identity>",
+  "principal": "captain"
+ },
+ "imsg-captain": {
+  "credential": "<cred>",
+  "destination": "imessage",
+  "owner": "<pid-identity>",
+  "principal": "captain"
+ }
+}
+=== 12. a v1 (ElevenLabs-only) home refuses an iMessage bind
+
+$ fm-inbox.sh conversation pilot-init <<< '{"publication_policy":"owner-authored-elevenlabs-v1"}'
+{"destination":"elevenlabs","pilot":true}
+[exit=0]
+
+$ fm-inbox.sh conversation bind <<< '{"conversation_id":"imsg-2","authenticated_principal":"captain","destination":"imessage"}'
+fm-inbox conversation: this publication policy does not authorize destination 'imessage'
+[exit=2]
