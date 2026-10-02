@@ -102,6 +102,13 @@
 #                          source owned closes that episode); the queued
 #                          payload names what to check. These three kinds are
 #                          joined with `;` when more than one surfaces in a cycle
+#   check: conversation turn queued: <keys>
+#                          a phone or texted turn the conversation transport
+#                          queued as an `inbox:vc-*` check row has not been
+#                          surfaced yet; a sentinel child rings this watcher so
+#                          the turn closes the cycle within about one second
+#                          instead of waiting for the poll loop to come back
+#                          around, and each queued row is reported once
 #   check: rejected unauthenticated state checks: <paths>
 #                          unsafe state checks were refused without execution
 #   check: rejected unauthenticated PR poll retirement receipts: <paths>
@@ -1660,6 +1667,146 @@ procevent_surface_queued() {
   wake "$reason"
 }
 
+# Deliver a queued conversation turn - a phone call's spoken turn or a texted
+# message, which bin/fm_inbox_conversation.py files as an `inbox:vc-*` check row -
+# while its sender is still waiting. A poll iteration can run for minutes in a
+# busy home (checks, status classification, the signal grace), and a row checked
+# only at the top of the loop waits for the rest of that iteration, so a
+# sentinel child looks for an unsurfaced turn every second and rings this
+# watcher with USR1. The trap delivers from the main shell at its
+# next command boundary, and the long waits below (watch_sleep, the event wait,
+# a running check) are interruptible `wait`s, so the cycle closes within about
+# one ring wherever the iteration is. Delivery stands down while this watcher
+# holds any state lock, because exiting there would strand the lock or cut a
+# locked rewrite short; the sentinel simply rings again. Each queued row is
+# surfaced once: its `.seen-conversation-<epoch>-<seq>` marker is written only
+# after the reason line is out, and sequence numbers are never reused, so a
+# marker is retired as soon as its row has left the queue. The drain still
+# presents and acknowledges the row (docs/watcher-continuity.md).
+conversation_queued_rows() {  # print "<epoch>-<seq><TAB><key>" per queued turn
+  [ -s "$FM_WAKE_QUEUE" ] || return 0
+  awk -F '\t' 'NF >= 5 && $3 == "check" && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ \
+    && $4 ~ /^inbox:vc-[A-Za-z0-9._-]+$/ { print $1 "-" $2 "\t" $4 }' \
+    "$FM_WAKE_QUEUE" 2>/dev/null || true
+}
+
+conversation_unsurfaced_rows() {
+  local id key
+  while IFS=$'\t' read -r id key; do
+    [ -e "$STATE/.seen-conversation-$id" ] || printf '%s\t%s\n' "$id" "$key"
+  done < <(conversation_queued_rows)
+}
+
+# 0 while this watcher's main shell holds a state lock other than its own
+# singleton. Reads lock owners with builtins only, so the sentinel can call it
+# every ring at no fork cost.
+conversation_watcher_holds_lock() {
+  local lock pid
+  for lock in "$STATE"/*lock* "$STATE"/.*lock* "$FM_WAKE_QUEUE_LOCK"; do
+    case "$lock" in "$WATCH_LOCK"|"$WATCH_LOCK".*) continue ;; esac
+    [ -f "$lock/pid" ] || continue
+    IFS= read -r pid < "$lock/pid" 2>/dev/null || continue
+    [ "$pid" = "$WATCHER_PID" ] && return 0
+  done
+  return 1
+}
+
+# Retire the marker of every row that has left the queue.
+conversation_markers_prune() {
+  local id marker live=" "
+  for marker in "$STATE"/.seen-conversation-*; do
+    [ -e "$marker" ] || return 0
+    break
+  done
+  while IFS=$'\t' read -r id _; do
+    live="$live$id "
+  done < <(conversation_queued_rows)
+  for marker in "$STATE"/.seen-conversation-*; do
+    [ -e "$marker" ] || continue
+    case "$live" in *" ${marker##*/.seen-conversation-} "*) ;; *) rm -f -- "$marker" ;; esac
+  done
+}
+
+conversation_surface_after_output() {
+  local output_status=$1 id status=0
+  [ "$output_status" -eq 0 ] || return 0
+  for id in $CONVERSATION_SURFACED; do
+    : > "$STATE/.seen-conversation-$id" || status=1
+  done
+  conversation_markers_prune
+  return "$status"
+}
+
+conversation_surface_queued() {
+  local id key keys=""
+  CONVERSATION_SURFACED=
+  [ -s "$FM_WAKE_QUEUE" ] || return 0
+  conversation_watcher_holds_lock && return 0
+  while IFS=$'\t' read -r id key; do
+    CONVERSATION_SURFACED="$CONVERSATION_SURFACED $id"
+    case "$keys " in *" $key "*) ;; *) keys="$keys $key" ;; esac
+  done < <(conversation_unsurfaced_rows)
+  [ -n "$CONVERSATION_SURFACED" ] || return 0
+  # shellcheck disable=SC2034 # Consumed by wake() in the separately linted transition owner.
+  FM_WAKE_POST_OUTPUT_ACTION=conversation_surface_after_output
+  wake "check: conversation turn queued:$keys"
+}
+
+# Runs as a background child for the life of the poll loop. It only rings;
+# deciding and delivering stay in the main shell. Its stdio is detached so a
+# reader of the watcher's output never waits on it.
+conversation_sentinel() {
+  local holder
+  trap - EXIT HUP INT TERM
+  trap '' USR1
+  while kill -0 "$WATCHER_PID" 2>/dev/null; do
+    sleep 1
+    IFS= read -r holder < "$WATCH_LOCK/pid" 2>/dev/null || exit 0
+    [ "$holder" = "$WATCHER_PID" ] || exit 0
+    [ -s "$FM_WAKE_QUEUE" ] || continue
+    [ -n "$(conversation_unsurfaced_rows)" ] || continue
+    conversation_watcher_holds_lock && continue
+    kill -USR1 "$WATCHER_PID" 2>/dev/null || exit 0
+  done
+}
+
+CONVERSATION_SENTINEL_PID=
+conversation_sentinel_start() {
+  conversation_markers_prune
+  trap conversation_surface_queued USR1
+  conversation_sentinel </dev/null >/dev/null 2>&1 &
+  CONVERSATION_SENTINEL_PID=$!
+}
+
+conversation_sentinel_stop() {
+  trap '' USR1
+  [ -z "$CONVERSATION_SENTINEL_PID" ] || kill "$CONVERSATION_SENTINEL_PID" 2>/dev/null || true
+  CONVERSATION_SENTINEL_PID=
+}
+
+# Wait for a background child of this shell. A trapped ring interrupts `wait`
+# even when delivery stands down, so keep waiting while the child still runs.
+watch_wait_child() {  # <pid>
+  local pid=$1 rc
+  while :; do
+    wait "$pid" 2>/dev/null
+    rc=$?
+    [ "$rc" -gt 128 ] && kill -0 "$pid" 2>/dev/null && continue
+    return "$rc"
+  done
+}
+
+# An interruptible sleep, so a ring is not held for the rest of a long pause.
+WATCH_SLEEP_PID=
+EVENT_WAIT_PID=
+EVENT_WAIT_OUT=
+watch_sleep() {  # <seconds>
+  sleep "$1" >/dev/null 2>&1 &
+  WATCH_SLEEP_PID=$!
+  watch_wait_child "$WATCH_SLEEP_PID"
+  WATCH_SLEEP_PID=
+}
+
 run_check_process() {
   local c=$1
   shift
@@ -1734,7 +1881,7 @@ run_check_capture() {
     return 1
   fi
   [ -z "$FM_CHECK_SIGNAL_PENDING" ] || exit 1
-  wait "$FM_ACTIVE_CHECK_PID" 2>/dev/null || true
+  watch_wait_child "$FM_ACTIVE_CHECK_PID" || true
   FM_ACTIVE_CHECK_PID=
   fm_active_check_stop || return 1
   FM_CHECK_RESULT=$(cat "$FM_CHECK_OUTPUT" 2>/dev/null || true)
@@ -1880,7 +2027,7 @@ event_wait_or_sleep() {
   done < <(recorded_windows)
 
   if [ "${#windows[@]}" -eq 0 ]; then
-    sleep "$POLL"
+    watch_sleep "$POLL"
     return
   fi
 
@@ -1896,12 +2043,25 @@ event_wait_or_sleep() {
     _event_cap_fails=0
   fi
   if [ "$_event_cap_ok" != 1 ]; then
-    sleep "$POLL"
+    watch_sleep "$POLL"
     return
   fi
 
-  rec=$(FM_BACKEND_EVENTS_CAPABILITY_CONFIRMED=1 fm_backend_wait_transition "$first_backend" "$first_session" "$POLL" "$STATE" "${windows[@]}")
-  rc=$?
+  # The wait runs as a child so a conversation ring can interrupt it; without a
+  # scratch file the event path is unusable this cycle.
+  if EVENT_WAIT_OUT=$(mktemp "$STATE/.event-wait.XXXXXX"); then
+    FM_BACKEND_EVENTS_CAPABILITY_CONFIRMED=1 fm_backend_wait_transition "$first_backend" "$first_session" "$POLL" "$STATE" "${windows[@]}" > "$EVENT_WAIT_OUT" &
+    EVENT_WAIT_PID=$!
+    watch_wait_child "$EVENT_WAIT_PID"
+    rc=$?
+    EVENT_WAIT_PID=
+    rec=$(cat "$EVENT_WAIT_OUT" 2>/dev/null)
+    rm -f -- "$EVENT_WAIT_OUT"
+    EVENT_WAIT_OUT=
+  else
+    EVENT_WAIT_OUT=
+    rc=2
+  fi
   case "$rc" in
     0)
       _event_cap_fails=0
@@ -1913,7 +2073,7 @@ event_wait_or_sleep() {
       # pure polling for the rest of this watcher process.
       _event_cap_fails=$((_event_cap_fails + 1))
       [ "$_event_cap_fails" -ge "$EVENT_CAP_FAIL_MAX" ] && _event_cap_ok=0
-      sleep "$POLL"
+      watch_sleep "$POLL"
       ;;
     *)
       # 1: a clean full-budget wait with no actionable edge - the reader already
@@ -2058,6 +2218,10 @@ pr_poll_publish_release() {
 
 watcher_cleanup() {
   local cleanup_status=0 owns_lock=0 transition=release-lock
+  conversation_sentinel_stop
+  [ -z "$WATCH_SLEEP_PID" ] || kill "$WATCH_SLEEP_PID" 2>/dev/null || true
+  [ -z "$EVENT_WAIT_PID" ] || kill "$EVENT_WAIT_PID" 2>/dev/null || true
+  [ -z "$EVENT_WAIT_OUT" ] || rm -f -- "$EVENT_WAIT_OUT"
   pr_poll_publish_release || cleanup_status=1
   pr_poll_control_release || cleanup_status=1
   if [ "$(cat "$WATCH_LOCK/pid" 2>/dev/null || true)" = "${WATCHER_PID:-}" ]; then
@@ -2154,6 +2318,10 @@ resurface_after_downtime() {
   wake "check: rearm-resurface"
 }
 
+# A person waiting on a phone or texted turn cannot wait for the loop to come
+# back around; see conversation_surface_queued.
+conversation_sentinel_start
+
 while :; do
   # Self-eviction: if the singleton lock no longer names this process, a second
   # watcher has taken over (e.g. a transient duplicate from a racy arm). Stand
@@ -2202,7 +2370,9 @@ while :; do
     FM_HOME="$FM_HOME" "$SCRIPT_DIR/fm-procevent.sh" reconcile >/dev/null 2>&1 || true
   fi
   # Then deliver any queued-but-unsurfaced result, including one a runner
-  # published while this watcher was between cycles.
+  # published while this watcher was between cycles. A conversation turn goes
+  # first; the sentinel normally rings for it long before this point.
+  conversation_surface_queued
   procevent_surface_queued
 
   # A process-event result carries richer adapter-owned wake context than the
@@ -2353,7 +2523,7 @@ EOF
   # signature for an already-pending file (last write wins below).
   pending=$(scan_signals)
   if [ -n "$pending" ]; then
-    sleep "$SIGNAL_GRACE"
+    watch_sleep "$SIGNAL_GRACE"
     pending=$(printf '%s\n%s' "$pending" "$(scan_signals)")
     # The final coalesced signal set is the watcher-carried status-change
     # trigger for this home's published summary. Start it before either

@@ -5009,6 +5009,165 @@ test_procevent_marker_failure_exits_and_replays() {
   pass "marker failure exits through the shared wake owner, releases its lock, and replays later"
 }
 
+# --- conversation turns: a queued phone or texted turn closes the cycle -----
+# These drive the real conversation transport (bin/fm-inbox.sh conversation) in
+# an empty lab home, so the queued row is exactly what a phone call or a text
+# files, against a real watcher whose own poll would not come back around for a
+# minute. Before the sentinel, such a turn waited for the rest of that poll.
+CONVERSATION_OWNER="$TMP_ROOT/codex"
+
+conversation_env() {  # <home> <command...>: run scoped to <home> with no redirects
+  local home=$1
+  shift
+  env -u FM_STATE_OVERRIDE -u FM_DATA_OVERRIDE -u FM_CONFIG_OVERRIDE \
+    -u FM_WAKE_QUEUE -u FM_WAKE_QUEUE_LOCK FM_HOME="$home" "$@"
+}
+
+conversation_transport() {  # <home> <command> <json>
+  conversation_env "$1" "$ROOT/bin/fm-inbox.sh" conversation "$2" <<< "$3"
+}
+
+# Owner commands must run under the harness holding the home's session lock;
+# a bash copy named like a harness stands in for it, as in the transport's own
+# contract test.
+conversation_owner() {  # <home> <command> <json>
+  [ -x "$CONVERSATION_OWNER" ] || cp "$(command -v bash)" "$CONVERSATION_OWNER" || return 1
+  # shellcheck disable=SC2016 # The owner shell expands its own arguments and PID.
+  "$CONVERSATION_OWNER" -c 'printf "%s\n" "$$" > "$1/state/.lock"
+    env -u FM_STATE_OVERRIDE -u FM_DATA_OVERRIDE -u FM_CONFIG_OVERRIDE \
+      -u FM_WAKE_QUEUE -u FM_WAKE_QUEUE_LOCK FM_HOME="$1" \
+      "$2/bin/fm-inbox.sh" conversation "$3" <<< "$4"
+    exit "$?"' _ "$1" "$ROOT" "$2" "$3"
+}
+
+# Create an empty lab home with one bound conversation; prints its credential.
+conversation_lab() {  # <home>
+  local home=$1 bound
+  conversation_transport "$home" lab-init '{"speech_catalog": {"ack": "On it."}}' >/dev/null || return 1
+  bound=$(conversation_owner "$home" bind '{"conversation_id": "text", "authenticated_principal": "captain"}') \
+    || return 1
+  printf '%s' "$bound" | python3 -c 'import json, sys; print(json.load(sys.stdin)["credential"])'
+}
+
+conversation_capture() {  # <home> <credential> <turn-number>
+  conversation_transport "$1" capture "{\"conversation_id\": \"text\", \"credential\": \"$2\",
+    \"turn_id\": \"t$3\", \"request_id\": \"r$3\", \"committed_transcript\": \"Are you there?\",
+    \"revision\": 1, \"previous_turn_id\": null, \"created_at\": \"2026-10-02T04:24:29Z\"}" >/dev/null
+}
+
+# The watcher's output goes through a pipe, so the returned pid (the reader)
+# exits only once every process holding that output has: a sentinel or sleep
+# left behind would hold a pipe-reading consumer open.
+conversation_watch_bg() {  # <dir> <home> <out> [env assignments...]
+  local dir=$1 home=$2 out=$3
+  shift 3
+  conversation_env "$home" PATH="$dir/fakebin:$PATH" FM_CREW_STATE_BIN="$dir/fakebin/fm-crew-state.sh" \
+    FM_POLL=60 FM_SIGNAL_GRACE=1 FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$@" "$WATCH" | cat > "$out" &
+}
+
+# Stop a background watcher by its lock-recorded pid, then its pipe reader.
+conversation_reap() {  # <state> <reader-pid>
+  local watcher
+  watcher=$(cat "$1/.watch.lock/pid" 2>/dev/null || true)
+  [ -z "$watcher" ] || kill "$watcher" 2>/dev/null || true
+  wait_for_exit "$2" 50 >/dev/null 2>&1 || true
+}
+
+wait_for_path() {  # <path> [limit-ticks]
+  local path=$1 limit=${2:-100} i=0
+  while [ "$i" -lt "$limit" ]; do
+    [ -e "$path" ] && return 0
+    sleep 0.1
+    i=$((i + 1))
+  done
+  return 1
+}
+
+test_conversation_turn_closes_a_running_cycle_promptly() {
+  local dir home state out cred pid key start elapsed
+  command -v python3 >/dev/null 2>&1 || { pass "conversation turn latency skipped: python3 not found"; return 0; }
+  dir=$(make_case conversation-idle); home="$dir/home"; state="$home/state"; out="$dir/watch.out"
+  cred=$(conversation_lab "$home") && [ -n "$cred" ] || fail "the conversation lab could not be bound"
+  conversation_watch_bg "$dir" "$home" "$out"
+  pid=$!
+  wait_for_path "$state/.last-watcher-beat" || { conversation_reap "$state" "$pid"; fail "the watcher never started polling"; }
+  sleep 1
+  is_live_non_zombie "$pid" || fail "an idle lab watcher closed before any turn: $(cat "$out")"
+  start=$(date +%s)
+  conversation_capture "$home" "$cred" 1 || { conversation_reap "$state" "$pid"; fail "the transport refused the captured turn"; }
+  wait_for_exit "$pid" 100 || fail "a captured turn did not close the running cycle: $(cat "$out")"
+  elapsed=$(( $(date +%s) - start ))
+  [ "$elapsed" -le 10 ] || fail "a captured turn waited ${elapsed}s for the watcher"
+  key=$(awk -F '\t' '$4 ~ /^inbox:vc-/ { print $4; exit }' "$state/.wake-queue")
+  [ -n "$key" ] || fail "the transport queued no conversation row"
+  grep -Fx "check: conversation turn queued: $key" "$out" >/dev/null \
+    || fail "the turn did not surface under its own reason: $(cat "$out")"
+  [ -n "$(find "$state" -maxdepth 1 -name '.seen-conversation-*' -type f)" ] \
+    || fail "the surfaced row was not marked"
+
+  # The row stays queued until the turn is accepted, and it is not announced again.
+  conversation_watch_bg "$dir" "$home" "$out.again"
+  pid=$!
+  wait_for_exit "$pid" 100 || true
+  ! grep -F "conversation turn queued" "$out.again" >/dev/null \
+    || fail "a still-queued turn was surfaced twice: $(cat "$out.again")"
+
+  # Once the turn is accepted and acknowledged, its marker is retired.
+  conversation_owner "$home" accept '{"conversation_id": "text"}' >/dev/null \
+    || fail "the owner could not accept the turn"
+  ack_stopped_cycle "$state" >/dev/null 2>&1 || fail "the accepted turn could not be acknowledged"
+  ! grep -F "$key" "$state/.wake-queue" >/dev/null || fail "the acknowledged turn stayed queued"
+  rm -f "$state/.last-watcher-beat"
+  conversation_watch_bg "$dir" "$home" "$out.after"
+  pid=$!
+  wait_for_path "$state/.last-watcher-beat" || { conversation_reap "$state" "$pid"; fail "the watcher never started polling"; }
+  [ -z "$(find "$state" -maxdepth 1 -name '.seen-conversation-*')" ] \
+    || { conversation_reap "$state" "$pid"; fail "a retired row kept its marker"; }
+  conversation_reap "$state" "$pid"
+  pass "a captured conversation turn closes a running watcher cycle within seconds, once per row"
+}
+
+test_conversation_turn_interrupts_a_running_check() {
+  local dir home state out cred pid check_pid start elapsed
+  command -v python3 >/dev/null 2>&1 || { pass "conversation check interruption skipped: python3 not found"; return 0; }
+  dir=$(make_case conversation-check); home="$dir/home"; state="$home/state"; out="$dir/watch.out"
+  cred=$(conversation_lab "$home") && [ -n "$cred" ] || fail "the conversation lab could not be bound"
+  # A slow, silent poll, like a network-bound check.
+  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$$" > %q\nexec sleep 60\n' "$dir/check.pid" > "$state/slow.check.sh"
+  chmod 0700 "$state/slow.check.sh"
+  conversation_env "$home" "$ROOT/bin/fm-check-register.sh" slow >/dev/null || fail "the slow check could not be registered"
+  conversation_watch_bg "$dir" "$home" "$out" FM_CHECK_INTERVAL=0 FM_CHECK_TIMEOUT=120
+  pid=$!
+  wait_for_path "$dir/check.pid" || { conversation_reap "$state" "$pid"; fail "the slow check never started"; }
+  check_pid=$(cat "$dir/check.pid")
+  start=$(date +%s)
+  conversation_capture "$home" "$cred" 1 || { conversation_reap "$state" "$pid"; fail "the transport refused the captured turn"; }
+  wait_for_exit "$pid" 100 || fail "a captured turn waited for a running check: $(cat "$out")"
+  elapsed=$(( $(date +%s) - start ))
+  [ "$elapsed" -le 10 ] || fail "a captured turn waited ${elapsed}s behind a running check"
+  grep -F "check: conversation turn queued: inbox:vc-" "$out" >/dev/null \
+    || fail "the turn did not surface under its own reason: $(cat "$out")"
+  ! is_live_non_zombie "$check_pid" || fail "the interrupted check was left running"
+  pass "a captured conversation turn interrupts a running check instead of waiting it out"
+}
+
+test_typed_inbox_note_keeps_its_ordinary_path() {
+  local dir home state out pid
+  command -v python3 >/dev/null 2>&1 || { pass "typed note path skipped: python3 not found"; return 0; }
+  dir=$(make_case conversation-typed-note); home="$dir/home"; state="$home/state"; out="$dir/watch.out"
+  conversation_lab "$home" >/dev/null || fail "the conversation lab could not be bound"
+  conversation_watch_bg "$dir" "$home" "$out"
+  pid=$!
+  wait_for_path "$state/.last-watcher-beat" || { conversation_reap "$state" "$pid"; fail "the watcher never started polling"; }
+  conversation_env "$home" "$ROOT/bin/fm-inbox.sh" note "typed, not a conversation turn" >/dev/null \
+    || { conversation_reap "$state" "$pid"; fail "the typed note was not queued"; }
+  grep -F "inbox:" "$state/.wake-queue" >/dev/null || { conversation_reap "$state" "$pid"; fail "the typed note queued no row"; }
+  wait_live "$pid" 30 || fail "a typed inbox note took the conversation fast path: $(cat "$out")"
+  conversation_reap "$state" "$pid"
+  [ ! -s "$out" ] || fail "a typed inbox note printed a reason mid-poll: $(cat "$out")"
+  pass "a typed inbox note keeps its ordinary next-poll path"
+}
+
 # --- heartbeat: no-change absorbed, backstop surfaces a missed status --------
 
 test_heartbeat_no_change_absorbed() {
@@ -5539,6 +5698,9 @@ test_procevent_launch_failed_episodes_are_each_delivered
 test_procevent_surface_serializes_with_drain
 test_procevent_surface_crash_boundaries
 test_procevent_marker_failure_exits_and_replays
+test_conversation_turn_closes_a_running_cycle_promptly
+test_conversation_turn_interrupts_a_running_check
+test_typed_inbox_note_keeps_its_ordinary_path
 test_heartbeat_no_change_absorbed
 test_heartbeat_backstop_surfaces_unsurfaced_status
 test_heartbeat_backstop_surfaces_a_masked_status
