@@ -1,0 +1,13 @@
+[target] 06:55:00.175045844 watcher pid=1625684 idle over herdr pane fm-lab-convturn-1624868:w1:p2 (FM_POLL=60)
+[target] watcher children (expect the event wait + sentinel):
+    bash,1625684 ./drive-herdr-eventwait-turn.sh /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M3XN2CRZT5S3MDC6H0NRWN09 ...
+      `-bash,1625686 /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M3XN2CRZT5S3MDC6H0NRWN09/bin/fm-watch.sh
+          |-bash,1626344 /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M3XN2CRZT5S3MDC6H0NRWN09/bin/fm-watch.sh
+          `-bash,1627767 /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M3XN2CRZT5S3MDC6H0NRWN09/bin/fm-watch.sh
+              `-python3,1627801 ...
+[target] 06:55:00.779165664 texted turn filed
+[target] 06:55:01.789896595 watcher exited; latency from text to wake: 1.5s
+[target] watcher stdout:
+    check: conversation turn queued: inbox:vc-fe9e1387390c45aa78516763daeb3123f9e7399a780a020563c763e1b0b5140c
+[target] fm-herdr-eventwait scratch dirs before=0 after=1 (declined review-1 concern)
+[target] processes still carrying this home's FM_HOME after exit:   python3 /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M3XN2CRZT5S3MDC6H0NRWN09/bin/backends/herdr-eventwait.py /home/firstmate/.config/herdr/sessions/fm-lab-convturn-1624868/herdr.sock 60 w1:p2 

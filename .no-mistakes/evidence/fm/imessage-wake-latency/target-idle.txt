@@ -1,0 +1,8 @@
+[target] 06:54:05.542338718 home=/tmp/fm-latency.tWLnJt/home
+[target] 06:54:08.636628177 watcher pid=1603537 idle, polling every 60s
+[target] 06:54:09.98991975 texted turn filed; queue row: check inbox:vc-fe9e1387390c45aa78516763daeb3123f9e7399a780a020563c763e1b0b5140c
+[target] 06:54:09.983549035 watcher exited; latency from text to wake: 1.3s
+[target] watcher stdout (the wake reason Firstmate sees):
+    check: conversation turn queued: inbox:vc-fe9e1387390c45aa78516763daeb3123f9e7399a780a020563c763e1b0b5140c
+[target] seen markers: 1
+[target] processes still carrying this home's FM_HOME after exit: 

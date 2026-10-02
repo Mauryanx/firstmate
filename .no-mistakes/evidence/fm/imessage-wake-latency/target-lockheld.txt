@@ -1,0 +1,11 @@
+[target] 06:54:39.11130460 home=/tmp/fm-latency.IZNeDL/home
+[target] 06:54:42.111860890 watcher pid=1618709 idle, polling every 60s
+[target] 06:54:42.138921112 planted a state lock owned by the watcher pid 1618711 (bg pid was 1618709)
+[target] 06:54:42.709389155 texted turn filed; queue row: check inbox:vc-fe9e1387390c45aa78516763daeb3123f9e7399a780a020563c763e1b0b5140c
+[target] 06:54:47.33227357 still running after 4s with lock held (stood down, as required)
+[target] 06:54:47.45339699 lock released
+[target] 06:54:47.695611371 watcher exited; latency from text to wake: 5.5s
+[target] watcher stdout (the wake reason Firstmate sees):
+    check: conversation turn queued: inbox:vc-fe9e1387390c45aa78516763daeb3123f9e7399a780a020563c763e1b0b5140c
+[target] seen markers: 1
+[target] processes still carrying this home's FM_HOME after exit: 

@@ -1,0 +1,8 @@
+[base] 06:50:43.491488987 home=/tmp/fm-latency.IbPwje/home
+[base] 06:50:46.470232699 watcher pid=1478882 idle, polling every 60s
+[base] 06:50:46.963111695 texted turn filed; queue row: check inbox:vc-fe9e1387390c45aa78516763daeb3123f9e7399a780a020563c763e1b0b5140c
+[base] 06:51:46.198500939 watcher exited; latency from text to wake: 59.7s
+[base] watcher stdout (the wake reason Firstmate sees):
+    check: rearm-resurface
+[base] seen markers: 0
+[base] leftover fm-watch.sh processes from this tree after exit: 0

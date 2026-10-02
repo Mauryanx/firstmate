@@ -1,0 +1,12 @@
+[base] 06:52:47.324801662 watcher pid=1552375 idle over herdr pane fm-lab-convturn-1551057:w1:p2 (FM_POLL=60)
+[base] watcher children (expect the event wait + sentinel):
+    bash,1552375 ./drive-herdr-eventwait-turn.sh /tmp/fm-base base
+      `-bash,1552377 /tmp/fm-base/bin/fm-watch.sh
+          `-bash,1554603 /tmp/fm-base/bin/fm-watch.sh
+              `-python3,1554619 /tmp/fm-base/bin/backends/herdr-eventwait.py ...
+[base] 06:52:47.907659241 texted turn filed
+[base] 06:53:45.768905994 watcher exited; latency from text to wake: 58.3s
+[base] watcher stdout:
+    check: rearm-resurface
+[base] fm-herdr-eventwait scratch dirs before=0 after=0 (declined review-1 concern)
+[base] stray herdr-eventwait readers: 1
