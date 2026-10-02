@@ -46,6 +46,10 @@ def bind(cid):
 connection = bind('c')
 assert bind('c') == connection
 other = bind('other')
+refused = run('bind', {'conversation_id': 'lab-text', 'authenticated_principal': 'captain',
+                       'destination': 'imessage'}, code=2)
+assert "does not authorize destination 'imessage'" in refused.stderr, refused.stderr
+run('accept', {'conversation_id': 'lab-text'}, code=2)
 run('bind', {'conversation_id': 'c', 'authenticated_principal': 'captain'}, code=6,
     extra={'FM_SUPERVISION_ACTOR': 'branch'})
 run('accept', {'conversation_id': 'c'}, code=6, extra={'FM_SUPERVISION_ACTOR': 'branch'})

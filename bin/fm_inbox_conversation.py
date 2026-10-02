@@ -34,7 +34,7 @@ pilot-init (owner): {publication_policy: "owner-authored-elevenlabs-v1"}, or
 bind (owner): {conversation_id, authenticated_principal, destination?}. Returns
     a random transport credential bound to this conversation and its authenticated
     principal. destination defaults to "elevenlabs" and must be one the live
-    policy authorizes; it is fixed at the first bind, and publish refuses any
+    policy authorizes (a lab authorizes only the default); it is fixed at the first bind, and publish refuses any
     reply for another destination, so a reply meant for a call never goes out as
     a text and a text never reaches a call. A conversation bound to a
     destination other than "elevenlabs" reports it from accept and audit; one
@@ -253,8 +253,8 @@ class Conversation:
             require((home / '.voice-conversation-lab').read_text() == 'synthetic-only-v1\n',
                     'invalid lab marker')
             self.catalog = json.loads((self.root / 'catalog.json').read_text())
-            # The lab publishes only its synthetic catalog, never to a destination.
-            self.policy, self.destinations = None, list(DESTINATIONS)
+            # The lab publishes only its synthetic catalog, so it binds only the default destination.
+            self.policy, self.destinations = None, [DEFAULT_DESTINATION]
         else:
             policy = json.loads((self.root / 'policy.json').read_text())
             require(isinstance(policy, dict) and policy.get('publication_policy') in (V1_POLICY, V2_POLICY),
