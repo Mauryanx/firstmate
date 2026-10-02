@@ -410,10 +410,11 @@ assert owning('audit', cid='live')['requests'][-1]['state'] == 'accepted'
 print('PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused')
 
 # Destinations leave an ElevenLabs-only home exactly as it was: a reply for any
-# other destination is refused in the words it always was, a voice conversation
+# other destination is refused and publishes nothing, a voice conversation
 # records and reports no destination, and its disclosure names the v1 policy.
-refused = run('publish', dict(live_reply, response_id='to-text', destination='imessage'), code=2)
-assert 'this publication policy authorizes ElevenLabs only' in refused.stderr, refused.stderr
+run('publish', dict(live_reply, response_id='to-text', destination='imessage'), code=2)
+assert not any(r['event']['response_id'] == 'to-text' for r in json.loads(
+    (pilot / 'state/voice-conversation/journal.json').read_text())['replies'].values())
 run('bind', {'conversation_id': 'text', 'authenticated_principal': 'captain', 'destination': 'imessage'}, code=2)
 run('capture', dict(connection, **capture(4, 't3')))
 assert set(owning('accept', cid='live')) == {'dispatch', 'input', 'playback_context'}
@@ -488,8 +489,9 @@ assert run('pilot-init', dict(both, destinations=['elevenlabs']))['destinations'
 refused = run('publish', later, code=2)
 assert "does not authorize destination 'imessage'" in refused.stderr, refused.stderr
 assert run('pilot-init', {'publication_policy': 'owner-authored-elevenlabs-v1'})['destination'] == 'elevenlabs'
-refused = run('publish', later, code=2)
-assert 'this publication policy authorizes ElevenLabs only' in refused.stderr, refused.stderr
+run('publish', later, code=2)
+assert not any(r['event']['response_id'] == 'text-later' for r in json.loads(
+    (texting / 'state/voice-conversation/journal.json').read_text())['replies'].values())
 refused = run('publish', dict(later, destination='elevenlabs'), code=2)
 assert 'bound to destination imessage' in refused.stderr, refused.stderr
 assert owning('audit', cid='text')['destination'] == 'imessage'

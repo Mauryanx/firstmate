@@ -225,9 +225,6 @@ def policy_destinations(policy):
 def pilot_init(home, payload):
     """The owning turn explicitly enables publication, never a transport peer."""
     require(string(os.environ.get('FM_VOICE_OWNER')), 'owning session required')
-    if payload.get('publication_policy') != V2_POLICY:
-        require(payload == {'publication_policy': V1_POLICY},
-                'explicit owner-authored ElevenLabs publication policy required')
     destinations = policy_destinations(payload)
     require(home.is_absolute() and (home / 'state').is_dir(), 'existing operational home required')
     require(not (home / '.voice-conversation-lab').exists(), 'cannot convert a lab into a live home')
@@ -261,8 +258,7 @@ class Conversation:
             require(isinstance(policy, dict) and policy.get('publication_policy') in (V1_POLICY, V2_POLICY),
                     'live publication has not been explicitly enabled by the owner')
             self.policy = policy['publication_policy']
-            self.destinations = [DEFAULT_DESTINATION] if self.policy == V1_POLICY else policy_destinations(
-                {k: v for k, v in policy.items() if k != 'enabled_by'})
+            self.destinations = policy_destinations({k: v for k, v in policy.items() if k != 'enabled_by'})
         self.path = self.root / 'journal.json'
         self.lock = (self.root / 'lock').open('a')
         fcntl.flock(self.lock, fcntl.LOCK_EX)
@@ -478,8 +474,6 @@ class Conversation:
             require(string(event['speech_text']), 'explicit speech_text is required')
             require(len(event['speech_text']) <= MAX_SPEECH_CHARS,
                     'speech portion exceeds 1200 characters; publish shorter ordered portions')
-            if self.policy == V1_POLICY:
-                require(event['destination'] == 'elevenlabs', 'this publication policy authorizes ElevenLabs only')
             require(event['destination'] in self.destinations,
                     'this publication policy does not authorize destination %r' % (event['destination'],))
             require(event['destination'] == self.destination(),
