@@ -438,7 +438,7 @@ Handle actionable wakes as follows:
 1. For `signal:`, read the listed event lines first, then reconcile current state only where action depends on it.
 2. For `stale:`, inspect the recorded endpoint and load `stuck-crewmate-recovery` for a stopped, looping, confused, or unresponsive worker; a deep-inspection reason also requires current-state and validation-log inspection.
 3. For `check:`, act on the named poll result, including merges, contribution signals, Relay events, process-to-event source results, and captain inbox notes; a handled inbox note is also acknowledged with `bin/fm-inbox.sh drain --ack <id>`, or it stays counted as still waiting for firstmate.
-   An `inbox:vc-*` key is a spoken turn on a live call, not a note: the drain presents it first under a `VOICE` heading, and it is answered through `answer-voice-turn` before the rest of the drain, because the wait is audible and moving the note to handled is not an answer.
+   An `inbox:vc-*` key is a spoken or texted turn on a live conversation, not a note: the drain presents it first under a `VOICE` heading, and it is answered through `answer-voice-turn` before the rest of the drain, because the captain is waiting and moving the note to handled is not an answer.
 4. For `heartbeat:`, review the whole fleet from the structured fleet view, reconcile suspicious tasks and PR state, update the backlog, and never report an unchanged fleet as progress.
 
 Load `bearings` on a contributions check wake or when filing work linked to an upstream issue; its contribution-follow-up section owns triage and exact signal acknowledgement.

@@ -90,16 +90,18 @@ Only accepting the request and publishing a reply against its `request_id` produ
    ```
 
    Compose the words under [`references/speaking.md`](references/speaking.md), and take portions, kinds, rejection, and refusal meanings from [`references/publication.md`](references/publication.md).
+   When `accept` reports `destination: imessage`, the conversation is a text one: publish with that destination instead, written under [`references/writing.md`](references/writing.md).
 
 6. Acknowledge the wake through the ordinary generation-bound drain acknowledgement, and reconcile anything still `saved` per `references/publication.md`.
    The acknowledgement retires a `vc-` row only once its request has left `saved`; a row whose request is still `saved` is held and presented again by the next drain, so an early acknowledgement cannot lose a spoken turn, but it does not answer it either.
 
 ## References
 
-Load the one you need; both are resources of this skill, not separate skills.
+Load the one you need; all are resources of this skill, not separate skills.
 
 - [`references/publication.md`](references/publication.md) - the accept, publish, reject, and reconcile commands, ordered progress portions, and what each refusal means.
 - [`references/speaking.md`](references/speaking.md) - composing an answer meant for the ear, and the disclosure boundary on published speech.
+- [`references/writing.md`](references/writing.md) - composing an answer for a conversation bound to the `imessage` destination.
 
 ## What the conversation already guarantees
 
