@@ -22,6 +22,12 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# The one exact Pi package version every Pi extension test lane installs.
+# Pinned because Pi 1.0.0 changed its stock rendering and broke the Calm
+# stock-parity tests; moving to Pi 1.x needs those parity tests updated first.
+env:
+  FM_CI_PI_VERSION: 0.85.1
+
 jobs:
   lint:
     name: Lint ${{ matrix.partition }}
@@ -110,7 +116,7 @@ jobs:
       - name: Install the Pi package for the Pi extension tests
         run: |
           set -eu
-          npm install -g @earendil-works/pi-coding-agent
+          npm install -g "@earendil-works/pi-coding-agent@$FM_CI_PI_VERSION"
           npm ls -g --depth 0 @earendil-works/pi-coding-agent
       - name: Run portable parallel shard 1
         run: |
@@ -216,7 +222,7 @@ jobs:
       - name: Install the Pi package for the Pi extension tests
         run: |
           set -eu
-          npm install -g @earendil-works/pi-coding-agent
+          npm install -g "@earendil-works/pi-coding-agent@$FM_CI_PI_VERSION"
           npm ls -g --depth 0 @earendil-works/pi-coding-agent
       - name: Run portable serial shard ${{ matrix.shard }}
         env:
