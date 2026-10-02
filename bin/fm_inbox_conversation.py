@@ -34,9 +34,10 @@ pilot-init (owner): {publication_policy: "owner-authored-elevenlabs-v1"}, or
 bind (owner): {conversation_id, authenticated_principal, destination?}. Returns
     a random transport credential bound to this conversation and its authenticated
     principal. destination defaults to "elevenlabs" and must be one the live
-    policy authorizes (a lab authorizes only the default); it is fixed at the first bind, and publish refuses any
-    reply for another destination, so a reply meant for a call never goes out as
-    a text and a text never reaches a call. A conversation bound to a
+    policy authorizes (a lab authorizes only the default); it is fixed at the
+    first bind, and publish refuses any reply for another destination, so a
+    reply meant for a call never goes out as a text and a text never reaches a
+    call. A conversation bound to a
     destination other than "elevenlabs" reports it from accept and audit; one
     bound to the default carries no such field, exactly as before it existed.
     Repeat bind by the session holding the lock is idempotent; a different
