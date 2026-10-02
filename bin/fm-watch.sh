@@ -106,10 +106,9 @@
 #                          a phone or texted turn the conversation transport
 #                          queued as an `inbox:vc-*` check row has not been
 #                          surfaced yet; a sentinel child rings this watcher so
-#                          the turn closes the cycle within about one
-#                          FM_CONVERSATION_RING_SECS instead of waiting for the
-#                          poll loop to come back around, and each queued row
-#                          is reported once
+#                          the turn closes the cycle within about one second
+#                          instead of waiting for the poll loop to come back
+#                          around, and each queued row is reported once
 #   check: rejected unauthenticated state checks: <paths>
 #                          unsafe state checks were refused without execution
 #   check: rejected unauthenticated PR poll retirement receipts: <paths>
@@ -243,9 +242,6 @@ esac
 SIGNAL_GRACE=${FM_SIGNAL_GRACE:-30}   # seconds to linger after a signal so trailing
                                       # signals (a status write, then the same turn's
                                       # turn-end hook) coalesce into one wake
-CONVERSATION_RING_SECS=${FM_CONVERSATION_RING_SECS:-1}  # how often the
-                                      # conversation sentinel looks for a queued
-                                      # phone or texted turn (conversation_sentinel)
 TURNEND_CHURN_ABSORB_SECS=${FM_TURNEND_CHURN_ABSORB_SECS:-900}  # longest a task's
                                       # bare turn-ends may be deferred on pane-churn
                                       # evidence alone (signal_turnend_panes_churned)
@@ -1676,8 +1672,8 @@ procevent_surface_queued() {
 # while its sender is still waiting. A poll iteration can run for minutes in a
 # busy home (checks, status classification, the signal grace), and a row checked
 # only at the top of the loop waits for the rest of that iteration, so a
-# sentinel child looks for an unsurfaced turn every CONVERSATION_RING_SECS and
-# rings this watcher with USR1. The trap delivers from the main shell at its
+# sentinel child looks for an unsurfaced turn every second and rings this
+# watcher with USR1. The trap delivers from the main shell at its
 # next command boundary, and the long waits below (watch_sleep, the event wait,
 # a running check) are interruptible `wait`s, so the cycle closes within about
 # one ring wherever the iteration is. Delivery stands down while this watcher
@@ -1764,7 +1760,7 @@ conversation_sentinel() {
   trap - EXIT HUP INT TERM
   trap '' USR1
   while kill -0 "$WATCHER_PID" 2>/dev/null; do
-    sleep "$CONVERSATION_RING_SECS"
+    sleep 1
     IFS= read -r holder < "$WATCH_LOCK/pid" 2>/dev/null || exit 0
     [ "$holder" = "$WATCHER_PID" ] || exit 0
     [ -s "$FM_WAKE_QUEUE" ] || continue
@@ -2052,7 +2048,7 @@ event_wait_or_sleep() {
   fi
 
   # The wait runs as a child so a conversation ring can interrupt it; without a
-  # scratch file it falls back to the uninterruptible capture.
+  # scratch file the event path is unusable this cycle.
   if EVENT_WAIT_OUT=$(mktemp "$STATE/.event-wait.XXXXXX"); then
     FM_BACKEND_EVENTS_CAPABILITY_CONFIRMED=1 fm_backend_wait_transition "$first_backend" "$first_session" "$POLL" "$STATE" "${windows[@]}" > "$EVENT_WAIT_OUT" &
     EVENT_WAIT_PID=$!
@@ -2063,8 +2059,8 @@ event_wait_or_sleep() {
     rm -f -- "$EVENT_WAIT_OUT"
     EVENT_WAIT_OUT=
   else
-    rec=$(FM_BACKEND_EVENTS_CAPABILITY_CONFIRMED=1 fm_backend_wait_transition "$first_backend" "$first_session" "$POLL" "$STATE" "${windows[@]}")
-    rc=$?
+    EVENT_WAIT_OUT=
+    rc=2
   fi
   case "$rc" in
     0)

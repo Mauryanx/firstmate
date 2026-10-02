@@ -52,7 +52,7 @@ The turn-end guard remains the final backstop rather than the normal continuity 
 
 A phone or texted turn is filed by the conversation transport as a `check` row keyed `inbox:vc-<id>`, and its sender is waiting for a reply.
 One watcher poll iteration can run for minutes in a busy home, so a row read only at the top of the loop waited out the rest of that iteration.
-Instead, a sentinel child of the watcher looks for an unsurfaced conversation row every `FM_CONVERSATION_RING_SECS` (default one second) and rings the watcher, which closes the cycle with `check: conversation turn queued: <keys>` at its next command boundary.
+Instead, a sentinel child of the watcher looks for an unsurfaced conversation row every second and rings the watcher, which closes the cycle with `check: conversation turn queued: <keys>` at its next command boundary.
 The watcher's long waits - the poll sleep, the signal grace, the backend event wait, and a running check - are interruptible, so an idle Firstmate sees the turn within seconds wherever the iteration is.
 Delivery stands down while the watcher holds any state lock and the sentinel rings again, so a lock is never stranded and a locked rewrite is never cut short.
 Each queued row is surfaced once, and its marker is retired after the row leaves the queue; the drain still presents and acknowledges the row as described under "Per-actor acknowledgement".
