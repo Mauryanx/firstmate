@@ -25,6 +25,7 @@ Device-level latency, recognition fidelity and voice quality need a live client 
 Publication is accountable speech.
 Each published portion records its exact content digest, author identity, destination and turn, and live publication stays refused until the owner has explicitly enabled it for this home under the captain's disclosure authorization.
 That is accountability for deliberate speech, not an automated claim that any scan makes arbitrary private content safe to say out loud.
+The same transport can carry a text conversation, such as iMessage, when the owner's policy authorizes that destination; each conversation is bound to one destination, so a call's reply is never sent as a text and a text's reply is never spoken, and `bin/fm-inbox.sh conversation --help` owns that policy and binding.
 
 ## Existing audio prototype
 

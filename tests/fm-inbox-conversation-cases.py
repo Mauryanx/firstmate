@@ -404,3 +404,89 @@ assert json.loads(policy_path.read_text())['enabled_by'] == successor_owner
 (pilot / 'state/.lock').write_text(owner + '\n')
 assert owning('audit', cid='live')['requests'][-1]['state'] == 'accepted'
 print('PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused')
+
+# Destinations leave an ElevenLabs-only home exactly as it was: a reply for any
+# other destination is refused in the words it always was, a voice conversation
+# records and reports no destination, and its disclosure names the v1 policy.
+refused = run('publish', dict(live_reply, response_id='to-text', destination='imessage'), code=2)
+assert 'this publication policy authorizes ElevenLabs only' in refused.stderr, refused.stderr
+run('bind', {'conversation_id': 'text', 'authenticated_principal': 'captain', 'destination': 'imessage'}, code=2)
+run('capture', dict(connection, **capture(4, 't3')))
+assert set(owning('accept', cid='live')) == {'dispatch', 'input', 'playback_context'}
+assert 'destination' not in owning('audit', cid='live')
+live_journal = json.loads((pilot / 'state/voice-conversation/journal.json').read_text())
+assert set(live_journal['conversations']['live']) == {'owner', 'principal', 'credential'}
+assert 'text' not in live_journal['conversations']
+assert set(proof) == {'destination', 'digest', 'author', 'published_at', 'policy'}
+assert proof['policy'] == 'owner-authored-elevenlabs-v1'
+print('PASS: an ElevenLabs-only home refuses an iMessage reply and records nothing new for a voice conversation')
+
+# A v2 policy names its destinations, and each conversation is bound to one:
+# a text conversation publishes only as a text and a call only as speech.
+texting = temp / 'texting'
+(texting / 'state').mkdir(parents=True)
+(texting / 'state/.lock').write_text(owner + '\n')
+env['FM_HOME'] = str(texting)
+both = {'publication_policy': 'owner-authored-v2', 'destinations': ['elevenlabs', 'imessage']}
+for malformed in (dict(both, destinations=['imessage', 'sms']), dict(both, destinations=[]),
+                  dict(both, destinations=['imessage', 'imessage']), dict(both, destinations='imessage'),
+                  dict(both, enabled_by='someone'), {'publication_policy': 'owner-authored-v2'}):
+    run('pilot-init', malformed, code=2)
+assert not (texting / 'state/voice-conversation/policy.json').exists()
+assert run('pilot-init', both) == {'pilot': True, 'destinations': ['elevenlabs', 'imessage']}
+call = bind('call')
+text_bind = {'conversation_id': 'text', 'authenticated_principal': 'captain', 'destination': 'imessage'}
+text = run('bind', text_bind)
+assert run('bind', text_bind) == text
+for rebind in (dict(text_bind, destination='elevenlabs'), {'conversation_id': 'text', 'authenticated_principal': 'captain'},
+               {'conversation_id': 'call', 'authenticated_principal': 'captain', 'destination': 'imessage'},
+               {'conversation_id': 'fax', 'authenticated_principal': 'captain', 'destination': 'fax'}):
+    run('bind', rebind, code=2)
+texting_journal = json.loads((texting / 'state/voice-conversation/journal.json').read_text())
+assert texting_journal['conversations']['text']['destination'] == 'imessage'
+assert 'destination' not in texting_journal['conversations']['call']
+assert 'fax' not in texting_journal['conversations']
+
+run('capture', dict(text, **capture(1)))
+accepted = owning('accept', cid='text')
+assert accepted['dispatch'] and accepted['destination'] == 'imessage'
+assert owning('audit', cid='text')['destination'] == 'imessage'
+text_reply = dict(conversation_id='text', request_id='r1', response_id='text-answer', sequence=1,
+                  kind='answer', final=True, destination='imessage',
+                  speech_text='The migration branch is green and waiting on your review.')
+refused = run('publish', dict(text_reply, destination='elevenlabs'), code=2)
+assert 'bound to destination imessage' in refused.stderr, refused.stderr
+refused = run('publish', dict(text_reply, destination='sms'), code=2)
+assert "does not authorize destination 'sms'" in refused.stderr, refused.stderr
+run('publish', text_reply)
+delivered = run('deliver', dict(text, response_id='text-answer', generation='g1'))
+assert delivered['speech_text'] == text_reply['speech_text']
+assert delivered['disclosure']['destination'] == 'imessage'
+assert delivered['disclosure']['policy'] == 'owner-authored-v2'
+
+run('capture', dict(call, **capture(1)))
+assert 'destination' not in owning('accept', cid='call')
+call_reply = dict(text_reply, conversation_id='call', response_id='call-answer', destination='elevenlabs')
+refused = run('publish', dict(call_reply, destination='imessage'), code=2)
+assert 'bound to destination elevenlabs' in refused.stderr, refused.stderr
+run('publish', call_reply)
+delivered = run('deliver', dict(call, response_id='call-answer', generation='g1'))
+assert delivered['disclosure']['destination'] == 'elevenlabs'
+assert delivered['disclosure']['policy'] == 'owner-authored-v2'
+print('PASS: a v2 policy carries a text destination; each conversation publishes only to the one it is bound to')
+
+# Withdrawing a destination from the policy stops that conversation publishing,
+# under v2 and under v1 alike, without forgetting what it was bound to.
+run('capture', dict(text, **capture(2, 't1')))
+assert owning('accept', cid='text')['input']['request_id'] == 'r2'
+later = dict(text_reply, request_id='r2', response_id='text-later')
+assert run('pilot-init', dict(both, destinations=['elevenlabs']))['destinations'] == ['elevenlabs']
+refused = run('publish', later, code=2)
+assert "does not authorize destination 'imessage'" in refused.stderr, refused.stderr
+assert run('pilot-init', {'publication_policy': 'owner-authored-elevenlabs-v1'})['destination'] == 'elevenlabs'
+refused = run('publish', later, code=2)
+assert 'this publication policy authorizes ElevenLabs only' in refused.stderr, refused.stderr
+refused = run('publish', dict(later, destination='elevenlabs'), code=2)
+assert 'bound to destination imessage' in refused.stderr, refused.stderr
+assert owning('audit', cid='text')['destination'] == 'imessage'
+print('PASS: a destination withdrawn from the policy can no longer be published to')

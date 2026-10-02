@@ -11,14 +11,19 @@ Use the shell entry point; owner commands require its existing session-lock seam
 and main-actor role partition (a Pi supervision branch shares main's process).
 The local OS owner is trusted; no CLI or owner credential is a model tool.
 
-pilot-init (owner): {publication_policy: "owner-authored-elevenlabs-v1"}.
+pilot-init (owner): {publication_policy: "owner-authored-elevenlabs-v1"}, or
+    {publication_policy: "owner-authored-v2", destinations: [...]} naming the
+    destinations it authorizes, drawn from "elevenlabs" (speech) and "imessage"
+    (text). v1 authorizes ElevenLabs only, so a home enabled under it behaves
+    exactly as before v2 existed.
     Explicitly enables the pilot in an existing home while holding its session
     lock. Never run lab-init over that home. No browser or model is started.
-    This owner approves each exact reply for ElevenLabs by deliberately calling
+    This owner approves each exact reply for its destination by deliberately calling
     publish from the owning turn. No text is scraped or automatically classified.
-    Private research is permitted only under the captain's ElevenLabs disclosure
-    authorization; credentials must never be published. Other providers are not
-    authorized by this policy. The author is accountable as for written replies.
+    Private research is permitted only under the captain's disclosure
+    authorization for that destination; credentials must never be published.
+    A destination the policy does not name is not authorized, and publish
+    refuses it. The author is accountable as for written replies.
     Authorization of speech content does not grant action/merge/spend authority.
     Ownership follows this home's session lock, not the process that first
     enabled the pilot: a later session holding the lock may re-run pilot-init,
@@ -26,10 +31,16 @@ pilot-init (owner): {publication_policy: "owner-authored-elevenlabs-v1"}.
     home, including requests a previous session left saved. A session restart
     therefore needs no reset of state/voice-conversation/policy.json.
 
-bind (owner): {conversation_id, authenticated_principal}. Returns a random
-    transport credential bound to this conversation and its authenticated principal.
+bind (owner): {conversation_id, authenticated_principal, destination?}. Returns
+    a random transport credential bound to this conversation and its authenticated
+    principal. destination defaults to "elevenlabs" and must be one the live
+    policy authorizes; it is fixed at the first bind, and publish refuses any
+    reply for another destination, so a reply meant for a call never goes out as
+    a text and a text never reaches a call. A conversation bound to a
+    destination other than "elevenlabs" reports it from accept and audit; one
+    bound to the default carries no such field, exactly as before it existed.
     Repeat bind by the session holding the lock is idempotent; a different
-    principal cannot adopt the conversation.
+    principal or destination cannot adopt the conversation.
     A voice client exchanges its own pairing secret for this transport
     credential and keeps it server-side; this module never sees that exchange.
 All remaining commands require conversation_id. Transport commands also require
@@ -64,11 +75,12 @@ reject (owner): {request_id, reason}. Declines an unaccepted input explicitly;
 publish (owner): {request_id, response_id, sequence, kind, speech_key, final,
     question_binding?}. kind is receipt/progress/question/answer/error; sequence
     starts at 1 per request. IDs are immutable and retries must match exactly.
-    In the live pilot replace speech_key with speech_text and
-    destination:"elevenlabs". The owner publishes that exact text for that exact
-    turn, in portions of at most 1200 characters. Author process identity,
-    timestamp, destination and content digest are durable accountability
-    evidence, not a claim of automated privacy detection.
+    In the live pilot replace speech_key with speech_text and destination, which
+    must be both authorized by the policy and the one the conversation is bound
+    to. The owner publishes that exact text for that exact turn, in portions of
+    at most 1200 characters. Author process identity, timestamp, destination,
+    policy and content digest are durable accountability evidence, not a claim
+    of automated privacy detection.
     Questions require a unique binding. A bound answer consumes that question at
     acceptance. Missing, ambiguous or stale bindings never become approvals.
     Explicit work outcome is separate from playback: final closes this request's
@@ -114,6 +126,13 @@ import sys
 import time
 
 MAX_SPEECH_CHARS = 1200
+
+# Every destination a live policy may authorize, and the one a conversation is
+# bound to when bind names none: the voice conversations that predate the field.
+DESTINATIONS = ('elevenlabs', 'imessage')
+DEFAULT_DESTINATION = 'elevenlabs'
+V1_POLICY = 'owner-authored-elevenlabs-v1'
+V2_POLICY = 'owner-authored-v2'
 
 
 SUPERSEDED_REASON = 'prior call ended; superseded'
@@ -190,11 +209,25 @@ def init(home, payload):
     return {'lab': True, 'network': False}
 
 
+def policy_destinations(policy):
+    """The destinations a live policy authorizes, or a refusal for any other policy."""
+    if policy == {'publication_policy': V1_POLICY}:
+        return [DEFAULT_DESTINATION]
+    destinations = policy.get('destinations')
+    require(set(policy) == {'publication_policy', 'destinations'} and policy['publication_policy'] == V2_POLICY
+            and isinstance(destinations, list) and destinations
+            and all(d in DESTINATIONS for d in destinations) and len(set(destinations)) == len(destinations),
+            'explicit owner-authored publication policy required')
+    return destinations
+
+
 def pilot_init(home, payload):
     """The owning turn explicitly enables publication, never a transport peer."""
     require(string(os.environ.get('FM_VOICE_OWNER')), 'owning session required')
-    require(payload == {'publication_policy': 'owner-authored-elevenlabs-v1'},
-            'explicit owner-authored ElevenLabs publication policy required')
+    if payload.get('publication_policy') != V2_POLICY:
+        require(payload == {'publication_policy': V1_POLICY},
+                'explicit owner-authored ElevenLabs publication policy required')
+    destinations = policy_destinations(payload)
     require(home.is_absolute() and (home / 'state').is_dir(), 'existing operational home required')
     require(not (home / '.voice-conversation-lab').exists(), 'cannot convert a lab into a live home')
     root = home / 'state/voice-conversation'
@@ -204,7 +237,9 @@ def pilot_init(home, payload):
     if not target.exists() or json.loads(target.read_text()) != policy:
         write(target, canonical(policy))
     (home / 'state/inbox/handled').mkdir(mode=0o700, parents=True, exist_ok=True)
-    return {'pilot': True, 'destination': 'elevenlabs'}
+    if payload['publication_policy'] == V1_POLICY:
+        return {'pilot': True, 'destination': DEFAULT_DESTINATION}
+    return {'pilot': True, 'destinations': destinations}
 
 
 class Conversation:
@@ -218,10 +253,15 @@ class Conversation:
             require((home / '.voice-conversation-lab').read_text() == 'synthetic-only-v1\n',
                     'invalid lab marker')
             self.catalog = json.loads((self.root / 'catalog.json').read_text())
+            # The lab publishes only its synthetic catalog, never to a destination.
+            self.policy, self.destinations = None, list(DESTINATIONS)
         else:
             policy = json.loads((self.root / 'policy.json').read_text())
-            require(policy.get('publication_policy') == 'owner-authored-elevenlabs-v1',
+            require(isinstance(policy, dict) and policy.get('publication_policy') in (V1_POLICY, V2_POLICY),
                     'live publication has not been explicitly enabled by the owner')
+            self.policy = policy['publication_policy']
+            self.destinations = [DEFAULT_DESTINATION] if self.policy == V1_POLICY else policy_destinations(
+                {k: v for k, v in policy.items() if k != 'enabled_by'})
         self.path = self.root / 'journal.json'
         self.lock = (self.root / 'lock').open('a')
         fcntl.flock(self.lock, fcntl.LOCK_EX)
@@ -251,6 +291,17 @@ class Conversation:
             self.c['owner'] = owner
             self.save()
         return owner
+
+    def destination(self):
+        # A conversation bound before destinations existed, or to the default,
+        # stores none, so its journal record is exactly what it always was.
+        return self.c.get('destination', DEFAULT_DESTINATION)
+
+    def scoped(self, result):
+        """Name a non-default destination in an owner result; voice results stay unchanged."""
+        if self.destination() != DEFAULT_DESTINATION:
+            result['destination'] = self.destination()
+        return result
 
     def note_path(self, key):
         pending = self.inbox / (key + '.note')
@@ -299,11 +350,18 @@ class Conversation:
         owner = os.environ.get('FM_VOICE_OWNER')
         principal = self.p.get('authenticated_principal')
         require(string(owner) and identifier(principal), 'owner and authenticated principal are required')
+        destination = self.p.get('destination', DEFAULT_DESTINATION)
+        require(destination in self.destinations,
+                'this publication policy does not authorize destination %r' % (destination,))
         if self.c:
             require(self.c['principal'] == principal, 'conversation already bound')
+            require(self.destination() == destination,
+                    'conversation already bound to destination %s' % self.destination())
             self.own()
         else:
             self.c = {'owner': owner, 'principal': principal, 'credential': secrets.token_urlsafe(32)}
+            if destination != DEFAULT_DESTINATION:
+                self.c['destination'] = destination
             self.j['conversations'][self.cid] = self.c
             self.save()
         return {'conversation_id': self.cid, 'credential': self.c['credential']}
@@ -385,7 +443,7 @@ class Conversation:
             self.recover()
             context = [{'response_id': r['event']['response_id'], 'delivery': r.get('delivery')}
                        for r in self.j['replies'].values() if r['conversation_id'] == self.cid]
-            return {'dispatch': True, 'input': event, 'playback_context': context}
+            return self.scoped({'dispatch': True, 'input': event, 'playback_context': context})
         return {'dispatch': False}
 
     def reject(self):
@@ -419,11 +477,16 @@ class Conversation:
             require(string(event['speech_text']), 'explicit speech_text is required')
             require(len(event['speech_text']) <= MAX_SPEECH_CHARS,
                     'speech portion exceeds 1200 characters; publish shorter ordered portions')
-            require(event['destination'] == 'elevenlabs', 'this publication policy authorizes ElevenLabs only')
+            if self.policy == V1_POLICY:
+                require(event['destination'] == 'elevenlabs', 'this publication policy authorizes ElevenLabs only')
+            require(event['destination'] in self.destinations,
+                    'this publication policy does not authorize destination %r' % (event['destination'],))
+            require(event['destination'] == self.destination(),
+                    'conversation is bound to destination %s; publish there only' % self.destination())
             speech = event['speech_text']
-            disclosure = {'destination': 'elevenlabs', 'digest': digest(speech),
+            disclosure = {'destination': event['destination'], 'digest': digest(speech),
                           'author': self.c['owner'], 'published_at': int(time.time()),
-                          'policy': 'owner-authored-elevenlabs-v1'}
+                          'policy': self.policy}
         binding = event['question_binding']
         require(identifier(binding) if event['kind'] == 'question' else binding is None, 'invalid question binding')
         request = self.j['requests'].get(self.key(self.cid, event['request_id']))
@@ -505,8 +568,8 @@ class Conversation:
         replies = [{'request_id': r['event']['request_id'], 'response_id': r['event']['response_id'],
                     'final': r['event']['final'], 'disclosure': r['disclosure'], 'delivery': r.get('delivery', {'state': 'waiting'})}
                    for r in self.j['replies'].values() if r['conversation_id'] == self.cid]
-        return {'conversation_id': self.cid, 'requests': requests, 'replies': replies,
-                'work_outcome': 'Firstmate-owned; acceptance and playback do not prove action completion'}
+        return self.scoped({'conversation_id': self.cid, 'requests': requests, 'replies': replies,
+                            'work_outcome': 'Firstmate-owned; acceptance and playback do not prove action completion'})
 
 
 def main():
