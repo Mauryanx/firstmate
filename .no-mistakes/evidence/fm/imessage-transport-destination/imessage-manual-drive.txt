@@ -1,0 +1,90 @@
+== 1. Owner enables a v2 policy naming iMessage (and ElevenLabs)
+$ fm-inbox.sh conversation pilot-init <<< {"publication_policy": "owner-authored-v2", "destinations": ["elevenlabs", "imessage"]}
+  exit=0
+  stdout: {"destinations":["elevenlabs","imessage"],"pilot":true}
+
+== 2. The iMessage front end binds the captain's text thread to destination imessage
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "imessage-captain", "authenticated_principal": "captain", "destination": "imessage"}
+  exit=0
+  stdout: {"conversation_id":"imessage-captain","credential":"kRKGCY3N3ou53kNMW1NLSPMyjfscUMChTNPNrBn1rpM"}
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "voice-call", "authenticated_principal": "captain"}
+  exit=0
+  stdout: {"conversation_id":"voice-call","credential":"_aWI_MxLxCl2ykT_ZED-iEd6tV5FrJ2oPc1PIqyUAQc"}
+
+== 3. The captain texts Firstmate; the front end files it
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "imessage-captain", "credential": "kRKGCY3N3ou53kNMW1NLSPMyjfscUMChTNPNrBn1rpM", "turn_id": "m1", "request_id": "m1", "committed_transcript": "Status on the migration PR?", "revision": 1, "previous_turn_id": null, "created_at": "2026-10-02T03:00:00Z"}
+  exit=0
+  stdout: {"request_id":"m1","state":"saved"}
+  inbox notes: ['vc-b1fa93b7642c77907a7067cd2093425e0010638a276dc9093cd40c6d728727dd.note']
+  note body:
+    id=vc-b1fa93b7642c77907a7067cd2093425e0010638a276dc9093cd40c6d728727dd
+    source=voice-conversation
+    --
+    {"authenticated_principal":"captain","committed_transcript":"Status on the migration PR?","conversation_id":"imessage-captain","correction_of":null,"created_at":"2026-10-02T03:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"m1","revision":1,"turn_id":"m1"}
+    
+  wake record state/.wake-queue: 1790912592	1	check	inbox:vc-b1fa93b7642c77907a7067cd2093425e0010638a276dc9093cd40c6d728727dd	check: conversation inbox note vc-b1fa93b7642c77907a7067cd2093425e0010638a276dc9093cd40c6d728727dd; use fm-inbox.sh conversation accept
+  wake record state/.wake-queue.seq: 1
+
+== 4. Firstmate accepts the turn (reports destination imessage)
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "imessage-captain"}
+  exit=0
+  stdout: {"destination":"imessage","dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Status on the migration PR?","conversation_id":"imessage-captain","correction_of":null,"created_at":"2026-10-02T03:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"m1","revision":1,"turn_id":"m1"},"playback_context":[]}
+
+== 5. Adversarial: Firstmate tries to speak the text reply / publish to an unknown destination
+$ fm-inbox.sh conversation publish <<< {"conversation_id": "imessage-captain", "request_id": "m1", "response_id": "m1-answer", "sequence": 1, "kind": "answer", "final": true, "destination": "elevenlabs", "speech_text": "The migration PR is green and waiting on your review."}
+  exit=2
+  stderr: fm-inbox conversation: conversation is bound to destination imessage; publish there only
+$ fm-inbox.sh conversation publish <<< {"conversation_id": "imessage-captain", "request_id": "m1", "response_id": "m1-answer", "sequence": 1, "kind": "answer", "final": true, "destination": "sms", "speech_text": "The migration PR is green and waiting on your review."}
+  exit=2
+  stderr: fm-inbox conversation: this publication policy does not authorize destination 'sms'
+
+== 6. Firstmate publishes the reply as an iMessage
+$ fm-inbox.sh conversation publish <<< {"conversation_id": "imessage-captain", "request_id": "m1", "response_id": "m1-answer", "sequence": 1, "kind": "answer", "final": true, "destination": "imessage", "speech_text": "The migration PR is green and waiting on your review."}
+  exit=0
+  stdout: {"published":true,"response_id":"m1-answer"}
+
+== 7. The front end picks up the reply to text back to the captain
+$ fm-inbox.sh conversation deliver <<< {"conversation_id": "imessage-captain", "credential": "kRKGCY3N3ou53kNMW1NLSPMyjfscUMChTNPNrBn1rpM", "response_id": "m1-answer", "generation": "g1"}
+  exit=0
+  stdout: {"deliver":true,"disclosure":{"author":"linux-starttime=478327166 cmdline-hex=2f746d702f666d2d696d73672d64726976652f72756e2e326737362f636f646578002d6300707974686f6e3320222431222022243222202224332220222424223b20657869742022243f220066697874757265002f746d702f666d2d696d73672d64726976652f64726976652e7079002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d335841503631434a4b4d51454e32575736564d31443552002f746d702f666d2d696d73672d64726976652f72756e2e3267373600","destination":"imessage","digest":"109c49428627ed1d8ce679f9594ee46116a5ba6c45319307317f436d43493061","policy":"owner-authored-v2","published_at":1790912595},"generation":"g1","response_id":"m1-answer","speech_text":"The migration PR is green and waiting on your review."}
+$ fm-inbox.sh conversation playback <<< {"conversation_id": "imessage-captain", "credential": "kRKGCY3N3ou53kNMW1NLSPMyjfscUMChTNPNrBn1rpM", "response_id": "m1-answer", "generation": "g1", "state": "completed", "position_ms": 0}
+  exit=0
+  stdout: {"generation":"g1","position_ms":0,"state":"completed"}
+
+== 8. Audit of the text conversation
+$ fm-inbox.sh conversation audit <<< {"conversation_id": "imessage-captain"}
+  exit=0
+  stdout: {"conversation_id":"imessage-captain","destination":"imessage","replies":[{"delivery":{"generation":"g1","position_ms":0,"state":"completed"},"disclosure":{"author":"linux-starttime=478327166 cmdline-hex=2f746d702f666d2d696d73672d64726976652f72756e2e326737362f636f646578002d6300707974686f6e3320222431222022243222202224332220222424223b20657869742022243f220066697874757265002f746d702f666d2d696d73672d64726976652f64726976652e7079002f686f6d652f66697273746d6174652f2e6e6f2d6d697374616b65732f776f726b74726565732f3833353265323131646237652f30314d335841503631434a4b4d51454e32575736564d31443552002f746d702f666d2d696d73672d64726976652f72756e2e3267373600","destination":"imessage","digest":"109c49428627ed1d8ce679f9594ee46116a5ba6c45319307317f436d43493061","policy":"owner-authored-v2","published_at":1790912595},"final":true,"request_id":"m1","response_id":"m1-answer"}],"requests":[{"call_id":null,"correction_of":null,"note_id":"vc-b1fa93b7642c77907a7067cd2093425e0010638a276dc9093cd40c6d728727dd","previous_turn_id":null,"question_binding":null,"reason":null,"request_id":"m1","state":"accepted","turn_id":"m1"}],"work_outcome":"Firstmate-owned; acceptance and playback do not prove action completion"}
+
+== 9. Adversarial: the voice call cannot be rebound to imessage, nor publish a text
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "voice-call", "authenticated_principal": "captain", "destination": "imessage"}
+  exit=2
+  stderr: fm-inbox conversation: conversation already bound to destination elevenlabs
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "voice-call", "credential": "_aWI_MxLxCl2ykT_ZED-iEd6tV5FrJ2oPc1PIqyUAQc", "turn_id": "v1", "request_id": "v1", "committed_transcript": "Hello", "revision": 1, "previous_turn_id": null, "created_at": "2026-10-02T03:01:00Z"}
+  exit=0
+  stdout: {"request_id":"v1","state":"saved"}
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "voice-call"}
+  exit=0
+  stdout: {"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Hello","conversation_id":"voice-call","correction_of":null,"created_at":"2026-10-02T03:01:00Z","previous_turn_id":null,"question_binding":null,"request_id":"v1","revision":1,"turn_id":"v1"},"playback_context":[]}
+$ fm-inbox.sh conversation publish <<< {"conversation_id": "voice-call", "request_id": "v1", "response_id": "v1-a", "sequence": 1, "kind": "answer", "final": true, "destination": "imessage", "speech_text": "The migration PR is green and waiting on your review."}
+  exit=2
+  stderr: fm-inbox conversation: conversation is bound to destination elevenlabs; publish there only
+
+== 10. Adversarial: owner withdraws imessage (v1 policy); a new text reply is refused, nothing published
+$ fm-inbox.sh conversation capture <<< {"conversation_id": "imessage-captain", "credential": "kRKGCY3N3ou53kNMW1NLSPMyjfscUMChTNPNrBn1rpM", "turn_id": "m2", "request_id": "m2", "committed_transcript": "And the deploy?", "revision": 1, "previous_turn_id": "m1", "created_at": "2026-10-02T03:02:00Z"}
+  exit=0
+  stdout: {"request_id":"m2","state":"saved"}
+$ fm-inbox.sh conversation accept <<< {"conversation_id": "imessage-captain"}
+  exit=0
+  stdout: {"destination":"imessage","dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"And the deploy?","conversation_id":"imessage-captain","correction_of":null,"created_at":"2026-10-02T03:02:00Z","previous_turn_id":"m1","question_binding":null,"request_id":"m2","revision":1,"turn_id":"m2"},"playback_context":[{"delivery":{"generation":"g1","position_ms":0,"state":"completed"},"response_id":"m1-answer"}]}
+$ fm-inbox.sh conversation pilot-init <<< {"publication_policy": "owner-authored-elevenlabs-v1"}
+  exit=0
+  stdout: {"destination":"elevenlabs","pilot":true}
+$ fm-inbox.sh conversation publish <<< {"conversation_id": "imessage-captain", "request_id": "m2", "response_id": "m2-answer", "sequence": 1, "kind": "answer", "final": true, "destination": "imessage", "speech_text": "The migration PR is green and waiting on your review."}
+  exit=2
+  stderr: fm-inbox conversation: this publication policy does not authorize destination 'imessage'
+$ fm-inbox.sh conversation bind <<< {"conversation_id": "fresh-text", "authenticated_principal": "captain", "destination": "imessage"}
+  exit=2
+  stderr: fm-inbox conversation: this publication policy does not authorize destination 'imessage'
+
+ALL MANUAL DRIVE CHECKS PASSED
