@@ -55,6 +55,7 @@ FM_HOME="$FM_HOME" bin/fm-inbox.sh conversation reject <<<'{"conversation_id":"<
 ```
 
 A rejected request may still be answered with `kind: error` or `kind: question`, and never with a receipt, progress, or answer that would imply its work was accepted.
+When the owner's policy no longer authorizes the destination a conversation is bound to, which `audit` reports when it is not `elevenlabs`, reject each of its still-`saved` turns with that reason instead of accepting it, and never republish it to another destination.
 
 ## A new call supersedes what the last one left saved
 
