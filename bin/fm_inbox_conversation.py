@@ -14,8 +14,8 @@ The local OS owner is trusted; no CLI or owner credential is a model tool.
 pilot-init (owner): {publication_policy: "owner-authored-elevenlabs-v1"}, or
     {publication_policy: "owner-authored-v2", destinations: [...]} naming the
     destinations it authorizes, drawn from "elevenlabs" (speech) and "imessage"
-    (text). v1 authorizes ElevenLabs only, so a home enabled under it behaves
-    exactly as before v2 existed.
+    (text). v1 authorizes ElevenLabs only, so a home enabled under it accepts
+    and refuses exactly what it did before v2 existed.
     Explicitly enables the pilot in an existing home while holding its session
     lock. Never run lab-init over that home. No browser or model is started.
     This owner approves each exact reply for its destination by deliberately calling
