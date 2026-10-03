@@ -343,6 +343,7 @@ bin/fm-test-run.sh tests/fm-teardown-endpoint-safety.test.sh
 bin/fm-test-run.sh tests/fm-backend-herdr.test.sh
 TMPDIR=/var/tmp bin/fm-test-run.sh tests/fm-secondmate-safety.test.sh
 TMPDIR=/var/tmp bin/fm-test-run.sh tests/fm-teardown.test.sh
+TMPDIR=/var/tmp bash tests/fm-control-relaunch.test.sh
 ```
 
 Relevant output:
@@ -354,12 +355,14 @@ ok - fm-teardown: a pool slot named by a second task record is never returned, k
 ok - fm-teardown: a pool slot held by another firstmate home is never returned
 ok - herdr presentation focus: cleanup refuses rather than close the tab a live client is viewing
 ok - forced secondmate teardown refuses duplicated descendant pool slots
+ok - fm-control relaunch: durable task metadata survives while the prior return receipt is cleared
 FM_TEST_END 2026-10-03T17:39:09Z tests/fm-teardown.test.sh exit=0 duration_ms=551909 gate_skip=false
 ```
 
 The retry regression keeps a dirty successor copy while retiring both older records without `--force`, and asserts the successor claim survives with no second Treehouse return.
 It also returns the current owner's slot while an older legacy record remains, proving a stale duplicate cannot veto the actual owner's teardown.
 The same receipt prevents slot inspection after its pool registration disappears.
+The relaunch regression drives the public control interface with a stubbed tmux provider and checks the replacement metadata: PR and decision fields survive while the prior return receipt is cleared.
 An absent claim with unresolved duplicate records still refuses.
 The Herdr descendant fixtures prefer standalone GNU `gnusleep` when available because multicall uutils `sleep` dispatches on its invoked basename and cannot run through a `pi` alias.
 This host had GNU coreutils 9.7 and uutils coreutils 0.8.0; the existing platform `sleep` remains the fallback.

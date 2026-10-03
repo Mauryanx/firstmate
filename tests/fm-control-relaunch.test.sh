@@ -560,6 +560,7 @@ test_relaunch_preserves_durable_task_metadata() {
     printf '%s\n' 'pr_head=feature/relaunch'
     printf '%s\n' 'x_request=request-19'
     printf '%s\n' 'decisions_reviewed=1'
+    printf 'treehouse_returned=%s\n' "$dir/wt"
   } >> "$dir/home/state/rl19.meta"
 
   out=$(run_control "$dir" rl19 relaunch --note "continuing review work"); rc=$?
@@ -572,7 +573,9 @@ test_relaunch_preserves_durable_task_metadata() {
     || fail "the task X request must survive relaunch"
   [ "$(meta_field "$dir" rl19 decisions_reviewed)" = 1 ] \
     || fail "the task decision state must survive relaunch"
-  pass "fm-control relaunch: durable task metadata survives replacement launch publication"
+  [ -z "$(meta_field "$dir" rl19 treehouse_returned)" ] \
+    || fail "a replacement occupying the worktree must not inherit its prior return receipt"
+  pass "fm-control relaunch: durable task metadata survives while the prior return receipt is cleared"
 }
 
 test_relaunch_serializes_concurrent_durable_metadata_publication() {
