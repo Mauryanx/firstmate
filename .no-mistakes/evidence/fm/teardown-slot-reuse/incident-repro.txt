@@ -1,0 +1,42 @@
+===== BASE 8ef80a3 bin/fm-teardown.sh =====
+--- STATE: two records name /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/worktree; claim: task=wispr-register-fix home=/tmp/fm-teardown-endpoint-safety.Rdp51z/incident/home 
+--- $ FM_HOME=<home> bin/fm-teardown.sh distill-scale  -> exit 1
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:●  WATCHER DOWN - SUPERVISION IS OFF
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:●  2 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:●  This is a supervision warning only; the guarded operation WILL still run.
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:REFUSED: task distill-scale's recorded worktree /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/pool/1/project is also task wispr-register-fix's recorded worktree.
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:Returning that pool slot would kill wispr-register-fix's processes and reset its copy, so nothing was changed - not even with --force.
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/distill-scale.err:Reconcile whichever record is wrong (bin/fm-crew-state.sh distill-scale; bin/fm-crew-state.sh wispr-register-fix), then re-run teardown.
+    record present: yes; sentinel present: yes; treehouse return calls: 0
+    claim now: task=wispr-register-fix home=/tmp/fm-teardown-endpoint-safety.Rdp51z/incident/home 
+--- $ FM_HOME=<home> bin/fm-teardown.sh wispr-register-fix  -> exit 1
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/wispr-register-fix.err:REFUSED: task wispr-register-fix's recorded worktree /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/pool/1/project is also task distill-scale's recorded worktree.
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/wispr-register-fix.err:Returning that pool slot would kill distill-scale's processes and reset its copy, so nothing was changed - not even with --force.
+    /tmp/fm-teardown-endpoint-safety.Rdp51z/incident/wispr-register-fix.err:Reconcile whichever record is wrong (bin/fm-crew-state.sh wispr-register-fix; bin/fm-crew-state.sh distill-scale), then re-run teardown.
+    record present: yes; sentinel present: yes; treehouse return calls: 0
+    claim now: task=wispr-register-fix home=/tmp/fm-teardown-endpoint-safety.Rdp51z/incident/home 
+===== TARGET 7fe5863 bin/fm-teardown.sh =====
+--- STATE: two records name /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/worktree; claim: task=wispr-register-fix home=/tmp/fm-teardown-endpoint-safety.kBDkxj/incident/home 
+--- $ FM_HOME=<home> bin/fm-teardown.sh distill-scale  -> exit 0
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.out:teardown distill-scale complete (window firstmate:fm-distill-scale; pool slot /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/worktree left to task wispr-register-fix (home /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/home), which it was reassigned to)
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.out:Backlog: distill-scale just finished (this home keeps no markdown backlog at /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/home/data/backlog.md). Update /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/home/data/backlog.md - move distill-scale to Done, keep Done to the 10 most recent, then re-scan Queued and dispatch only work whose blockers are gone and date is due.
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.err:●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.err:●  WATCHER DOWN - SUPERVISION IS OFF
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.err:●  2 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.err:●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.err:●  This is a supervision warning only; the guarded operation WILL still run.
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.err:●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.err:●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/distill-scale.err:warning: task distill-scale's recorded worktree /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/pool/1/project was reassigned to task wispr-register-fix (home /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/home), which claimed that pool slot after this record was written; that slot is no longer distill-scale's, so its processes, copy, and claim are left untouched and only distill-scale's own cleanup runs.
+    record present: no; sentinel present: yes; treehouse return calls: 0
+    claim now: task=wispr-register-fix home=/tmp/fm-teardown-endpoint-safety.kBDkxj/incident/home 
+--- $ FM_HOME=<home> bin/fm-teardown.sh wispr-register-fix  -> exit 1
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/wispr-register-fix.err:REFUSED: worktree /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/worktree has uncommitted changes.
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/wispr-register-fix.err:uncommitted changes present
+    /tmp/fm-teardown-endpoint-safety.kBDkxj/incident/wispr-register-fix.err:Commit them (or get the captain's explicit OK to discard, then --force).
+    record present: yes; sentinel present: yes; treehouse return calls: 0
+    claim now: task=wispr-register-fix home=/tmp/fm-teardown-endpoint-safety.kBDkxj/incident/home 

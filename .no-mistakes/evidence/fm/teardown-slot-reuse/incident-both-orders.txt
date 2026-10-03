@@ -1,0 +1,20 @@
+===== TARGET 7fe5863, clean owner copy, both teardown orders =====
+--- STATE: two records name <case-root>/incident-distill-scale/worktree; claim: task=wispr-register-fix home=<case-root>/incident-distill-scale/home 
+--- $ FM_HOME=<home> bin/fm-teardown.sh distill-scale  -> exit 0
+    <case-root>/incident-distill-scale/distill-scale.out:teardown distill-scale complete (window firstmate:fm-distill-scale; pool slot <case-root>/incident-distill-scale/worktree left to task wispr-register-fix (home <case-root>/incident-distill-scale/home), which it was reassigned to)
+    <case-root>/incident-distill-scale/distill-scale.err:warning: task distill-scale's recorded worktree <case-root>/incident-distill-scale/pool/1/project was reassigned to task wispr-register-fix (home <case-root>/incident-distill-scale/home), which claimed that pool slot after this record was written; that slot is no longer distill-scale's, so its processes, copy, and claim are left untouched and only distill-scale's own cleanup runs.
+    record present: no; sentinel present: yes; treehouse return calls: 0
+    claim now: task=wispr-register-fix home=<case-root>/incident-distill-scale/home 
+--- $ FM_HOME=<home> bin/fm-teardown.sh wispr-register-fix  -> exit 0
+    <case-root>/incident-distill-scale/wispr-register-fix.out:teardown wispr-register-fix complete (window firstmate:fm-wispr-register-fix, worktree <case-root>/incident-distill-scale/worktree)
+    record present: no; sentinel present: no; treehouse return calls: 1
+    claim now: 
+--- STATE: two records name <case-root>/incident-wispr-register-fix/worktree; claim: task=wispr-register-fix home=<case-root>/incident-wispr-register-fix/home 
+--- $ FM_HOME=<home> bin/fm-teardown.sh wispr-register-fix  -> exit 0
+    <case-root>/incident-wispr-register-fix/wispr-register-fix.out:teardown wispr-register-fix complete (window firstmate:fm-wispr-register-fix, worktree <case-root>/incident-wispr-register-fix/worktree)
+    record present: no; sentinel present: no; treehouse return calls: 1
+    claim now: 
+--- $ FM_HOME=<home> bin/fm-teardown.sh distill-scale  -> exit 0
+    <case-root>/incident-wispr-register-fix/distill-scale.out:teardown distill-scale complete (window firstmate:fm-distill-scale, worktree <case-root>/incident-wispr-register-fix/worktree)
+    record present: no; sentinel present: no; treehouse return calls: 1
+    claim now: 
