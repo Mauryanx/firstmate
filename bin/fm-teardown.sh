@@ -310,24 +310,6 @@ SUB_HOME_PARENT_MARKER=".fm-secondmate-parent"
 . "$SCRIPT_DIR/fm-pending-reply-lib.sh"
 # shellcheck source=bin/fm-nm-run-lib.sh
 . "$SCRIPT_DIR/fm-nm-run-lib.sh"
-if [ "$#" = 1 ] && { [ "$1" = --help ] || [ "$1" = -h ]; }; then
-  cat <<'EOF'
-Usage: fm-teardown.sh <task-id> [--force] [--legacy-record]
-Return landed work and close only the task's recorded endpoint and records.
---force authorizes discarding this task's unlanded work; never other tasks' work.
---legacy-record requires a confirmed dead or agent-less legacy endpoint.
-
-A successful return is recorded as treehouse_returned=<original worktree>.
-Retries finish record cleanup without inspecting or returning that slot again.
-For older stranded records, keep worktree= intact and inspect .fm-slot-owner
-beside the pooled checkout. A successor's claim permits stale-record cleanup:
-  FM_HOME=<owning-home> bin/fm-teardown.sh <stale-id>
-Run separately for each stale task, without --force. If Herdr refuses an
-active-tab close, select an unrelated tab and retry. Never erase worktree=,
-remove an owner claim, or manufacture a return receipt to bypass a refusal.
-EOF
-  exit 0
-fi
 if [ "$#" -lt 1 ] || ! fm_task_id_path_safe "$1"; then
   echo "error: invalid teardown request" >&2
   exit 2
