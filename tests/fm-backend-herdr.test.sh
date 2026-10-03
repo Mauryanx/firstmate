@@ -567,7 +567,9 @@ test_exhausted_settle_window_keeps_a_non_shell_foreground_live() {
 
 test_registered_agent_with_an_agent_descendant_outside_the_foreground_stays_alive() {
   local lab sleep_bin shell_pid out shell_verdict
-  sleep_bin=$(command -v sleep) || fail "sleep not found"
+  # A multicall sleep dispatches on argv[0] and cannot run through a pi
+  # alias; prefer the standalone GNU binary on hosts that provide it.
+  sleep_bin=$(command -v gnusleep || command -v sleep) || fail "sleep not found"
   lab="$TMP_ROOT/stale-reg-descendant-bin"; mkdir -p "$lab"
   # A symlink to a real long-running binary so the kernel records `pi` as the
   # executable identity (a copied platform binary fails code signing on macOS).
@@ -596,7 +598,9 @@ test_registered_agent_with_an_agent_descendant_outside_the_foreground_stays_aliv
 
 test_agent_descendant_under_a_spaced_install_path_stays_alive() {
   local lab sleep_bin shell_pid out
-  sleep_bin=$(command -v sleep) || fail "sleep not found"
+  # A multicall sleep dispatches on argv[0] and cannot run through a pi
+  # alias; prefer the standalone GNU binary on hosts that provide it.
+  sleep_bin=$(command -v gnusleep || command -v sleep) || fail "sleep not found"
   # The executable path the process table reports contains a space (the macOS
   # `/Library/Application Support/...` shape), so a field-split read of the
   # process table sees only a fragment of the name.
