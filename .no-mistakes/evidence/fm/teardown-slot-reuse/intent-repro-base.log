@@ -1,0 +1,17 @@
+== incident: teardown distill-scale (stale) without --force ==
+rc=1
+  stderr: ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  stderr: ●  WATCHER DOWN - SUPERVISION IS OFF
+  stderr: ●  2 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+  stderr: ●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+  stderr: ●  This is a supervision warning only; the guarded operation WILL still run.
+  stderr: ●  watcher supervision needs Stop-owned automatic recovery; inspect the hook registration and startup status before ending the turn.
+  stderr: ●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  stderr: REFUSED: task distill-scale's recorded worktree /tmp/fm-teardown-endpoint-safety.IoPTRB/incident/pool/1/project is also task wispr-register-fix's recorded worktree.
+  stderr: Returning that pool slot would kill wispr-register-fix's processes and reset its copy, so nothing was changed - not even with --force.
+  stderr: Reconcile whichever record is wrong (bin/fm-crew-state.sh distill-scale; bin/fm-crew-state.sh wispr-register-fix), then re-run teardown.
+  windows after: control fm-distill-scale fm-wispr-register-fix 
+  claim after: task=wispr-register-fix home=/tmp/fm-teardown-endpoint-safety.IoPTRB/incident/home 
+  treehouse returns: 0
+not ok - stale record distill-scale could not retire
+exit=1
