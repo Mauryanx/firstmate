@@ -331,6 +331,42 @@ Valid cleanup removed only the exact task-bound target and left the control wind
 The metadata-only validation covers tmux, Herdr, Zellij, Orca, and cmux before backend dispatch.
 Claude, Codex, OpenCode, Pi, pi-signed, Grok, Kimi, Cursor, and Muse share that backend cleanup boundary; their harness-specific hook files, tokens, transcript bindings, and session-log sidecars are cleaned only after it, so no harness needs a separate endpoint parser.
 
+### Pool-return retry ownership
+
+Validated on 2026-10-03 with tmux 3.6 against dedicated fixture sockets and a fake Treehouse return, without driving a live Herdr session.
+The backend-independent teardown path is shared by tmux, Herdr, Zellij, and cmux; Orca removes its own recorded worktree and does not use the pool-return receipt.
+Forced secondmate child cleanup uses the same ownership determination and receipt writer.
+The teardown script header owns the receipt and recovery contract.
+
+```sh
+bin/fm-test-run.sh tests/fm-teardown-endpoint-safety.test.sh
+bin/fm-test-run.sh tests/fm-backend-herdr.test.sh
+TMPDIR=/var/tmp bin/fm-test-run.sh tests/fm-secondmate-safety.test.sh
+TMPDIR=/var/tmp bin/fm-test-run.sh tests/fm-teardown.test.sh
+TMPDIR=/var/tmp bash tests/fm-control-relaunch.test.sh
+```
+
+Relevant output:
+
+```text
+ok - fm-teardown: a successful return followed by a failed close can retire before or after slot reallocation, including legacy records
+ok - fm-teardown: malformed return receipts refuse before mutation and failed returns retain their claim without a receipt
+ok - fm-teardown: a pool slot named by a second task record is never returned, killed, or reset
+ok - fm-teardown: a pool slot held by another firstmate home is never returned
+ok - herdr presentation focus: cleanup refuses rather than close the tab a live client is viewing
+ok - forced secondmate teardown refuses duplicated descendant pool slots
+ok - fm-control relaunch: durable task metadata survives while the prior return receipt is cleared
+FM_TEST_END 2026-10-03T17:39:09Z tests/fm-teardown.test.sh exit=0 duration_ms=551909 gate_skip=false
+```
+
+The retry regression keeps a dirty successor copy while retiring both older records without `--force`, and asserts the successor claim survives with no second Treehouse return.
+It also returns the current owner's slot while an older legacy record remains, proving a stale duplicate cannot veto the actual owner's teardown.
+The same receipt prevents slot inspection after its pool registration disappears.
+The relaunch regression drives the public control interface with a stubbed tmux provider and checks the replacement metadata: PR and decision fields survive while the prior return receipt is cleared.
+An absent claim with unresolved duplicate records still refuses.
+The Herdr descendant fixtures prefer standalone GNU `gnusleep` when available because multicall uutils `sleep` dispatches on its invoked basename and cannot run through a `pi` alias.
+This host had GNU coreutils 9.7 and uutils coreutils 0.8.0; the existing platform `sleep` remains the fallback.
+
 ### Endpoint close
 
 A reported close failure costs teardown every durable record of the task, so what each backend's close actually returns was measured before that status was given any authority.

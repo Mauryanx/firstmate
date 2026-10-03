@@ -1106,6 +1106,132 @@ test_failed_endpoint_close_refuses_before_removing_the_record() {
   pass "fm-teardown: a close that genuinely failed refuses and keeps the record naming the surviving endpoint, and the same teardown finishes once the close works"
 }
 
+# Exercise the operator path: return succeeds, endpoint close fails, then the
+# same pooled copy is allocated to another task before the old record retires.
+test_returned_slot_retry_survives_reallocation() {
+  local dir id=returned-task other=next-task socket=dedicated.sock session=return-retry rc variant
+  [ -n "$REAL_TMUX" ] || { echo "skip - tmux not installed"; return 0; }
+  for variant in returned reassigned legacy changed-slot; do
+    dir=$(make_case "return-retry-$variant")
+    mark_case_as_treehouse_pool "$dir"
+    rm -f "$dir/worktree/sentinel"
+    git -C "$dir/project" update-ref refs/remotes/origin/main HEAD
+    claim_pool_slot "$dir" "$id"
+    ( cd "$dir" && env -u TMUX -u TMUX_PANE "$REAL_TMUX" -S "$socket" new-session -d -s "$session" -n control )
+    ( cd "$dir" && env -u TMUX -u TMUX_PANE "$REAL_TMUX" -S "$socket" new-window -d -t "=$session:" -n "fm-$id" )
+    write_close_failing_tmux_shim "$dir" "$socket" "$REAL_TMUX"
+    fm_write_meta "$dir/home/state/$id.meta" \
+      "window=$session:fm-$id" "endpoint_task_id=$id" \
+      "worktree=$dir/worktree" "project=$dir/project" "kind=ship" "mode=local-only"
+    set +e
+    env -u TMUX -u TMUX_PANE FM_TEST_BLOCK_KILL=1 \
+      FM_HOME="$dir/home" FM_ROOT_OVERRIDE="$ROOT" FM_RUNTIME_LOG="$dir/runtime.log" \
+      PATH="$dir/fakebin:$PATH" "$TEARDOWN" "$id" > "$dir/failed.out" 2> "$dir/failed.err"
+    rc=$?
+    set -e
+    [ "$rc" -ne 0 ] || fail "$variant: teardown should refuse the failed close"
+    assert_grep 'treehouse <return>' "$dir/runtime.log" "$variant: fixture never returned the slot"
+    assert_present "$dir/home/state/$id.meta" "$variant: failed close lost the task record"
+    assert_absent "$dir/pool/1/.fm-slot-owner" "$variant: successful return kept the claim"
+
+    # Returned but not allocated yet must also avoid a second return. The
+    # dirty sentinel makes an accidental worktree inspection fail loudly.
+    : > "$dir/worktree/sentinel"
+    if [ "$variant" != returned ]; then
+      claim_pool_slot "$dir" "$other"
+      fm_write_meta "$dir/home/state/$other.meta" \
+        "window=$session:fm-$other" "endpoint_task_id=$other" \
+        "worktree=$dir/worktree" "project=$dir/project" "kind=ship" "mode=local-only"
+    fi
+    if [ "$variant" = changed-slot ]; then
+      # Receipt recovery must not depend on a surviving pool registration.
+      rm "$dir/pool/treehouse-state.json"
+    fi
+    if [ "$variant" = legacy ]; then
+      # A record left by an older teardown has no successful-return receipt.
+      sed '/^treehouse_returned=/d' "$dir/home/state/$id.meta" > "$dir/legacy.meta"
+      mv "$dir/legacy.meta" "$dir/home/state/$id.meta"
+    fi
+    if [ "$variant" = legacy ]; then
+      # Clean up the current owner first while the old record still names its
+      # slot, then give that slot to a third task. Both older records must be
+      # recoverable without touching the third task's live dirty copy.
+      rm -f "$dir/worktree/sentinel"
+      ( cd "$dir" && env -u TMUX -u TMUX_PANE "$REAL_TMUX" -S "$socket" new-window -d -t "=$session:" -n "fm-$other" )
+      set +e
+      env -u TMUX -u TMUX_PANE FM_TEST_BLOCK_KILL=1 \
+        FM_HOME="$dir/home" FM_ROOT_OVERRIDE="$ROOT" FM_RUNTIME_LOG="$dir/runtime.log" \
+        PATH="$dir/fakebin:$PATH" "$TEARDOWN" "$other" > "$dir/next.out" 2> "$dir/next.err"
+      rc=$?
+      set -e
+      [ "$rc" -ne 0 ] || fail "legacy: next task should retain its failed-close record"
+      assert_grep 'treehouse_returned=' "$dir/home/state/$other.meta" \
+        "legacy: old record blocked the current owner's return"
+      # Model the two historical stuck records: neither has a receipt, and
+      # the third task's claim is the sole durable reassignment proof.
+      sed '/^treehouse_returned=/d' "$dir/home/state/$other.meta" > "$dir/legacy-next.meta"
+      mv "$dir/legacy-next.meta" "$dir/home/state/$other.meta"
+      claim_pool_slot "$dir" successor-task
+      : > "$dir/worktree/sentinel"
+    fi
+    : > "$dir/runtime.log"
+    env -u TMUX -u TMUX_PANE \
+      FM_HOME="$dir/home" FM_ROOT_OVERRIDE="$ROOT" FM_RUNTIME_LOG="$dir/runtime.log" \
+      PATH="$dir/fakebin:$PATH" "$TEARDOWN" "$id" > "$dir/rerun.out" 2> "$dir/rerun.err" \
+      || fail "$variant: retained record cannot retire safely: $(cat "$dir/rerun.err")"
+    assert_absent "$dir/home/state/$id.meta" "$variant: retry kept the stale record"
+    assert_present "$dir/worktree/sentinel" "$variant: retry modified the returned copy"
+    assert_no_grep 'treehouse <return>' "$dir/runtime.log" "$variant: retry returned the slot twice"
+    if [ "$variant" != returned ]; then
+      assert_present "$dir/home/state/$other.meta" "$variant: retry removed the new owner's record"
+      if [ "$variant" = legacy ]; then
+        env -u TMUX -u TMUX_PANE \
+          FM_HOME="$dir/home" FM_ROOT_OVERRIDE="$ROOT" FM_RUNTIME_LOG="$dir/runtime.log" \
+          PATH="$dir/fakebin:$PATH" "$TEARDOWN" "$other" > "$dir/next-retry.out" 2> "$dir/next-retry.err" \
+          || fail "legacy: second retained record cannot retire: $(cat "$dir/next-retry.err")"
+        assert_absent "$dir/home/state/$other.meta" "legacy: next task's record remains"
+        assert_present "$dir/worktree/sentinel" "legacy: next task touched its successor's copy"
+        assert_grep 'task=successor-task' "$dir/pool/1/.fm-slot-owner" "legacy: successor claim lost"
+        assert_no_grep 'treehouse <return>' "$dir/runtime.log" "legacy: cleanup returned successor's slot"
+      else
+        assert_grep "task=$other" "$dir/pool/1/.fm-slot-owner" "$variant: retry removed the new owner's claim"
+      fi
+    fi
+    ( cd "$dir" && env -u TMUX -u TMUX_PANE "$REAL_TMUX" -S "$socket" kill-server 2>/dev/null ) || true
+  done
+  pass "fm-teardown: a successful return followed by a failed close can retire before or after slot reallocation, including legacy records"
+}
+
+test_return_receipt_refusals() {
+  local dir id=receipt-task variant
+  for variant in empty duplicate drifted; do
+    dir=$(make_case "receipt-$variant")
+    mark_case_as_treehouse_pool "$dir"
+    fm_write_meta "$dir/home/state/$id.meta" \
+      "window=firstmate:fm-$id" "endpoint_task_id=$id" \
+      "worktree=$dir/worktree" "project=$dir/project" "kind=scout"
+    case "$variant" in
+      empty) printf 'treehouse_returned=\n' >> "$dir/home/state/$id.meta" ;;
+      duplicate) printf 'treehouse_returned=%s\ntreehouse_returned=%s\n' "$dir/worktree" "$dir/worktree" >> "$dir/home/state/$id.meta" ;;
+      drifted) printf 'treehouse_returned=%s/other\n' "$dir" >> "$dir/home/state/$id.meta" ;;
+    esac
+    assert_refused_without_mutation "$dir" "$id" "malformed $variant receipt"
+  done
+  dir=$(make_case receipt-failed-return)
+  mark_case_as_treehouse_pool "$dir"
+  claim_pool_slot "$dir" "$id"
+  fm_write_meta "$dir/home/state/$id.meta" \
+    "window=firstmate:fm-$id" "endpoint_task_id=$id" \
+    "worktree=$dir/worktree" "project=$dir/project" "kind=scout"
+  printf '#!/usr/bin/env bash\nexit 1\n' > "$dir/fakebin/treehouse"
+  if run_case "$dir" "$id" > "$dir/stdout" 2> "$dir/stderr"; then
+    fail "failed pool return was accepted"
+  fi
+  assert_no_grep 'treehouse_returned=' "$dir/home/state/$id.meta" "failed return published a receipt"
+  assert_grep "task=$id" "$dir/pool/1/.fm-slot-owner" "failed return released its claim"
+  pass "fm-teardown: malformed return receipts refuse before mutation and failed returns retain their claim without a receipt"
+}
+
 test_forced_teardown_continues_past_a_close_it_could_not_make() {
   local dir socket session='forced close failure' id=forced-task rc
   [ -n "$REAL_TMUX" ] || { echo "skip - tmux not installed"; return 0; }
@@ -1376,6 +1502,8 @@ test_tmux_empty_target_refuses_without_invocation
 test_recorded_process_identity_cleanup_is_exact
 test_isolated_tmux_invalid_and_valid_cleanup
 test_failed_endpoint_close_refuses_before_removing_the_record
+test_returned_slot_retry_survives_reallocation
+test_return_receipt_refusals
 test_forced_teardown_continues_past_a_close_it_could_not_make
 test_unreadable_close_read_refuses_while_a_definitive_absence_completes
 test_forced_secondmate_child_close_failure_still_refuses
