@@ -9,7 +9,7 @@
 # gh unchanged; invalid config or failed App authentication refuses the read.
 # Configured reads require the existing curl, jq, and openssl tools. JWTs use
 # RS256, iat=now-60 and exp=now+540. The installation request explicitly narrows
-# permissions to checks/statuses/metadata/pull_requests read for the target repository on github.com.
+# permissions to checks/statuses/metadata/pull_requests/actions read for the target repository on github.com.
 # Tokens are never stored or cached: each read mints one fresh token and rejects
 # expired responses. Secrets reach curl via stdin and gh only via GH_TOKEN,
 # never argv. Repositories outside this installation use the normal login with
@@ -99,7 +99,7 @@ printf '%s' "$RESPONSE" | jq -e --arg repo "$REPO" '
   (.account.login | ascii_downcase) == ($repo | split("/")[0] | ascii_downcase)
 ' >/dev/null 2>&1 || die 'invalid repository installation response'
 BODY=$(jq -cn --arg repo "$REPO_NAME" \
-  '{repositories:[$repo],permissions:{checks:"read",statuses:"read",metadata:"read",pull_requests:"read"}}')
+  '{repositories:[$repo],permissions:{checks:"read",statuses:"read",metadata:"read",pull_requests:"read",actions:"read"}}')
 RESPONSE=$(printf 'header = "Authorization: Bearer %s"\n' "$JWT" | \
   curl -q --config - --silent --fail --connect-timeout 10 --max-time 30 \
     --request POST --header 'Accept: application/vnd.github+json' \
@@ -179,6 +179,7 @@ query($id:ID!, $prID:ID!, $required:Boolean!, $endCursor:String) {
         ... on CheckRun {
           name status conclusion startedAt completedAt detailsUrl
           isRequired(pullRequestId:$prID) @include(if:$required)
+          checkSuite @include(if:$required) { workflowRun { event workflow { name } } }
         }
         ... on StatusContext {
           context state createdAt targetUrl
@@ -197,6 +198,13 @@ GRAPHQL
   CONTEXTS=$(printf '%s' "$PAGES" | jq -ce --arg rollup "$ROLLUP_ID" --argjson required "$REQUIRED" '
     def text: type == "string";
     def nullable_text: . == null or text;
+    def grouping_valid:
+      has("checkSuite") and
+      (.checkSuite == null or
+        (.checkSuite | type == "object" and has("workflowRun") and
+          (.workflowRun == null or
+            (.workflowRun | type == "object" and (.event | text) and has("workflow") and
+              (.workflow == null or (.workflow | type == "object" and (.name | text)))))));
     def context_valid:
       type == "object" and
       (if .__typename == "CheckRun" then
@@ -205,6 +213,7 @@ GRAPHQL
          and (.status != "COMPLETED" or (.conclusion | text and length > 0))
          and has("startedAt") and (.startedAt | nullable_text)
          and has("completedAt") and (.completedAt | nullable_text)
+         and ($required == false or grouping_valid)
        elif .__typename == "StatusContext" then
          (.context | text) and (.state | text and length > 0)
        else false end)
@@ -231,7 +240,20 @@ if [ "$MODE" = view ]; then
     {statusCheckRollup:$checks} + (if $fields == "headRefOid,statusCheckRollup" then {headRefOid:$head} else {} end)'
 else
   CHECKS=$(printf '%s' "$CONTEXTS" | jq -ce '
-    [.[] | select(.isRequired)
+    def started_at:
+      if .startedAt == null then [0,0]
+      else .startedAt
+        | (capture("^(?<second>[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2})(?:\\.(?<fraction>[0-9]{1,9}))?Z$")
+            // error("invalid check start time"))
+        | [(.second + "Z" | fromdateiso8601), ("0." + (.fraction // "0") | tonumber)]
+      end;
+    to_entries | sort_by([(.value | started_at), -.key]) | reverse | map(.value)
+    | reduce .[] as $check ({seen:{},checks:[]};
+        ($check | if .__typename == "StatusContext" then [.__typename,.context]
+          else [.__typename, ([.name, (.checkSuite.workflowRun.workflow.name // ""),
+            (.checkSuite.workflowRun.event // "")] | join("/"))] end | tojson) as $key
+        | if .seen[$key] then . else .seen[$key] = true | .checks += [$check] end)
+    | [.checks[] | select(.isRequired)
         | {name:(.name // .context),state:(.state // (if .status == "COMPLETED" then .conclusion else .status end))}
         | . + {bucket:(if .state == "SUCCESS" then "pass"
             elif .state == "SKIPPED" or .state == "NEUTRAL" then "skipping"

@@ -535,7 +535,7 @@ Create the private home file `config/gh-checks-app.json`:
 }
 ```
 
-Install the App on the repositories to inspect with Checks read, Commit statuses read, Metadata read, and Pull requests read permissions.
+Install the App on the repositories to inspect with Checks read, Commit statuses read, Metadata read, Pull requests read, and Actions read permissions.
 Keep its private key owned by the local user with mode `600` or `400`.
 The configuration is local to each `FM_HOME`; it is not inherited into secondmate homes.
 Merge preflight, PR blocker reporting, and optional live bearings enrichment use [`bin/fm-gh-checks-read.sh`](../bin/fm-gh-checks-read.sh), whose header owns configuration validation and token handling.
