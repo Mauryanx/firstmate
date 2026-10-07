@@ -72,15 +72,11 @@ if [ "${FAKE_GH_APP:-0}" = 1 ]; then
       [ "${FAKE_GH_APP_RACE:-0}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
       printf '{"headRefOid":"%s","id":"PR_test","headRefName":"fm/ship-task"}\n' "$head"
       ;;
-    'api --hostname')
+    'api graphql')
       [ "${GH_TOKEN:-}" = bearings_app_secret ] || exit 83
       head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       [ "${FAKE_GH_APP_RACE:-0}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-      case "${*: -1}" in
-        */check-runs*) printf '[{"check_runs":[{"head_sha":"%s","name":"ci","status":"completed","conclusion":"success"}]}]\n' "$head" ;;
-        */status*) printf '[{"sha":"%s","statuses":[]}]\n' "$head" ;;
-        *) exit 84 ;;
-      esac
+      printf '[{"data":{"node":{"commits":{"nodes":[{"commit":{"oid":"%s","statusCheckRollup":{"contexts":{"nodes":[{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"SUCCESS"}]}}}}]}}}}]\n' "$head"
       ;;
     *) exit 85 ;;
   esac

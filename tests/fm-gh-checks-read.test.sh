@@ -53,7 +53,7 @@ case "${*: -1}" in
 esac
 [ -z "${FM_TEST_MINT_FAIL:-}" ] || exit 88
 case " $* " in
-  *' --data {"repositories":["repo"],"permissions":{"checks":"read","statuses":"read","metadata":"read"}} https://api.github.com/app/installations/168738038/access_tokens '*) ;;
+  *' --data {"repositories":["repo"],"permissions":{"checks":"read","statuses":"read","metadata":"read","pull_requests":"read"}} https://api.github.com/app/installations/168738038/access_tokens '*) ;;
   *) exit 82 ;;
 esac
 count=0
@@ -73,55 +73,45 @@ for arg in "$@"; do
   case "$arg" in *installation_secret*|*ordinary_user_token*) exit 83 ;; esac
 done
 printf '%s\n' "$*" >> "$FM_TEST_CHECKS_ROOT/argv"
+if [ "${1:-} ${2:-}" = 'pr checks' ] && [ "${FM_TEST_COVERAGE:-}" != missing ] && [ "${FM_TEST_COVERAGE:-}" != other ] && [ -n "${FM_TEST_APP_ON:-}" ]; then
+  [ "$GH_TOKEN" = "installation_secret.-$(cat "$FM_TEST_CHECKS_ROOT/mints")" ] || exit 84
+  [ -z "${GH_DEBUG:-}" ] || exit 85
+  [ "${GH_HOST:-}" = github.com ] || exit 89
+  if [ "${FM_TEST_NO_CHECKS:-}" = 1 ]; then
+    printf "no checks reported on the 'feature' branch\n" >&2
+    exit 1
+  fi
+  [ "$*" = 'pr checks https://github.com/example/repo/pull/7 --required --json name,state,bucket --jq .' ] || exit 90
+  printf '%s\n' '[{"name":"ci","state":"SUCCESS","bucket":"pass"},{"name":"required-status","state":"PENDING","bucket":"pending"},{"name":"cancelled","state":"CANCELLED","bucket":"cancel"},{"name":"neutral","state":"NEUTRAL","bucket":"skipping"}]'
+  exit 0
+fi
 if [ "${1:-}" = pr ]; then
   [ "$GH_TOKEN" = ordinary_user_token ] || exit 86
   if [ -n "${FM_TEST_APP_ON:-}" ] && [ "${FM_TEST_COVERAGE:-}" != missing ] && [ "${FM_TEST_COVERAGE:-}" != other ]; then
-    [ "$*" = "pr view https://github.com/example/repo/pull/7 --json headRefOid,id,headRefName" ] || exit 90
-    printf '%s\n' '{"headRefOid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","id":"PR_test","headRefName":"feature"}'
+    case "$*" in
+      'pr view https://github.com/example/repo/pull/7 --json headRefOid,id,headRefName')
+        printf '%s\n' '{"headRefOid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","id":"PR_test","headRefName":"feature"}' ;;
+      'pr view https://github.com/example/repo/pull/7 --json headRefOid --jq .headRefOid')
+        head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        [ "${FM_TEST_REQUIRED_HEAD_RACE:-}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+        printf '%s\n' "$head" ;;
+      *) exit 91 ;;
+    esac
   else
     printf 'normal read\n'
   fi
   exit 0
 fi
-if [ "$GH_TOKEN" = ordinary_user_token ]; then
-  case "${*: -1}" in
-    */rules/branches/main)
-      if [ "${FM_TEST_RULES_UNAVAILABLE:-}" = 1 ]; then
-        printf '%s' '[{"status":"403","message":"Upgrade to GitHub Pro or make this repository public to enable this feature."}]'
-        exit 1
-      elif [ "${FM_TEST_RULES_ERROR:-}" = 1 ]; then
-        printf '%s' '[{"status":"403","message":"Resource not accessible by personal access token"}]'
-        exit 1
-      fi
-      ;;
-  esac
-  case " $* " in
-    *' api graphql '*)
-      printf '%s\n' '{"data":{"node":{"headRefOid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","baseRefName":"main","baseRef":{"branchProtectionRule":{"requiredStatusCheckContexts":["ci","neutral","cancelled"]}}}}}' ;;
-    *'/rules/branches/main '*) printf '%s\n' '[[{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"required-status"}]}}]]' ;;
-    *'/rules/branches/main') printf '%s\n' '[[{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"required-status"}]}}]]' ;;
-    *) exit 91 ;;
-  esac
-  exit 0
-fi
 [ "$GH_TOKEN" = "installation_secret.-$(cat "$FM_TEST_CHECKS_ROOT/mints")" ] || exit 84
 [ -z "${GH_DEBUG:-}" ] || exit 85
-case " $* " in *' api graphql '*) exit 92 ;; esac
+[ "$1 $2" = 'api graphql' ] || exit 92
 [ "${FM_TEST_CHECKS_ERROR:-}" != 1 ] || exit 93
 head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 [ "${FM_TEST_HEAD_MISMATCH:-}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-case "${*: -1}" in
-  */check-runs*)
-    case "${*: -1}" in *'filter=latest') ;; *) exit 95 ;; esac
-    runs='[{"name":"ci","status":"completed","conclusion":"success"},{"name":"optional","status":"completed","conclusion":"failure"},{"name":"neutral","status":"completed","conclusion":"neutral"},{"name":"cancelled","status":"completed","conclusion":"cancelled"}]'
-    [ "${FM_TEST_NO_CHECKS:-}" != 1 ] || runs='[]'
-    jq -cn --arg head "$head" --argjson runs "$runs" '[{check_runs:[$runs[:2][] | . + {head_sha:$head}]},{check_runs:[$runs[2:][] | . + {head_sha:$head}]}]' ;;
-  */status*)
-    statuses='[{"context":"required-status","state":"pending"}]'
-    [ "${FM_TEST_NO_CHECKS:-}" != 1 ] || statuses='[]'
-    jq -cn --arg head "$head" --argjson statuses "$statuses" '[{sha:$head,statuses:$statuses}]' ;;
-  *) exit 94 ;;
-esac
+nodes='[{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-01-01T00:00:01Z","completedAt":"2026-01-01T00:00:10Z","isRequired":true,"app":{"id":1}},{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-01-01T00:00:09Z","completedAt":"2026-01-01T00:00:09Z","isRequired":false,"app":{"id":2}},{"__typename":"CheckRun","name":"neutral","status":"COMPLETED","conclusion":"NEUTRAL"},{"__typename":"CheckRun","name":"cancelled","status":"COMPLETED","conclusion":"CANCELLED"},{"__typename":"StatusContext","context":"required-status","state":"PENDING"}]'
+[ "${FM_TEST_NO_CHECKS:-}" != 1 ] || nodes='[]'
+jq -cn --arg head "$head" --argjson nodes "$nodes" '[ $nodes[:2], $nodes[2:] ]
+  | map({data:{node:{commits:{nodes:[{commit:{oid:$head,statusCheckRollup:{contexts:{nodes:.}}}}]}}}})'
 SH
 chmod +x "$FAKEBIN/gh" "$FAKEBIN/curl"
 URL=https://github.com/example/repo/pull/7
@@ -133,6 +123,8 @@ export FM_TEST_APP_ON=1 GH_DEBUG=api
 export TOKEN=ambient_token JWT=ambient_jwt RESPONSE=ambient_response SIGNATURE=ambient_signature
 bash -x "$SCRIPT" pr view "$URL" --json statusCheckRollup > "$TMP_ROOT/out" 2> "$TMP_ROOT/trace"
 jq -e '.statusCheckRollup | length == 5' "$TMP_ROOT/out" >/dev/null || fail 'configured read did not return every App checks page'
+jq -e '.statusCheckRollup | [.[] | select(.name == "ci")] | length == 2 and any(.[]; .conclusion == "FAILURE")' "$TMP_ROOT/out" >/dev/null \
+  || fail 'overlapping old-success/new-failure contexts were filtered'
 [ "$GH_TOKEN" = ordinary_user_token ] || fail 'App token escaped into caller'
 if rg 'installation_secret|eyJhbGci' "$TMP_ROOT/trace" "$TMP_ROOT/argv"; then fail 'secret leaked into logs or argv'; fi
 pass 'configured reads verify RS256 JWT and pass secrets without argv/debug/trace leakage'
@@ -142,8 +134,9 @@ printf '%s' "$out" | jq -e '
     and any(.[]; .name == "required-status" and .bucket == "pending")
     and any(.[]; .name == "cancelled" and .bucket == "cancel")
     and any(.[]; .name == "neutral" and .bucket == "skipping")
-    and all(.[]; .name != "optional")
-' >/dev/null || fail 'required checks lost filtering, states, pagination, or latest-run selection'
+    and ([.[] | select(.name == "ci")] | length == 1)
+    and all(.[]; .name != "ci" or .state == "SUCCESS")
+' >/dev/null || fail 'native required checks included a same-name advisory check from another App'
 "$SCRIPT" pr view "$URL" --json headRefOid,statusCheckRollup >/dev/null
 [ "$(cat "$TMP_ROOT/mints")" = 3 ] || fail 'tokens persisted across reads'
 pass 'normal-login PR identity and paginated App commit checks preserve required-check behavior'
@@ -158,10 +151,8 @@ printf '%s' "$out" | jq -e '.headRefOid == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   || fail 'empty commit rollup lost its head binding'
 if FM_TEST_NO_CHECKS=1 "$SCRIPT" pr checks "$URL" --required > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'no required checks reported readiness'; fi
 assert_grep 'no checks reported' "$TMP_ROOT/err" 'empty checks diagnostic missing'
-out=$(FM_TEST_RULES_UNAVAILABLE=1 "$SCRIPT" pr checks "$URL" --required --json name,state,bucket --jq '.')
-printf '%s' "$out" | jq -e 'length == 3 and all(.[]; .name != "required-status")' >/dev/null \
-  || fail 'plan-gated rules lost classic branch-protection requirements'
-if FM_TEST_RULES_ERROR=1 "$SCRIPT" pr checks "$URL" --required > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'unreadable branch rules accepted'; fi
+if FM_TEST_REQUIRED_HEAD_RACE=1 "$SCRIPT" pr checks "$URL" --required --json name,state,bucket --jq '.' > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'required checks accepted a changed head'; fi
+[ ! -s "$TMP_ROOT/out" ] || fail 'required checks published output after a head change'
 rm "$TMP_ROOT/mints"
 if FM_TEST_EXPIRED=always "$SCRIPT" pr checks "$URL" > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'expired token accepted'; fi
 [ ! -s "$TMP_ROOT/out" ] && [ "$(cat "$TMP_ROOT/mints")" = 1 ] || fail 'expiry refusal was not bounded'

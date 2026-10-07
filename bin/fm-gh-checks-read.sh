@@ -9,7 +9,7 @@
 # gh unchanged; invalid config or failed App authentication refuses the read.
 # Configured reads require the existing curl, jq, and openssl tools. JWTs use
 # RS256, iat=now-60 and exp=now+540. The installation request explicitly narrows
-# permissions to checks/statuses/metadata read for the target repository on github.com.
+# permissions to checks/statuses/metadata/pull_requests read for the target repository on github.com.
 # Tokens are never stored or cached: each read mints one fresh token and rejects
 # expired responses. Secrets reach curl via stdin and gh only via GH_TOKEN,
 # never argv. Repositories outside this installation use the normal login with
@@ -99,7 +99,7 @@ printf '%s' "$RESPONSE" | jq -e --arg repo "$REPO" '
   (.account.login | ascii_downcase) == ($repo | split("/")[0] | ascii_downcase)
 ' >/dev/null 2>&1 || die 'invalid repository installation response'
 BODY=$(jq -cn --arg repo "$REPO_NAME" \
-  '{repositories:[$repo],permissions:{checks:"read",statuses:"read",metadata:"read"}}')
+  '{repositories:[$repo],permissions:{checks:"read",statuses:"read",metadata:"read",pull_requests:"read"}}')
 RESPONSE=$(printf 'header = "Authorization: Bearer %s"\n' "$JWT" | \
   curl -q --config - --silent --fail --connect-timeout 10 --max-time 30 \
     --request POST --header 'Accept: application/vnd.github+json' \
@@ -117,101 +117,60 @@ EXPIRES=$(printf '%s' "$RESPONSE" | jq -er '.expires_at | fromdateiso8601' 2>/de
 unset RESPONSE
 NOW=$(date +%s)
 [ "$EXPIRES" -gt "$((NOW + 60))" ] || die 'installation token expired'
+READ_ARGS=("$@")
 MODE=$2
 URL=$3
 shift 3
-FILTER=.
-case "$MODE" in
-  view)
-    [ "$#" = 2 ] && [ "$1" = --json ] || die 'unsupported checks view arguments'
-    case "$2" in statusCheckRollup|headRefOid,statusCheckRollup) VIEW_FIELDS=$2 ;; *) die 'unsupported checks view fields' ;; esac
-    ;;
-  checks)
-    [ "${1:-}" = --required ] || die 'expected a required checks read'
-    shift
-    if [ "$#" -gt 0 ]; then
-      [ "$#" = 4 ] && [ "$1" = --json ] && [ "$2" = name,state,bucket ] && [ "$3" = --jq ] \
-        || die 'unsupported required checks arguments'
-      FILTER=$4
-    fi
-    ;;
-esac
+if [ "$MODE" = view ]; then
+  [ "$#" = 2 ] && [ "$1" = --json ] || die 'unsupported checks view arguments'
+  case "$2" in statusCheckRollup|headRefOid,statusCheckRollup) VIEW_FIELDS=$2 ;; *) die 'unsupported checks view fields' ;; esac
+fi
 METADATA=$(gh pr view "$URL" --json headRefOid,id,headRefName) \
   || die 'could not read pull-request identity with normal login'
 HEAD=$(printf '%s' "$METADATA" | jq -er '.headRefOid') \
   || die 'missing pull-request head'
 fm_pr_head_valid "$HEAD" || die 'invalid pull-request head'
-REQUIRED_NAMES='[]'
 if [ "$MODE" = checks ]; then
-  PR_ID=$(printf '%s' "$METADATA" | jq -er '.id | select(type == "string" and length > 0)') \
-    || die 'missing pull-request identity'
-  POLICY_QUERY=$(cat <<'GRAPHQL'
-query($id:ID!) { node(id:$id) { ... on PullRequest {
-  headRefOid baseRefName baseRef { branchProtectionRule { requiredStatusCheckContexts } }
-} } }
+  RESULT_CODE=0
+  RESULT=$(GH_HOST=github.com GH_TOKEN="$TOKEN" gh "${READ_ARGS[@]}") || RESULT_CODE=$?
+  AFTER=$(gh pr view "$URL" --json headRefOid --jq .headRefOid) \
+    || die 'could not reread pull-request head with normal login'
+  [ "$HEAD" = "$AFTER" ] || die 'pull-request head changed during required checks read'
+  [ -z "$RESULT" ] || printf '%s\n' "$RESULT"
+  exit "$RESULT_CODE"
+fi
+PR_ID=$(printf '%s' "$METADATA" | jq -er '.id | select(type == "string" and length > 0)') \
+  || die 'missing pull-request identity'
+QUERY=$(cat <<'GRAPHQL'
+query($id:ID!, $endCursor:String) {
+  node(id:$id) { ... on PullRequest {
+    commits(last:1) { nodes { commit {
+      oid
+      statusCheckRollup { contexts(first:100, after:$endCursor) {
+        nodes {
+          __typename
+          ... on CheckRun { name status conclusion startedAt completedAt detailsUrl }
+          ... on StatusContext { context state createdAt targetUrl }
+        }
+        pageInfo { hasNextPage endCursor }
+      } }
+    } } }
+  } }
+}
 GRAPHQL
 )
-  POLICY=$(gh api graphql --hostname github.com -f "query=$POLICY_QUERY" -f "id=$PR_ID") \
-    || die 'could not read required-check policy with normal login'
-  REQUIRED_NAMES=$(printf '%s' "$POLICY" | jq -ce --arg head "$HEAD" '
-    if (.errors // [] | length) == 0 and .data.node.headRefOid == $head
-      and (.data.node.baseRefName | type) == "string" and .data.node.baseRef != null
-    then (.data.node.baseRef.branchProtectionRule.requiredStatusCheckContexts // [])
-    else error("invalid pull-request policy or head mismatch") end
-  ') || die 'invalid required-check policy or head mismatch'
-  BASE=$(printf '%s' "$POLICY" | jq -er '.data.node.baseRefName | @uri')
-  if ! RULES=$(gh api --hostname github.com --paginate --slurp "repos/$REPO/rules/branches/$BASE" 2>/dev/null); then
-    printf '%s' "$RULES" | jq -e '
-      length == 1 and .[0].status == "403" and .[0].message == "Upgrade to GitHub Pro or make this repository public to enable this feature."
-    ' >/dev/null 2>&1 || die 'could not read branch rules with normal login'
-    RULES='[]'
-  fi
-  REQUIRED_NAMES=$(jq -cn --argjson classic "$REQUIRED_NAMES" --argjson rules "$RULES" '
-    $classic + [$rules[][] | select(.type == "required_status_checks") | .parameters.required_status_checks[].context]
-    | unique
-  ') || die 'invalid required-check rules'
-fi
-RUN_PAGES=$(GH_TOKEN="$TOKEN" gh api --hostname github.com --paginate --slurp \
-  "repos/$REPO/commits/$HEAD/check-runs?per_page=100&filter=latest") \
-  || die 'could not read commit check runs'
-STATUS_PAGES=$(GH_TOKEN="$TOKEN" gh api --hostname github.com --paginate --slurp \
-  "repos/$REPO/commits/$HEAD/status?per_page=100") \
-  || die 'could not read commit statuses'
-CONTEXTS=$(jq -cn --arg head "$HEAD" --argjson runs "$RUN_PAGES" --argjson statuses "$STATUS_PAGES" '
-  if ($runs | type) != "array" or ($runs | length) == 0
-    or ($statuses | type) != "array" or ($statuses | length) == 0
-    or any($runs[]; (.check_runs | type) != "array")
-    or any($statuses[]; .sha != $head or (.statuses | type) != "array")
-    or any($runs[].check_runs[]; .head_sha != $head)
-  then error("invalid checks response or head mismatch") else
-    [$runs[].check_runs[] | {
-      __typename:"CheckRun",name,status:(.status | ascii_upcase),
-      conclusion:(if .conclusion == null then null else .conclusion | ascii_upcase end),
-      startedAt:.started_at,completedAt:.completed_at,detailsUrl:.details_url
-    }] + [$statuses[].statuses[] | {
-      __typename:"StatusContext",context,state:(.state | ascii_upcase),createdAt:.created_at,targetUrl:.target_url
-    }]
-  end
+PAGES=$(GH_TOKEN="$TOKEN" gh api graphql --hostname github.com --paginate --slurp \
+  -f "query=$QUERY" -f "id=$PR_ID") || die 'could not read pull-request commit checks'
+CONTEXTS=$(printf '%s' "$PAGES" | jq -ce --arg head "$HEAD" '
+  if type != "array" or length == 0 then error("missing checks pages") else . end
+  | [ .[]
+      | if (.errors // [] | length) > 0 then error("GraphQL errors") else .data.node.commits.nodes end
+      | if type == "array" and length == 1 then .[0].commit else error("missing head commit") end
+      | if .oid == $head then . else error("commit head mismatch") end
+      | if .statusCheckRollup == null then []
+        elif (.statusCheckRollup.contexts.nodes | type) == "array" then .statusCheckRollup.contexts.nodes
+        else error("invalid checks response") end
+    ] | add
 ') || die 'invalid commit checks response or head mismatch'
-if [ "$MODE" = view ]; then
-  jq -cn --arg head "$HEAD" --arg fields "$VIEW_FIELDS" --argjson checks "$CONTEXTS" '
-    {statusCheckRollup:$checks} + (if $fields == "headRefOid,statusCheckRollup" then {headRefOid:$head} else {} end)'
-else
-  CHECKS=$(printf '%s' "$CONTEXTS" | jq -ce --argjson required "$REQUIRED_NAMES" '
-    [ .[] | select((.name // .context) as $name | $required | index($name) != null)
-        | {name:(.name // .context), state:(.state // (if .status == "COMPLETED" then .conclusion else .status end))}
-        | . + {bucket:(if .state == "SUCCESS" then "pass"
-            elif .state == "SKIPPED" or .state == "NEUTRAL" then "skipping"
-            elif .state == "ERROR" or .state == "FAILURE" or .state == "TIMED_OUT" or .state == "ACTION_REQUIRED" then "fail"
-            elif .state == "CANCELLED" then "cancel" else "pending" end)} ]
-  ') || die 'invalid required checks response'
-  if [ "$CONTEXTS" = '[]' ]; then
-    printf "no checks reported on the '%s' branch\n" "$(printf '%s' "$METADATA" | jq -r '.headRefName')" >&2
-    exit 1
-  fi
-  if [ "$CHECKS" = '[]' ]; then
-    printf "no required checks reported on the '%s' branch\n" "$(printf '%s' "$METADATA" | jq -r '.headRefName')" >&2
-    exit 1
-  fi
-  printf '%s' "$CHECKS" | jq -r "$FILTER"
-fi
+jq -cn --arg head "$HEAD" --arg fields "$VIEW_FIELDS" --argjson checks "$CONTEXTS" '
+  {statusCheckRollup:$checks} + (if $fields == "headRefOid,statusCheckRollup" then {headRefOid:$head} else {} end)'

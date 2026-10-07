@@ -141,22 +141,11 @@ SH
 printf '%s\n' "$*" >> "$FM_TEST_GH_LOG"
 if [ -n "${FM_TEST_CHECKS_APP:-}" ]; then
   case " $* " in
-    *'/check-runs?'*|*'/status?'*) [ "${GH_TOKEN:-}" = installation_merge_secret ] || exit 90 ;;
+    *' --paginate --slurp '*) [ "${GH_TOKEN:-}" = installation_merge_secret ] || exit 90 ;;
     *) [ "${GH_TOKEN:-}" = ordinary_merge_identity ] || exit 91 ;;
   esac
 fi
 case "${1:-} ${2:-}" in
-  "api --hostname")
-    jq --arg endpoint "${*: -1}" --arg race "${FM_TEST_APP_HEAD_RACE:-}" '
-      (if $race == "1" then "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" else .headRefOid end) as $head
-      | if $endpoint | contains("/check-runs?") then
-          [{check_runs:[.statusCheckRollup[] | select(.__typename == "CheckRun")
-            | {head_sha:$head,name,status:(.status | ascii_downcase),conclusion:(.conclusion | ascii_downcase)}]}]
-        else [{sha:$head,statuses:[.statusCheckRollup[] | select(.__typename == "StatusContext")
-          | {context,state:(.state | ascii_downcase)}]}] end
-    ' "$FM_TEST_GH_VIEW_JSON"
-    exit 0
-    ;;
   "pr view")
     case " $* " in
       *statusCheckRollup*)
@@ -210,6 +199,16 @@ case "${1:-} ${2:-}" in
     exit "$merge_rc"
     ;;
   "api graphql")
+    if [ -n "${FM_TEST_CHECKS_APP:-}" ]; then
+      case " $* " in
+        *' --paginate --slurp '*)
+          jq --arg race "${FM_TEST_APP_HEAD_RACE:-}" '
+            [{data:{node:{commits:{nodes:[{commit:{oid:(if $race == "1" then "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" else .headRefOid end),statusCheckRollup:{contexts:{nodes:.statusCheckRollup}}}}]}}}}]
+          ' "$FM_TEST_GH_VIEW_JSON"
+          exit 0
+          ;;
+      esac
+    fi
     if [ -f "${FM_TEST_GH_GRAPHQL_FAIL:-}" ]; then
       echo 'error: could not reach the GitHub API' >&2
       exit 1
@@ -3131,6 +3130,17 @@ SH
     > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
   expect_code 1 "$rc" 'App checks: red checks must refuse'
   assert_no_grep 'pr merge' "$case_dir/gh.log" 'App checks: red merge reached forge'
+  : > "$case_dir/gh.log"
+  write_github_rollup_json "$case_dir" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+    "$(check_run ci COMPLETED SUCCESS 2026-01-01T00:00:01Z 2026-01-01T00:00:10Z)" \
+    "$(check_run ci COMPLETED FAILURE 2026-01-01T00:00:09Z 2026-01-01T00:00:09Z)"
+  rc=0
+  GH_TOKEN=ordinary_merge_identity FM_TEST_CHECKS_APP=1 \
+    run_pr_merge "$case_dir" task-x1 https://github.com/example/repo/pull/74 \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  expect_code 1 "$rc" 'App checks: a late-finishing old success hid a newer failure'
+  assert_grep "check 'ci' is not green" "$case_dir/stderr" 'App checks: newer failure was not named'
+  assert_no_grep 'pr merge' "$case_dir/gh.log" 'App checks: overlapping red merge reached forge'
   : > "$case_dir/gh.log"
   write_github_live_json "$case_dir" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   rc=0
