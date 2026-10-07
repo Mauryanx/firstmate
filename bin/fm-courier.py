@@ -3,6 +3,8 @@
 
 Usage: fm-courier.py submit < request.json
        fm-courier.py results ID DIGEST
+       fm-courier.py notify TO < notification.txt
+       fm-courier.py delivery ID DIGEST
 Opt in with FM_COURIER_ENABLED=1; absent/off exits 3 without I/O.
 FM_COURIER_OUTBOX defaults to /srv/brain/courier/outbox.
 FM_COURIER_INBOX defaults to /srv/brain/courier/inbox.
@@ -15,6 +17,13 @@ new intentional message needs a new ID. Attachment snapshots remain in outbox.
 Results prints ALL matching immutable snapshots, not a guessed latest status.
 No receipt exits 4 with an empty list. Refusal exits 1; usage exits 2.
 Only courier can approve, enforce policy/limits, or contact a provider.
+Notify is the Firstmate active-alert adapter: it assigns a fresh ID, publishes
+the text-only imessage proposal and checks matching receipts. Delivery checks
+that same ID/digest later. Both print submission identity, all receipts and a
+delivered flag; only a matching sent receipt exits 0. Unconfirmed delivery
+(including waiting, approved, unknown or denied snapshots) exits 4. Receipt
+refusal exits 1 while preserving the published identity on stdout for recovery.
+Never retry notify to poll or resolve an unknown send; use delivery instead.
 """
 
 import argparse
@@ -23,6 +32,7 @@ import os
 from pathlib import Path
 import pwd
 import re
+import secrets
 import sys
 
 from fm_zone_io import Refused, canonical, directory, fields, protected, publish, read_at, strict_json
@@ -58,7 +68,11 @@ def submit():
     data = sys.stdin.buffer.read(JSON_LIMIT + 1)
     if len(data) > JSON_LIMIT:
         raise Refused()
-    row = fields(strict_json(data),
+    return publish_request(strict_json(data))
+
+
+def publish_request(row):
+    row = fields(row,
                  {"id", "channel", "to", "text", "purpose", "attachments"}, {"approval_ref"})
     identity(row["id"])
     if row["channel"] != "imessage":
@@ -146,6 +160,27 @@ def results(identity_value, digest):
         os.close(parent)
 
 
+def delivery(identity_value, digest):
+    row = {"id": identity_value, "digest": digest, "delivered": False, "receipts": None}
+    try:
+        row["receipts"] = results(identity_value, digest)
+    except (OSError, ValueError, KeyError, TypeError, RecursionError, UnicodeError):
+        print("courier refused notification receipts", file=sys.stderr)
+        return row, 1
+    row["delivered"] = any(receipt["result"] == "sent" for receipt in row["receipts"])
+    return row, 0 if row["delivered"] else 4
+
+
+def notify(recipient):
+    message = sys.stdin.buffer.read(40001).decode("utf-8")
+    submitted = publish_request({"id": "notify-" + secrets.token_hex(16), "channel": "imessage",
+                                 "to": recipient, "text": message,
+                                 "purpose": "Firstmate active notification", "attachments": []})
+    row, status = delivery(submitted["id"], submitted["digest"])
+    row["submission"] = submitted
+    return row, status
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="operation", required=True)
@@ -153,14 +188,28 @@ def main():
     reader = commands.add_parser("results")
     reader.add_argument("id")
     reader.add_argument("digest")
+    notifier = commands.add_parser("notify")
+    notifier.add_argument("to")
+    checker = commands.add_parser("delivery")
+    checker.add_argument("id")
+    checker.add_argument("digest")
     args = parser.parse_args()
     if os.environ.get("FM_COURIER_ENABLED") != "1":
         print("courier unavailable (opt-in required)", file=sys.stderr)
         return 3
     try:
-        result = submit() if args.operation == "submit" else results(args.id, args.digest)
+        if args.operation == "notify":
+            result, status = notify(args.to)
+        elif args.operation == "delivery":
+            identity(args.id)
+            if not DIGEST.fullmatch(args.digest):
+                raise Refused()
+            result, status = delivery(args.id, args.digest)
+        else:
+            result = submit() if args.operation == "submit" else results(args.id, args.digest)
+            status = 4 if result == [] else 0
         sys.stdout.buffer.write(canonical(result) + b"\n")
-        return 4 if result == [] else 0
+        return status
     except (OSError, ValueError, KeyError, TypeError, RecursionError, UnicodeError):
         print("courier refused request or result", file=sys.stderr)
         return 1

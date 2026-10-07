@@ -16,6 +16,11 @@ It lists channel directives, one per non-empty, non-comment line, and every list
   Other platforms have no built-in OS channel, so configure `command:` when a durable marker alone is insufficient.
 - `osascript` posts a macOS Notification Center banner outside the terminal pane.
 - `herdr` calls `herdr notification show` outside the supervised pane.
+- `courier` invokes the Firstmate notification adapter in [`fm-courier.py`](../bin/fm-courier.py), using `FM_COURIER_NOTIFY_TO` as the recipient and requiring `FM_COURIER_ENABLED=1`.
+  Both settings and the explicit channel are required; ordinary unconfigured alerts retain their current channels.
+  The caller logs the submission ID/digest and receipt evidence, distinguishes unconfirmed delivery from a matching `sent` receipt, and retains the alarm marker on pending approval, refusal or endpoint failure.
+  Use the adapter's `delivery` operation with that logged identity for subsequent polling; repeating `notify` creates a new intentional proposal.
+  Courier alone owns recipient policy and authenticated exact-message approval; the adapter never falls back to a legacy provider when courier is unavailable.
 - `command:<cmd>` runs `<cmd>` through `sh -c` with the alarm summary as `$1` and on stdin, allowing delivery to a phone or pager service.
 
 An absent `config/wedge-alarm` behaves as `auto`, which is default-on on macOS.
@@ -36,4 +41,5 @@ When the daemon is sourced as a library, that seam defaults to `discard`, so a t
 Production leaves the seam unset and uses the configured real channels.
 
 `tests/fm-daemon.test.sh` covers directive parsing, rate limiting, timeout and process-group cleanup, argv-safe dispatch, channel fallback, and safe `command:` summary delivery.
+`tests/fm-zones.test.sh` drives courier notification publication, delivery polling and the actual active-alert caller against isolated local endpoints, without sending messages.
 [`verification/supervision.md`](verification/supervision.md#wedge-alarm-channels) records the bounded manual macOS and Herdr channel proof.

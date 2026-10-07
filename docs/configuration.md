@@ -20,7 +20,7 @@ Untracked files and directories whose names begin with `scratchpad` are also git
 The producing PR and Relay helpers own the fields they append, `bin/fm-classify-lib.sh` owns status-event vocabulary, and `bin/fm-crew-state.sh` owns current-state reconciliation.
 Wake, watcher, away-mode, and Relay-specific state mechanics remain with their named scripts and reference sections rather than being duplicated into one exhaustive state tree here.
 
-## Optional brain-desk and courier clients
+## Optional brain-desk and courier integration
 
 [`bin/fm-brain-desk.py`](../bin/fm-brain-desk.py) connects Firstmate to the installed bounded desk; its help owns invocation, endpoint settings, input bounds and result validation.
 It is separate from ordinary ship/scout workers: `fm-spawn.sh`, `fm-send.sh` and `fm-control.sh` retain their existing launch, steer, interrupt and resume behavior.
@@ -28,12 +28,16 @@ The historical privileged wrapper name provides a tool-less desk, never an inter
 Desk facts are accepted only through the validated facts/citations protocol; raw reports, links and instructions refuse before reaching stdout.
 Keep journal reads on the curated view with `BRAIN_JOURNAL_VIEW=/srv/brain/view`, and operational control on the installed allowlisted `brainctl`; unavailable view data never licenses a raw-store fallback.
 
-[`bin/fm-courier.py`](../bin/fm-courier.py) publishes untrusted delivery proposals and reads immutable courier receipts; its help owns invocation, file publication and matching mechanics.
+[`bin/fm-courier.py`](../bin/fm-courier.py) publishes untrusted delivery proposals, adapts Firstmate notifications and reads immutable courier receipts; its help owns invocation, file publication, matching and delivery exit semantics.
 It has no provider client, approval-input path or send credential reader.
 Proposal submission is not delivery: only courier's recipient/channel policy, leak checks and authenticated exact-message code consumption can authorize a non-owner send.
 Receipt snapshots are returned together for the exact ID/digest because the upstream protocol supplies no ordering field; they are not a latest-status event stream.
-The existing human notification transport is firstmate-voice's `deploy/fm-notify` and `bridge/imessage/notify.py`, with conversation delivery in its poller.
-Its adapter cutover, reaction/poll behavior and credential migration remain in that repository; `fm-send.sh` is task steering and must not be redirected to courier.
+The Firstmate-owned active-alert caller uses the explicit `courier` channel described in [wedge-alarm.md](wedge-alarm.md); ordinary task steering remains with `fm-send.sh`.
+The existing phone/text notification transport is firstmate-voice's `deploy/fm-notify` and `bridge/imessage/notify.py`, with conversation delivery in its poller.
+Cross-project acceptance remains blocked on main coordinating that adapter against this boundary without editing another project here: its enabled notification branch must publish through `submit` or `notify`, retain the returned ID/digest, and poll `delivery` for confirmed sends while preserving existing unconfigured routing and caller failures.
+Its authenticated reaction/poll path must remain courier-owned; producer approval references and an `approved` snapshot must never count as delivery or authorize a send.
+Main must prove that adapter's approval, edit, denial, ambiguous-send and error paths with the reviewed release and dummy providers before closing this dependency or approving a cutover.
+This change performs no adapter deployment, credential migration or real sends.
 
 Both clients are disabled by default and refuse unavailable configured endpoints without a legacy or raw-access fallback.
 Their help documents environment settings for explicitly prepared installations and local fixtures; production must retain the designated brainreader/courier result identities and zone-owned read-only result paths.
@@ -216,7 +220,7 @@ When away-mode injection wedges past `FM_MAX_DEFER_SECS`, the sub-supervisor rai
 Beyond the durable `state/.subsuper-inject-wedged` marker and the tmux status-line flash, it attempts a configured backend-independent active alert that can reach the captain even when every pane and its backend status-line is unreadable.
 `config/wedge-alarm` (local, gitignored) lists channel directives, one per non-empty, non-comment line; every listed non-`off` channel fires, best-effort.
 `FM_WEDGE_ALARM_CHANNEL` overrides the file with a single directive.
-Directives are `off` (a position-independent kill switch that disables every active alert), `auto`/`default`, `osascript` (macOS Notification Center banner), `herdr` (herdr UI notification), and `command:<cmd>` (run `<cmd>` via `sh -c`, summary on `$1` and stdin).
+See [wedge-alarm.md](wedge-alarm.md#channels) for channel directives, including the disabled-by-default courier adapter.
 An absent file means `auto`, i.e. default-on on macOS: the alarm exists precisely so a wedged away-mode primary is never silent, and it fires at most once per max-defer window after a genuine wedge.
 A missing or failing channel logs and falls through to the next, never crashing the daemon.
 See [`wedge-alarm.md`](wedge-alarm.md) for the current channel reference, [`verification/supervision.md`](verification/supervision.md#wedge-alarm-channels) for active evidence, and [`examples/wedge-alarm`](examples/wedge-alarm) for a copyable config.

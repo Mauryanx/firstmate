@@ -23,7 +23,7 @@ class Clients(unittest.TestCase):
     def setUp(self):
         self.home = TEMP / self.id().split(".")[-1]
         self.home.mkdir()
-        for name in ("requests", "out", "outbox", "inbox", "fakebin"):
+        for name in ("requests", "out", "outbox", "inbox", "fakebin", "state", "config"):
             (self.home / name).mkdir(mode=0o750)
         self.env = dict(os.environ, FM_BRAIN_DESK_ENABLED="1", FM_COURIER_ENABLED="1",
                         FM_BRAIN_DESK_REQUESTS=str(self.home / "requests"),
@@ -77,6 +77,8 @@ sys.stdout.buffer.write((p / 'answer').read_bytes())
                     env[key] = setting
             self.run_cli("fm-brain-desk.py", ["ask", "desk"], b"Question", 3, env)
             self.run_cli("fm-courier.py", ["submit"], canonical(self.request), 3, env)
+            self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"Notification", 3, env)
+            self.run_cli("fm-courier.py", ["delivery", "message", "a" * 64], code=3, env=env)
         self.assertEqual(list((self.home / "requests").iterdir()), [])
         self.assertEqual(list((self.home / "outbox").iterdir()), [])
         self.assertFalse((self.home / "argv").exists())
@@ -255,6 +257,108 @@ sys.stdout.buffer.write((p / 'answer').read_bytes())
         self.run_cli("fm-courier.py", args, code=1)
         print("ok - courier rejects modified receipt hashes and symlink receipts")
 
+    def test_notification_publication_and_exact_delivery_polling(self):
+        result = self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"The work is ready.", 4)
+        notification = json.loads(result.stdout)
+        submitted = notification["submission"]
+        self.assertEqual(notification["id"], submitted["id"])
+        self.assertEqual(notification["digest"], submitted["digest"])
+        self.assertFalse(notification["delivered"])
+        self.assertEqual(notification["receipts"], [])
+        wire = json.loads((self.home / "outbox" / (submitted["id"] + ".json")).read_bytes())
+        self.assertEqual(wire, {"id": submitted["id"], "channel": "imessage", "to": self.request["to"],
+                               "text": "The work is ready.", "purpose": "Firstmate active notification",
+                               "attachments": []})
+        args = ["delivery", submitted["id"], submitted["digest"]]
+        for status in ("waiting", "approved", "unknown", "denied"):
+            self.receipt(submitted, status)
+            polled = json.loads(self.run_cli("fm-courier.py", args, code=4).stdout)
+            self.assertFalse(polled["delivered"])
+            self.assertIn(status, {row["result"] for row in polled["receipts"]})
+        self.receipt(dict(submitted, digest="b" * 64), "sent",
+                     idempotency_key="courier-" + hashlib.sha256(canonical([submitted["id"], "b" * 64])).hexdigest())
+        self.assertFalse(json.loads(self.run_cli("fm-courier.py", args, code=4).stdout)["delivered"])
+        self.receipt(submitted, "sent")
+        polled = json.loads(self.run_cli("fm-courier.py", args).stdout)
+        self.assertTrue(polled["delivered"])
+        self.assertEqual({row["result"] for row in polled["receipts"]},
+                         {"waiting", "approved", "unknown", "denied", "sent"})
+        self.assertEqual(len(list((self.home / "outbox").glob("*.json"))), 1)
+        print("ok - notifications publish through courier; only exact sent receipts confirm delivery and polling never resubmits")
+
+    def test_notification_refusal_and_receipt_failure_recovery(self):
+        for recipient, message in (("unlisted", b"Notification"), (self.request["to"], b""),
+                                   (self.request["to"], b"x" * 10001), (self.request["to"], b"bad\x00")):
+            self.run_cli("fm-courier.py", ["notify", recipient], message, 1)
+        self.assertEqual(list((self.home / "outbox").iterdir()), [])
+        self.env["FM_COURIER_INBOX"] = str(self.home / "absent")
+        failed = json.loads(self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"Notification", 1).stdout)
+        self.assertFalse(failed["delivered"])
+        self.assertIsNone(failed["receipts"])
+        self.assertTrue((self.home / "outbox" / (failed["id"] + ".json")).exists())
+        args = ["delivery", failed["id"], failed["digest"]]
+        self.assertEqual(json.loads(self.run_cli("fm-courier.py", args, code=1).stdout)["id"], failed["id"])
+        self.env["FM_COURIER_INBOX"] = str(self.home / "inbox")
+        sent = self.receipt(failed["submission"], "sent")
+        sent.chmod(0o660)
+        self.assertFalse(json.loads(self.run_cli("fm-courier.py", args, code=1).stdout)["delivered"])
+        sent.chmod(0o640)
+        self.assertTrue(json.loads(self.run_cli("fm-courier.py", args).stdout)["delivered"])
+        for identity, digest in (("../escape", failed["digest"]), (failed["id"], "bad")):
+            refused = self.run_cli("fm-courier.py", ["delivery", identity, digest], code=1)
+            self.assertEqual(refused.stdout, b"")
+        print("ok - invalid notifications refuse; receipt failure preserves publication identity for safe polling recovery")
+
+    def alarm(self, **changes):
+        env = dict(self.env, FM_HOME=str(self.home), FM_ROOT_OVERRIDE=str(self.home),
+                   FM_STATE_OVERRIDE=str(self.home / "state"), FM_CONFIG_OVERRIDE=str(self.home / "config"),
+                   FM_WEDGE_ALARM_CHANNEL="courier", FM_COURIER_NOTIFY_TO=self.request["to"],
+                   FM_WEDGE_ALARM_TIMEOUT_SECS="2")
+        env.update(changes)
+        script = '. "$1"; LOG="$2"; FM_WEDGE_ALARM_EXEC="${FIXTURE_NOTIFIER_OVERRIDE:-}"; wedge_alarm_notify "$3" "$4"'
+        result = subprocess.run(["bash", "-c", script, "_", str(ROOT / "bin/fm-supervise-daemon.sh"),
+                                 str(self.home / "alarm.log"), "Example alarm summary", str(self.home / "marker")],
+                                env=env, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        return (self.home / "alarm.log").read_text() if (self.home / "alarm.log").exists() else ""
+
+    def test_active_alert_caller_uses_courier_and_keeps_failures_visible(self):
+        marker = self.home / "marker"
+        marker.write_text("Durable alarm evidence")
+        log = self.alarm()
+        self.assertIn("courier delivery unconfirmed", log)
+        self.assertNotIn("delivery confirmed:", log)
+        notification = json.loads(log.split("identity: ", 1)[1].strip())
+        submitted = notification["submission"]
+        wire = json.loads((self.home / "outbox" / (submitted["id"] + ".json")).read_bytes())
+        self.assertEqual(wire["to"], self.request["to"])
+        self.assertEqual(wire["text"], "Example alarm summary\n")
+        log = self.alarm(FM_COURIER_ENABLED="0")
+        self.assertIn("notification failed (exit 3)", log)
+        self.env["FM_COURIER_OUTBOX"] = str(self.home / "absent")
+        log = self.alarm()
+        self.assertIn("notification failed (exit 1)", log)
+        self.assertEqual(len(list((self.home / "outbox").glob("*.json"))), 1)
+        self.env["FM_COURIER_OUTBOX"] = str(self.home / "outbox")
+        self.env["FM_COURIER_INBOX"] = str(self.home / "absent")
+        log = self.alarm()
+        recovery = json.loads(log.rsplit("publication metadata: ", 1)[1].strip())
+        self.assertIsNone(recovery["receipts"])
+        self.assertFalse(recovery["delivered"])
+        self.assertTrue((self.home / "outbox" / (recovery["id"] + ".json")).exists())
+        self.assertEqual(list((self.home / "state").iterdir()), [])
+        self.assertEqual(marker.read_text(), "Durable alarm evidence")
+        print("ok - actual active-alert caller publishes courier proposals, logs pending identity and failures, and retains alarm evidence")
+
+    def test_active_alert_opt_in_off_and_notifier_safety(self):
+        self.alarm(FM_WEDGE_ALARM_CHANNEL="courier\noff")
+        self.alarm(FIXTURE_NOTIFIER_OVERRIDE="discard")
+        self.alarm(FM_WEDGE_ALARM_CHANNEL="auto", FIXTURE_NOTIFIER_OVERRIDE="discard")
+        log = self.alarm(FM_COURIER_ENABLED="0")
+        self.assertIn("notification failed (exit 3)", log)
+        self.assertEqual(list((self.home / "outbox").iterdir()), [])
+        print("ok - unconfigured alerts, off directives, disabled courier and the discard seam never publish notifications")
+
     @unittest.skipUnless(os.environ.get("FM_ZONES_COURIER_RELEASE"), "read-only courier release not supplied")
     def test_reviewed_courier_approval_delivery_parity(self):
         # The optional external release supplies its existing offline acceptance
@@ -304,6 +408,12 @@ sys.stdout.buffer.write((p / 'answer').read_bytes())
         self.submit()
         rig.courier.tick()
         self.assertEqual(rig.job("unlisted")["result"], "denied")
+        notified = json.loads(self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"Notification", 4).stdout)
+        rig.courier.tick()
+        self.assertEqual(rig.job(notified["id"])["result"], "denied")
+        polled = json.loads(self.run_cli("fm-courier.py", ["delivery", notified["id"], notified["digest"]], code=4).stdout)
+        self.assertFalse(polled["delivered"])
+        self.assertIn("denied", {row["result"] for row in polled["receipts"]})
         print("ok - reviewed courier consumes real producer proposals; team exact-code/edit/restart and owner/deny gates hold against fake Linq")
 
 

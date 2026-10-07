@@ -1516,6 +1516,10 @@ families_for_changed_path() {
     bin/fm-brain-desk.py|bin/fm-courier.py|bin/fm_zone_io.py|tests/fm-zones-cases.py)
       printf '%s\n' __script__:fm-zones.test.sh
       ;;
+    bin/fm-supervise-daemon.sh)
+      printf '%s\n' __script__:fm-daemon.test.sh
+      printf '%s\n' __script__:fm-zones.test.sh
+      ;;
     bin/fm-inbox.sh|bin/fm_inbox_conversation.py|tests/fm-inbox-conversation-cases.py)
       printf '%s\n' __script__:fm-inbox-conversation.test.sh
       printf '%s\n' __script__:fm-wake-drain-voice-hold.test.sh
