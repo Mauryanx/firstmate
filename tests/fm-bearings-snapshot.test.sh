@@ -58,14 +58,29 @@ if [ "${FAKE_GH_APP:-0}" = 1 ]; then
     'pr list')
       [ "${GH_TOKEN:-}" = ordinary_bearings_user ] || exit 81
       case " $* " in *statusCheckRollup*) exit 82 ;; esac
-      printf '%s\n' '[{"number":9,"title":"Ship the thing","url":"https://github.com/kunchenguid/firstmate/pull/9","headRefName":"fm/ship-task","headRefOid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","reviewDecision":"APPROVED","mergeable":"MERGEABLE"}]'
+      rows='[{"number":9,"title":"Ship the thing","url":"https://github.com/kunchenguid/firstmate/pull/9","headRefName":"fm/ship-task","headRefOid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","reviewDecision":"APPROVED","mergeable":"MERGEABLE"}]'
+      if [ "${FAKE_GH_APP_OVERFLOW:-0}" = 1 ]; then
+        rows=$(printf '%s' "$rows" | jq '. + [.[0] | .number = 10 | .url = "https://github.com/kunchenguid/firstmate/pull/10"]')
+      fi
+      printf '%s\n' "$rows"
       ;;
     'pr view')
-      [ "${GH_TOKEN:-}" = bearings_app_secret ] || exit 83
-      case " $* " in *reviewDecision*|*mergeable*) exit 84 ;; esac
+      [ "${GH_TOKEN:-}" = ordinary_bearings_user ] || exit 83
+      case " $* " in *statusCheckRollup*) exit 84 ;; esac
+      case " $* " in *pull/10*) exit 86 ;; esac
       head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       [ "${FAKE_GH_APP_RACE:-0}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-      printf '{"headRefOid":"%s","statusCheckRollup":[{"status":"COMPLETED","conclusion":"SUCCESS"}]}\n' "$head"
+      printf '{"headRefOid":"%s","id":"PR_test","headRefName":"fm/ship-task"}\n' "$head"
+      ;;
+    'api --hostname')
+      [ "${GH_TOKEN:-}" = bearings_app_secret ] || exit 83
+      head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      [ "${FAKE_GH_APP_RACE:-0}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      case "${*: -1}" in
+        */check-runs*) printf '[{"check_runs":[{"head_sha":"%s","name":"ci","status":"completed","conclusion":"success"}]}]\n' "$head" ;;
+        */status*) printf '[{"sha":"%s","statuses":[]}]\n' "$head" ;;
+        *) exit 84 ;;
+      esac
       ;;
     *) exit 85 ;;
   esac
@@ -1457,6 +1472,11 @@ SH
   json=$(GH_TOKEN=ordinary_bearings_user FAKE_GH_APP=1 FAKE_GH_APP_RACE=1 run "$home" "$fakebin" --include-prs --json)
   printf '%s' "$json" | jq -e '(.candidate_prs | length) == 0 and (.prs | contains("unavailable"))' >/dev/null \
     || fail 'App bearings published checks from a different head'
+  json=$(GH_TOKEN=ordinary_bearings_user FAKE_GH_APP=1 FAKE_GH_APP_OVERFLOW=1 FM_BEARINGS_PR_LIMIT=1 run "$home" "$fakebin" --include-prs --json)
+  printf '%s' "$json" | jq -e '
+    (.candidate_prs | length) == 1 and .candidate_prs[0].checks == "passing"
+      and (.prs | contains("at least 2 open")) and (.prs | contains("unavailable") | not)
+  ' >/dev/null || fail 'unreadable overflow checks discarded displayed PRs or truncation metadata'
   pass 'App bearings keeps metadata under user login and refuses checks from a different head'
 }
 
@@ -3351,6 +3371,11 @@ test_a_remote_home_without_any_ledger_is_explicitly_unreadable_without_remote_co
     || fail "a no-ledger remote home triggered remote summary computation: $(cat "$parent/ledger-calls.log")"
   pass "a missing remote ledger stays explicitly unreadable without remote summary computation"
 }
+
+if [ "${1:-}" = --checks-app-only ]; then
+  test_checks_app_enrichment_binds_user_metadata
+  exit 0
+fi
 
 test_task_teardown_during_metadata_capture_does_not_abort_snapshot
 test_current_state_uses_captured_status_observation

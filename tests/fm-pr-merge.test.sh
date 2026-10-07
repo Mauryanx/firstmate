@@ -141,11 +141,22 @@ SH
 printf '%s\n' "$*" >> "$FM_TEST_GH_LOG"
 if [ -n "${FM_TEST_CHECKS_APP:-}" ]; then
   case " $* " in
-    *statusCheckRollup*) [ "${GH_TOKEN:-}" = installation_merge_secret ] || exit 90 ;;
+    *'/check-runs?'*|*'/status?'*) [ "${GH_TOKEN:-}" = installation_merge_secret ] || exit 90 ;;
     *) [ "${GH_TOKEN:-}" = ordinary_merge_identity ] || exit 91 ;;
   esac
 fi
 case "${1:-} ${2:-}" in
+  "api --hostname")
+    jq --arg endpoint "${*: -1}" --arg race "${FM_TEST_APP_HEAD_RACE:-}" '
+      (if $race == "1" then "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" else .headRefOid end) as $head
+      | if $endpoint | contains("/check-runs?") then
+          [{check_runs:[.statusCheckRollup[] | select(.__typename == "CheckRun")
+            | {head_sha:$head,name,status:(.status | ascii_downcase),conclusion:(.conclusion | ascii_downcase)}]}]
+        else [{sha:$head,statuses:[.statusCheckRollup[] | select(.__typename == "StatusContext")
+          | {context,state:(.state | ascii_downcase)}]}] end
+    ' "$FM_TEST_GH_VIEW_JSON"
+    exit 0
+    ;;
   "pr view")
     case " $* " in
       *statusCheckRollup*)
@@ -161,6 +172,10 @@ case "${1:-} ${2:-}" in
         ;;
       *state,isDraft,mergeable,mergeStateStatus,headRefOid,baseRefName*)
         cat "$FM_TEST_GH_VIEW_JSON"
+        ;;
+      *headRefOid,id,headRefName*)
+        jq --arg race "${FM_TEST_APP_HEAD_RACE:-}" '{headRefOid:(if $race == "1" then "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" else .headRefOid end), id:"PR_test", headRefName:"feature"}' "$FM_TEST_GH_VIEW_JSON"
+        exit 0
         ;;
       *headRefOid*)
         cat "$FM_TEST_GH_HEAD"
@@ -2160,6 +2175,8 @@ test_secondmate_without_parent_binding_is_loud() {
   pass "a secondmate home that cannot report upward says so instead of merging in silence"
 }
 
+if [ "${1:-}" != --checks-app-only ]; then
+
 test_github_zero_exit_queue_required_refuses_with_exact_retry
 test_github_closed_unqueued_outcome_omits_retry_flags
 test_github_agreeing_queue_rules_keep_retry_guidance
@@ -2210,6 +2227,8 @@ test_gitlab_stale_recorded_head_is_reported
 test_gitlab_unreadable_state_refuses
 test_gitlab_invalid_head_refuses
 test_gitlab_missing_tool_refuses_before_recording
+
+fi
 
 # The merge gate asks whether the task is still held for the captain. A home
 # that carries no backlog records no captain calls at all, so nothing can be
@@ -3123,6 +3142,11 @@ SH
   assert_no_grep 'pr merge' "$case_dir/gh.log" 'App checks: head race reached forge'
   pass 'App-authenticated checks preserve user merge identity, head binding, and red refusal'
 }
+
+if [ "${1:-}" = --checks-app-only ]; then
+  test_checks_app_preserves_merge_identity_and_red_guards
+  exit 0
+fi
 
 test_checks_app_preserves_merge_identity_and_red_guards
 test_gitlab_head_override_args_refuse_before_recording

@@ -317,10 +317,11 @@ EOF
             then $rows + [$item + {statusCheckRollup:$checks.statusCheckRollup}]
             else error("head changed or checks unreadable") end') || { failed=1; break; }
         done <<PR_ITEMS
-$(printf '%s' "$out" | jq -c '.[]')
+$(printf '%s' "$out" | jq -c --argjson limit "$FM_BEARINGS_PR_LIMIT" '.[:$limit][]')
 PR_ITEMS
         [ "$failed" = 0 ] || { nwarn=$((nwarn + 1)); continue; }
-        out=$enriched
+        out=$(jq -cn --argjson original "$out" --argjson enriched "$enriched" --argjson limit "$FM_BEARINGS_PR_LIMIT" \
+          '$enriched + $original[$limit:]')
       fi
       [ -n "$out" ] || out='[]'
       repo_result=$(printf '%s' "$out" | jq --arg repo "$repo" --argjson limit "$FM_BEARINGS_PR_LIMIT" '
