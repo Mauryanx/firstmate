@@ -117,60 +117,132 @@ EXPIRES=$(printf '%s' "$RESPONSE" | jq -er '.expires_at | fromdateiso8601' 2>/de
 unset RESPONSE
 NOW=$(date +%s)
 [ "$EXPIRES" -gt "$((NOW + 60))" ] || die 'installation token expired'
-READ_ARGS=("$@")
 MODE=$2
-URL=$3
 shift 3
+FILTER=.
 if [ "$MODE" = view ]; then
   [ "$#" = 2 ] && [ "$1" = --json ] || die 'unsupported checks view arguments'
   case "$2" in statusCheckRollup|headRefOid,statusCheckRollup) VIEW_FIELDS=$2 ;; *) die 'unsupported checks view fields' ;; esac
+else
+  [ "${1:-}" = --required ] || die 'expected a required checks read'
+  shift
+  if [ "$#" -gt 0 ]; then
+    [ "$#" = 4 ] && [ "$1" = --json ] && [ "$2" = name,state,bucket ] && [ "$3" = --jq ] \
+      || die 'unsupported required checks arguments'
+    FILTER=$4
+  fi
 fi
-METADATA=$(gh pr view "$URL" --json headRefOid,id,headRefName) \
-  || die 'could not read pull-request identity with normal login'
-HEAD=$(printf '%s' "$METADATA" | jq -er '.headRefOid') \
-  || die 'missing pull-request head'
-fm_pr_head_valid "$HEAD" || die 'invalid pull-request head'
-if [ "$MODE" = checks ]; then
-  RESULT_CODE=0
-  RESULT=$(GH_HOST=github.com GH_TOKEN="$TOKEN" gh "${READ_ARGS[@]}") || RESULT_CODE=$?
-  AFTER=$(gh pr view "$URL" --json headRefOid --jq .headRefOid) \
-    || die 'could not reread pull-request head with normal login'
-  [ "$HEAD" = "$AFTER" ] || die 'pull-request head changed during required checks read'
-  [ -z "$RESULT" ] || printf '%s\n' "$RESULT"
-  exit "$RESULT_CODE"
-fi
-PR_ID=$(printf '%s' "$METADATA" | jq -er '.id | select(type == "string" and length > 0)') \
-  || die 'missing pull-request identity'
-QUERY=$(cat <<'GRAPHQL'
-query($id:ID!, $endCursor:String) {
-  node(id:$id) { ... on PullRequest {
-    commits(last:1) { nodes { commit {
-      oid
-      statusCheckRollup { contexts(first:100, after:$endCursor) {
-        nodes {
-          __typename
-          ... on CheckRun { name status conclusion startedAt completedAt detailsUrl }
-          ... on StatusContext { context state createdAt targetUrl }
-        }
-        pageInfo { hasNextPage endCursor }
-      } }
-    } } }
+METADATA_QUERY=$(cat <<'GRAPHQL'
+query($owner:String!, $repo:String!, $number:Int!) {
+  repository(owner:$owner, name:$repo) { pullRequest(number:$number) {
+    id headRefOid headRefName
+    commits(last:1) { nodes { commit { oid statusCheckRollup { id } } } }
   } }
 }
 GRAPHQL
 )
-PAGES=$(GH_TOKEN="$TOKEN" gh api graphql --hostname github.com --paginate --slurp \
-  -f "query=$QUERY" -f "id=$PR_ID") || die 'could not read pull-request commit checks'
-CONTEXTS=$(printf '%s' "$PAGES" | jq -ce --arg head "$HEAD" '
-  if type != "array" or length == 0 then error("missing checks pages") else . end
-  | [ .[]
-      | if (.errors // [] | length) > 0 then error("GraphQL errors") else .data.node.commits.nodes end
-      | if type == "array" and length == 1 then .[0].commit else error("missing head commit") end
-      | if .oid == $head then . else error("commit head mismatch") end
-      | if .statusCheckRollup == null then []
-        elif (.statusCheckRollup.contexts.nodes | type) == "array" then .statusCheckRollup.contexts.nodes
-        else error("invalid checks response") end
-    ] | add
-') || die 'invalid commit checks response or head mismatch'
-jq -cn --arg head "$HEAD" --arg fields "$VIEW_FIELDS" --argjson checks "$CONTEXTS" '
-  {statusCheckRollup:$checks} + (if $fields == "headRefOid,statusCheckRollup" then {headRefOid:$head} else {} end)'
+read_identity() {
+  local response
+  response=$(gh api graphql --hostname github.com -f "query=$METADATA_QUERY" \
+    -f "owner=${REPO%/*}" -f "repo=$REPO_NAME" -F "number=$FM_PR_NUMBER") || return 1
+  printf '%s' "$response" | jq -ce '
+    def nonempty: type == "string" and length > 0;
+    if type != "object" or (has("errors") and ((.errors | type) != "array" or (.errors | length) > 0))
+    then error("invalid metadata response or GraphQL errors") else .data.repository.pullRequest end
+    | if type == "object" and (.id | nonempty) and (.headRefOid | nonempty)
+        and (.headRefName | nonempty) and (.commits.nodes | type) == "array" and (.commits.nodes | length) == 1
+      then . else error("incomplete pull-request identity") end
+    | . as $pr | .commits.nodes[0].commit
+    | if type != "object" or .oid != $pr.headRefOid or (has("statusCheckRollup") | not)
+      then error("commit head mismatch or missing rollup metadata") else . end
+    | if .statusCheckRollup == null or ((.statusCheckRollup | type) == "object" and (.statusCheckRollup.id | nonempty))
+      then {id:$pr.id,head:$pr.headRefOid,branch:$pr.headRefName,rollup:(.statusCheckRollup.id // null)}
+      else error("invalid rollup identity") end
+  '
+}
+IDENTITY=$(read_identity) || die 'could not read pull-request and rollup identity with normal login'
+HEAD=$(printf '%s' "$IDENTITY" | jq -r '.head')
+fm_pr_head_valid "$HEAD" || die 'invalid pull-request head'
+PR_ID=$(printf '%s' "$IDENTITY" | jq -r '.id')
+ROLLUP_ID=$(printf '%s' "$IDENTITY" | jq -r '.rollup // empty')
+CONTEXTS='[]'
+if [ -n "$ROLLUP_ID" ]; then
+  REQUIRED=false
+  [ "$MODE" != checks ] || REQUIRED=true
+  QUERY=$(cat <<'GRAPHQL'
+query($id:ID!, $prID:ID!, $required:Boolean!, $endCursor:String) {
+  node(id:$id) { ... on StatusCheckRollup {
+    id __typename
+    contexts(first:100, after:$endCursor) {
+      nodes {
+        __typename
+        ... on CheckRun {
+          name status conclusion startedAt completedAt detailsUrl
+          isRequired(pullRequestId:$prID) @include(if:$required)
+        }
+        ... on StatusContext {
+          context state createdAt targetUrl
+          isRequired(pullRequestId:$prID) @include(if:$required)
+        }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  } }
+}
+GRAPHQL
+)
+  PAGES=$(GH_TOKEN="$TOKEN" gh api graphql --hostname github.com --paginate --slurp \
+    -f "query=$QUERY" -f "id=$ROLLUP_ID" -f "prID=$PR_ID" -F "required=$REQUIRED") \
+    || die 'could not read rollup check contexts'
+  CONTEXTS=$(printf '%s' "$PAGES" | jq -ce --arg rollup "$ROLLUP_ID" --argjson required "$REQUIRED" '
+    def text: type == "string";
+    def nullable_text: . == null or text;
+    def context_valid:
+      type == "object" and
+      (if .__typename == "CheckRun" then
+         (.name | text) and (.status | text and length > 0)
+         and has("conclusion") and (.conclusion | nullable_text)
+         and (.status != "COMPLETED" or (.conclusion | text and length > 0))
+         and has("startedAt") and (.startedAt | nullable_text)
+         and has("completedAt") and (.completedAt | nullable_text)
+       elif .__typename == "StatusContext" then
+         (.context | text) and (.state | text and length > 0)
+       else false end)
+      and ($required == false or ((.isRequired | type) == "boolean"));
+    if type != "array" or length == 0 then error("missing checks pages") else . end
+    | map(
+        if type != "object" or (has("errors") and ((.errors | type) != "array" or (.errors | length) > 0))
+        then error("invalid checks response or GraphQL errors") else .data.node end
+        | if type == "object" and .id == $rollup and .__typename == "StatusCheckRollup"
+            and (.contexts | type) == "object" and (.contexts.nodes | type) == "array"
+            and all(.contexts.nodes[]; context_valid)
+            and (.contexts.pageInfo.hasNextPage | type) == "boolean"
+            and (.contexts.pageInfo.endCursor | nullable_text)
+            and (.contexts.pageInfo.hasNextPage == false or (.contexts.pageInfo.endCursor | text and length > 0))
+          then .contexts else error("invalid rollup identity, contexts or pagination") end)
+    | if .[-1].pageInfo.hasNextPage == false and all(.[:-1][]; .pageInfo.hasNextPage == true)
+      then [.[].nodes[]] else error("incomplete checks pagination") end
+  ') || die 'invalid rollup check contexts'
+fi
+AFTER=$(read_identity) || die 'could not reread pull-request and rollup identity with normal login'
+[ "$IDENTITY" = "$AFTER" ] || die 'pull-request head or rollup changed during checks read'
+if [ "$MODE" = view ]; then
+  jq -cn --arg head "$HEAD" --arg fields "$VIEW_FIELDS" --argjson checks "$CONTEXTS" '
+    {statusCheckRollup:$checks} + (if $fields == "headRefOid,statusCheckRollup" then {headRefOid:$head} else {} end)'
+else
+  CHECKS=$(printf '%s' "$CONTEXTS" | jq -ce '
+    [.[] | select(.isRequired)
+        | {name:(.name // .context),state:(.state // (if .status == "COMPLETED" then .conclusion else .status end))}
+        | . + {bucket:(if .state == "SUCCESS" then "pass"
+            elif .state == "SKIPPED" or .state == "NEUTRAL" then "skipping"
+            elif .state == "ERROR" or .state == "FAILURE" or .state == "TIMED_OUT" or .state == "ACTION_REQUIRED" then "fail"
+            elif .state == "CANCELLED" then "cancel" else "pending" end)} ]
+  ') || die 'invalid required checks response'
+  if [ "$CONTEXTS" = '[]' ] || [ "$CHECKS" = '[]' ]; then
+    LABEL='no required checks'
+    [ "$CONTEXTS" != '[]' ] || LABEL='no checks'
+    printf "%s reported on the '%s' branch\n" "$LABEL" "$(printf '%s' "$IDENTITY" | jq -r '.branch')" >&2
+    exit 1
+  fi
+  printf '%s' "$CHECKS" | jq -r "$FILTER"
+fi

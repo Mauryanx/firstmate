@@ -202,8 +202,15 @@ case "${1:-} ${2:-}" in
     if [ -n "${FM_TEST_CHECKS_APP:-}" ]; then
       case " $* " in
         *' --paginate --slurp '*)
+          jq '[{data:{node:{id:"ROLLUP_test",__typename:"StatusCheckRollup",contexts:{
+            nodes:[.statusCheckRollup[] | if .__typename == "CheckRun" then . + {startedAt:(.startedAt // null),completedAt:(.completedAt // null)} else . end],
+            pageInfo:{hasNextPage:false,endCursor:null}}}}}]' "$FM_TEST_GH_VIEW_JSON"
+          exit 0
+          ;;
+        *' number=74 '*|*' number=74')
           jq --arg race "${FM_TEST_APP_HEAD_RACE:-}" '
-            [{data:{node:{commits:{nodes:[{commit:{oid:(if $race == "1" then "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" else .headRefOid end),statusCheckRollup:{contexts:{nodes:.statusCheckRollup}}}}]}}}}]
+            (if $race == "1" then "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" else .headRefOid end) as $head
+            | {data:{repository:{pullRequest:{id:"PR_test",headRefOid:$head,headRefName:"feature",commits:{nodes:[{commit:{oid:$head,statusCheckRollup:{id:"ROLLUP_test"}}}]}}}}}
           ' "$FM_TEST_GH_VIEW_JSON"
           exit 0
           ;;

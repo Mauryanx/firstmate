@@ -73,10 +73,19 @@ if [ "${FAKE_GH_APP:-0}" = 1 ]; then
       printf '{"headRefOid":"%s","id":"PR_test","headRefName":"fm/ship-task"}\n' "$head"
       ;;
     'api graphql')
-      [ "${GH_TOKEN:-}" = bearings_app_secret ] || exit 83
       head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       [ "${FAKE_GH_APP_RACE:-0}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-      printf '[{"data":{"node":{"commits":{"nodes":[{"commit":{"oid":"%s","statusCheckRollup":{"contexts":{"nodes":[{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"SUCCESS"}]}}}}]}}}}]\n' "$head"
+      case " $* " in
+        *' --paginate --slurp '*)
+          [ "${GH_TOKEN:-}" = bearings_app_secret ] || exit 83
+          printf '%s\n' '[{"data":{"node":{"id":"ROLLUP_test","__typename":"StatusCheckRollup","contexts":{"nodes":[{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"SUCCESS","startedAt":null,"completedAt":null}],"pageInfo":{"hasNextPage":false,"endCursor":null}}}}}]'
+          ;;
+        *)
+          [ "${GH_TOKEN:-}" = ordinary_bearings_user ] || exit 83
+          case " $* " in *' number=10 '*|*' number=10') exit 86 ;; esac
+          printf '{"data":{"repository":{"pullRequest":{"id":"PR_test","headRefOid":"%s","headRefName":"feature","commits":{"nodes":[{"commit":{"oid":"%s","statusCheckRollup":{"id":"ROLLUP_test"}}}]}}}}}\n' "$head" "$head"
+          ;;
+      esac
       ;;
     *) exit 85 ;;
   esac

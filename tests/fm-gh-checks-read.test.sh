@@ -73,45 +73,61 @@ for arg in "$@"; do
   case "$arg" in *installation_secret*|*ordinary_user_token*) exit 83 ;; esac
 done
 printf '%s\n' "$*" >> "$FM_TEST_CHECKS_ROOT/argv"
-if [ "${1:-} ${2:-}" = 'pr checks' ] && [ "${FM_TEST_COVERAGE:-}" != missing ] && [ "${FM_TEST_COVERAGE:-}" != other ] && [ -n "${FM_TEST_APP_ON:-}" ]; then
-  [ "$GH_TOKEN" = "installation_secret.-$(cat "$FM_TEST_CHECKS_ROOT/mints")" ] || exit 84
-  [ -z "${GH_DEBUG:-}" ] || exit 85
-  [ "${GH_HOST:-}" = github.com ] || exit 89
-  if [ "${FM_TEST_NO_CHECKS:-}" = 1 ]; then
-    printf "no checks reported on the 'feature' branch\n" >&2
-    exit 1
-  fi
-  [ "$*" = 'pr checks https://github.com/example/repo/pull/7 --required --json name,state,bucket --jq .' ] || exit 90
-  printf '%s\n' '[{"name":"ci","state":"SUCCESS","bucket":"pass"},{"name":"required-status","state":"PENDING","bucket":"pending"},{"name":"cancelled","state":"CANCELLED","bucket":"cancel"},{"name":"neutral","state":"NEUTRAL","bucket":"skipping"}]'
-  exit 0
-fi
 if [ "${1:-}" = pr ]; then
   [ "$GH_TOKEN" = ordinary_user_token ] || exit 86
-  if [ -n "${FM_TEST_APP_ON:-}" ] && [ "${FM_TEST_COVERAGE:-}" != missing ] && [ "${FM_TEST_COVERAGE:-}" != other ]; then
-    case "$*" in
-      'pr view https://github.com/example/repo/pull/7 --json headRefOid,id,headRefName')
-        printf '%s\n' '{"headRefOid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","id":"PR_test","headRefName":"feature"}' ;;
-      'pr view https://github.com/example/repo/pull/7 --json headRefOid --jq .headRefOid')
-        head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-        [ "${FM_TEST_REQUIRED_HEAD_RACE:-}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-        printf '%s\n' "$head" ;;
-      *) exit 91 ;;
-    esac
-  else
-    printf 'normal read\n'
+  printf 'normal read\n'
+  exit 0
+fi
+[ "$1 $2" = 'api graphql' ] || exit 92
+if [ "$GH_TOKEN" = ordinary_user_token ]; then
+  case " $* " in *' number=7 '*) ;; *' number=7') ;; *) exit 91 ;; esac
+  marker="$FM_TEST_CHECKS_ROOT/metadata-$(cat "$FM_TEST_CHECKS_ROOT/mints")"
+  head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  rollup=ROLLUP_test
+  if [ -f "$marker" ]; then
+    [ "${FM_TEST_REQUIRED_HEAD_RACE:-}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+    [ "${FM_TEST_ROLLUP_RACE:-}" != 1 ] || rollup=ROLLUP_changed
   fi
+  : > "$marker"
+  payload=$(jq -cn --arg head "$head" --arg rollup "$rollup" '
+    {data:{repository:{pullRequest:{id:"PR_test",headRefOid:$head,headRefName:"feature",
+      commits:{nodes:[{commit:{oid:$head,statusCheckRollup:{id:$rollup}}}]}}}}}')
+  if [ "${FM_TEST_NO_ROLLUP:-}" = 1 ]; then
+    payload=$(printf '%s' "$payload" | jq '.data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup = null')
+  fi
+  case "${FM_TEST_METADATA_INVALID:-}" in
+    errors) payload=$(printf '%s' "$payload" | jq '.errors = [{message:"denied"}]') ;;
+    missing) payload=$(printf '%s' "$payload" | jq 'del(.data.repository.pullRequest.commits.nodes[0].commit.statusCheckRollup)') ;;
+    mismatch) payload=$(printf '%s' "$payload" | jq '.data.repository.pullRequest.commits.nodes[0].commit.oid = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"') ;;
+  esac
+  printf '%s\n' "$payload"
   exit 0
 fi
 [ "$GH_TOKEN" = "installation_secret.-$(cat "$FM_TEST_CHECKS_ROOT/mints")" ] || exit 84
 [ -z "${GH_DEBUG:-}" ] || exit 85
-[ "$1 $2" = 'api graphql' ] || exit 92
+case " $* " in *' id=ROLLUP_test '*|*' id=ROLLUP_test') ;; *) exit 94 ;; esac
+case " $* " in *' prID=PR_test '*|*' prID=PR_test') ;; *) exit 95 ;; esac
 [ "${FM_TEST_CHECKS_ERROR:-}" != 1 ] || exit 93
-head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-[ "${FM_TEST_HEAD_MISMATCH:-}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-nodes='[{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-01-01T00:00:01Z","completedAt":"2026-01-01T00:00:10Z","isRequired":true,"app":{"id":1}},{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-01-01T00:00:09Z","completedAt":"2026-01-01T00:00:09Z","isRequired":false,"app":{"id":2}},{"__typename":"CheckRun","name":"neutral","status":"COMPLETED","conclusion":"NEUTRAL"},{"__typename":"CheckRun","name":"cancelled","status":"COMPLETED","conclusion":"CANCELLED"},{"__typename":"StatusContext","context":"required-status","state":"PENDING"}]'
+case " $* " in *workflowRun*) printf 'Resource not accessible by integration\n' >&2; exit 93 ;; esac
+nodes='[{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"SUCCESS","startedAt":"2026-01-01T00:00:01Z","completedAt":"2026-01-01T00:00:10Z","isRequired":true,"app":{"id":1}},{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-01-01T00:00:09Z","completedAt":"2026-01-01T00:00:09Z","isRequired":false,"app":{"id":2}},{"__typename":"CheckRun","name":"ci","status":"COMPLETED","conclusion":"FAILURE","startedAt":"2026-01-01T00:00:00Z","completedAt":"2026-01-01T00:00:00Z","isRequired":true,"app":{"id":1}},{"__typename":"CheckRun","name":"neutral","status":"COMPLETED","conclusion":"NEUTRAL","isRequired":true},{"__typename":"CheckRun","name":"cancelled","status":"COMPLETED","conclusion":"CANCELLED","isRequired":true},{"__typename":"StatusContext","context":"required-status","state":"PENDING","isRequired":true}]'
 [ "${FM_TEST_NO_CHECKS:-}" != 1 ] || nodes='[]'
-jq -cn --arg head "$head" --argjson nodes "$nodes" '[ $nodes[:2], $nodes[2:] ]
-  | map({data:{node:{commits:{nodes:[{commit:{oid:$head,statusCheckRollup:{contexts:{nodes:.}}}}]}}}})'
+payload=$(jq -cn --argjson nodes "$nodes" '
+  $nodes | map(if .__typename == "CheckRun" then . + {startedAt:(.startedAt // null),completedAt:(.completedAt // null)} else . end)
+  | [ .[:2], .[2:] ] | to_entries
+  | map({data:{node:{id:"ROLLUP_test",__typename:"StatusCheckRollup",
+      contexts:{nodes:.value,pageInfo:{hasNextPage:(.key == 0),endCursor:(if .key == 0 then "next" else null end)}}}}})')
+case "${FM_TEST_INVALID_PAGE:-}" in
+  errors) payload=$(printf '%s' "$payload" | jq '.[0].errors = [{message:"denied"}]') ;;
+  error_type) payload=$(printf '%s' "$payload" | jq '.[0].errors = {}') ;;
+  context_type) payload=$(printf '%s' "$payload" | jq '.[0].data.node.contexts.nodes = "bad"') ;;
+  unknown_context) payload=$(printf '%s' "$payload" | jq '.[0].data.node.contexts.nodes[0].__typename = "Other"') ;;
+  conclusion_type) payload=$(printf '%s' "$payload" | jq '.[0].data.node.contexts.nodes[0].conclusion = 7') ;;
+  required_missing) payload=$(printf '%s' "$payload" | jq 'del(.[0].data.node.contexts.nodes[0].isRequired)') ;;
+  pagination) payload=$(printf '%s' "$payload" | jq '.[-1].data.node.contexts.pageInfo.hasNextPage = true | .[-1].data.node.contexts.pageInfo.endCursor = "another"') ;;
+  rollup) payload=$(printf '%s' "$payload" | jq '.[0].data.node.id = "ROLLUP_other"') ;;
+esac
+[ "${FM_TEST_HEAD_MISMATCH:-}" != 1 ] || payload=$(printf '%s' "$payload" | jq '.[0].data.node.id = "ROLLUP_other"')
+printf '%s\n' "$payload"
 SH
 chmod +x "$FAKEBIN/gh" "$FAKEBIN/curl"
 URL=https://github.com/example/repo/pull/7
@@ -122,27 +138,27 @@ jq -n --arg key "$KEY" '{app_id:"5219477",installation_id:"168738038",key_path:$
 export FM_TEST_APP_ON=1 GH_DEBUG=api
 export TOKEN=ambient_token JWT=ambient_jwt RESPONSE=ambient_response SIGNATURE=ambient_signature
 bash -x "$SCRIPT" pr view "$URL" --json statusCheckRollup > "$TMP_ROOT/out" 2> "$TMP_ROOT/trace"
-jq -e '.statusCheckRollup | length == 5' "$TMP_ROOT/out" >/dev/null || fail 'configured read did not return every App checks page'
-jq -e '.statusCheckRollup | [.[] | select(.name == "ci")] | length == 2 and any(.[]; .conclusion == "FAILURE")' "$TMP_ROOT/out" >/dev/null \
+jq -e '.statusCheckRollup | length == 6' "$TMP_ROOT/out" >/dev/null || fail 'configured read did not return every App checks page'
+jq -e '.statusCheckRollup | [.[] | select(.name == "ci")] | length == 3 and any(.[]; .conclusion == "FAILURE")' "$TMP_ROOT/out" >/dev/null \
   || fail 'overlapping old-success/new-failure contexts were filtered'
 [ "$GH_TOKEN" = ordinary_user_token ] || fail 'App token escaped into caller'
 if rg 'installation_secret|eyJhbGci' "$TMP_ROOT/trace" "$TMP_ROOT/argv"; then fail 'secret leaked into logs or argv'; fi
 pass 'configured reads verify RS256 JWT and pass secrets without argv/debug/trace leakage'
 out=$("$SCRIPT" pr checks "$URL" --required --json name,state,bucket --jq '.')
 printf '%s' "$out" | jq -e '
-  length == 4 and any(.[]; .name == "ci" and .bucket == "pass")
+  length == 5 and any(.[]; .name == "ci" and .bucket == "pass")
     and any(.[]; .name == "required-status" and .bucket == "pending")
     and any(.[]; .name == "cancelled" and .bucket == "cancel")
     and any(.[]; .name == "neutral" and .bucket == "skipping")
-    and ([.[] | select(.name == "ci")] | length == 1)
-    and all(.[]; .name != "ci" or .state == "SUCCESS")
-' >/dev/null || fail 'native required checks included a same-name advisory check from another App'
+    and ([.[] | select(.name == "ci")] | length == 2)
+    and ([.[] | select(.name == "ci") | .state] == ["SUCCESS", "FAILURE"])
+' >/dev/null || fail 'server required classification or context ordering changed'
 "$SCRIPT" pr view "$URL" --json headRefOid,statusCheckRollup >/dev/null
 [ "$(cat "$TMP_ROOT/mints")" = 3 ] || fail 'tokens persisted across reads'
-pass 'normal-login PR identity and paginated App commit checks preserve required-check behavior'
+pass 'normal-login rollup identity and paginated App contexts preserve required-check behavior'
 for scenario in FM_TEST_HEAD_MISMATCH FM_TEST_CHECKS_ERROR; do
   if (export "$scenario=1"; "$SCRIPT" pr view "$URL" --json headRefOid,statusCheckRollup) > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then
-    fail 'invalid or mismatched App commit checks accepted'
+    fail 'invalid or mismatched App rollup contexts accepted'
   fi
   [ ! -s "$TMP_ROOT/out" ] || fail 'invalid checks published partial output'
 done
@@ -153,6 +169,21 @@ if FM_TEST_NO_CHECKS=1 "$SCRIPT" pr checks "$URL" --required > "$TMP_ROOT/out" 2
 assert_grep 'no checks reported' "$TMP_ROOT/err" 'empty checks diagnostic missing'
 if FM_TEST_REQUIRED_HEAD_RACE=1 "$SCRIPT" pr checks "$URL" --required --json name,state,bucket --jq '.' > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'required checks accepted a changed head'; fi
 [ ! -s "$TMP_ROOT/out" ] || fail 'required checks published output after a head change'
+for invalid in errors error_type context_type unknown_context conclusion_type pagination rollup; do
+  if FM_TEST_INVALID_PAGE=$invalid "$SCRIPT" pr view "$URL" --json headRefOid,statusCheckRollup > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail "invalid rollup page accepted: $invalid"; fi
+  [ ! -s "$TMP_ROOT/out" ] || fail 'invalid pages published partial contexts'
+done
+for invalid in errors missing mismatch; do
+  if FM_TEST_METADATA_INVALID=$invalid "$SCRIPT" pr view "$URL" --json headRefOid,statusCheckRollup > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail "invalid metadata accepted: $invalid"; fi
+  [ ! -s "$TMP_ROOT/out" ] || fail 'invalid metadata published checks'
+done
+if FM_TEST_INVALID_PAGE=required_missing "$SCRIPT" pr checks "$URL" --required --json name,state,bucket --jq '.' > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'missing server required classification accepted'; fi
+[ ! -s "$TMP_ROOT/out" ] || fail 'missing classification published required checks'
+if FM_TEST_ROLLUP_RACE=1 "$SCRIPT" pr view "$URL" --json headRefOid,statusCheckRollup > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'rollup identity change accepted'; fi
+[ ! -s "$TMP_ROOT/out" ] || fail 'rollup change published checks'
+out=$(FM_TEST_NO_ROLLUP=1 "$SCRIPT" pr view "$URL" --json headRefOid,statusCheckRollup)
+printf '%s' "$out" | jq -e '.headRefOid == "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" and .statusCheckRollup == []' >/dev/null \
+  || fail 'null rollup did not return head-bound empty contexts'
 rm "$TMP_ROOT/mints"
 if FM_TEST_EXPIRED=always "$SCRIPT" pr checks "$URL" > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'expired token accepted'; fi
 [ ! -s "$TMP_ROOT/out" ] && [ "$(cat "$TMP_ROOT/mints")" = 1 ] || fail 'expiry refusal was not bounded'
