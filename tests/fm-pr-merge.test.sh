@@ -139,14 +139,31 @@ SH
   cat > "$case_dir/fakebin/gh" <<'SH'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$FM_TEST_GH_LOG"
+if [ -n "${FM_TEST_CHECKS_APP:-}" ]; then
+  case " $* " in
+    *' --paginate --slurp '*) [ "${GH_TOKEN:-}" = installation_merge_secret ] || exit 90 ;;
+    *) [ "${GH_TOKEN:-}" = ordinary_merge_identity ] || exit 91 ;;
+  esac
+fi
 case "${1:-} ${2:-}" in
   "pr view")
     case " $* " in
       *statusCheckRollup*)
-        cat "$FM_TEST_GH_VIEW_JSON"
+        if [ -n "${FM_TEST_APP_HEAD_RACE:-}" ]; then
+          jq '.headRefOid = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"' "$FM_TEST_GH_VIEW_JSON"
+        else
+          cat "$FM_TEST_GH_VIEW_JSON"
+        fi
         if [ -f "${FM_TEST_AWAY_RECORD_AFTER_VIEW:-}" ]; then
           cp "$FM_TEST_AWAY_RECORD_AFTER_VIEW" "$FM_STATE_OVERRIDE/.afk-contract"
         fi
+        exit 0
+        ;;
+      *state,isDraft,mergeable,mergeStateStatus,headRefOid,baseRefName*)
+        cat "$FM_TEST_GH_VIEW_JSON"
+        ;;
+      *headRefOid,id,headRefName*)
+        jq --arg race "${FM_TEST_APP_HEAD_RACE:-}" '{headRefOid:(if $race == "1" then "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" else .headRefOid end), id:"PR_test", headRefName:"feature"}' "$FM_TEST_GH_VIEW_JSON"
         exit 0
         ;;
       *headRefOid*)
@@ -182,6 +199,23 @@ case "${1:-} ${2:-}" in
     exit "$merge_rc"
     ;;
   "api graphql")
+    if [ -n "${FM_TEST_CHECKS_APP:-}" ]; then
+      case " $* " in
+        *' --paginate --slurp '*)
+          jq '[{data:{node:{id:"ROLLUP_test",__typename:"StatusCheckRollup",contexts:{
+            nodes:[.statusCheckRollup[] | if .__typename == "CheckRun" then . + {startedAt:(.startedAt // null),completedAt:(.completedAt // null)} else . end],
+            pageInfo:{hasNextPage:false,endCursor:null}}}}}]' "$FM_TEST_GH_VIEW_JSON"
+          exit 0
+          ;;
+        *' number=74 '*|*' number=74')
+          jq --arg race "${FM_TEST_APP_HEAD_RACE:-}" '
+            (if $race == "1" then "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" else .headRefOid end) as $head
+            | {data:{repository:{pullRequest:{id:"PR_test",headRefOid:$head,headRefName:"feature",commits:{nodes:[{commit:{oid:$head,statusCheckRollup:{id:"ROLLUP_test"}}}]}}}}}
+          ' "$FM_TEST_GH_VIEW_JSON"
+          exit 0
+          ;;
+      esac
+    fi
     if [ -f "${FM_TEST_GH_GRAPHQL_FAIL:-}" ]; then
       echo 'error: could not reach the GitHub API' >&2
       exit 1
@@ -2147,6 +2181,8 @@ test_secondmate_without_parent_binding_is_loud() {
   pass "a secondmate home that cannot report upward says so instead of merging in silence"
 }
 
+if [ "${1:-}" != --checks-app-only ]; then
+
 test_github_zero_exit_queue_required_refuses_with_exact_retry
 test_github_closed_unqueued_outcome_omits_retry_flags
 test_github_agreeing_queue_rules_keep_retry_guidance
@@ -2197,6 +2233,8 @@ test_gitlab_stale_recorded_head_is_reported
 test_gitlab_unreadable_state_refuses
 test_gitlab_invalid_head_refuses
 test_gitlab_missing_tool_refuses_before_recording
+
+fi
 
 # The merge gate asks whether the task is still held for the captain. A home
 # that carries no backlog records no captain calls at all, so nothing can be
@@ -3067,6 +3105,67 @@ test_allow_red_refused_on_gitlab() {
   pass "fm-pr-merge refuses --allow-red on GitLab"
 }
 
+test_checks_app_preserves_merge_identity_and_red_guards() {
+  local case_dir rc
+  case_dir=$(make_case github-checks-app)
+  add_gh_mocks "$case_dir" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  openssl genrsa -out "$case_dir/key.pem" 2048 2>/dev/null
+  chmod 600 "$case_dir/key.pem"
+  jq -n --arg key "$case_dir/key.pem" \
+    '{app_id:"5219477",installation_id:"168738038",key_path:$key}' \
+    > "$case_dir/home/config/gh-checks-app.json"
+  cat > "$case_dir/fakebin/curl" <<'SH'
+#!/usr/bin/env bash
+cat >/dev/null
+case "${*: -1}" in
+  */installation) printf '{"id":168738038,"account":{"login":"example"}}\n200'; exit 0 ;;
+esac
+printf '%s' '{"token":"installation_merge_secret","expires_at":"2099-01-01T00:00:00Z"}'
+SH
+  chmod +x "$case_dir/fakebin/curl"
+  GH_TOKEN=ordinary_merge_identity FM_TEST_CHECKS_APP=1 \
+    run_pr_merge "$case_dir" task-x1 https://github.com/example/repo/pull/74 \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "App checks: ordinary-identity merge failed: $(cat "$case_dir/stderr")"
+  assert_logged_gh_merge "$case_dir" 74 example/repo --squash
+  assert_no_grep 'installation_merge_secret' "$case_dir/gh.log" "App token leaked in argv"
+  : > "$case_dir/gh.log"
+  write_github_red_json "$case_dir" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ci
+  rc=0
+  GH_TOKEN=ordinary_merge_identity FM_TEST_CHECKS_APP=1 \
+    run_pr_merge "$case_dir" task-x1 https://github.com/example/repo/pull/74 \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  expect_code 1 "$rc" 'App checks: red checks must refuse'
+  assert_no_grep 'pr merge' "$case_dir/gh.log" 'App checks: red merge reached forge'
+  : > "$case_dir/gh.log"
+  write_github_rollup_json "$case_dir" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \
+    "$(check_run ci COMPLETED SUCCESS 2026-01-01T00:00:01Z 2026-01-01T00:00:10Z)" \
+    "$(check_run ci COMPLETED FAILURE 2026-01-01T00:00:09Z 2026-01-01T00:00:09Z)"
+  rc=0
+  GH_TOKEN=ordinary_merge_identity FM_TEST_CHECKS_APP=1 \
+    run_pr_merge "$case_dir" task-x1 https://github.com/example/repo/pull/74 \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  expect_code 1 "$rc" 'App checks: a late-finishing old success hid a newer failure'
+  assert_grep "check 'ci' is not green" "$case_dir/stderr" 'App checks: newer failure was not named'
+  assert_no_grep 'pr merge' "$case_dir/gh.log" 'App checks: overlapping red merge reached forge'
+  : > "$case_dir/gh.log"
+  write_github_live_json "$case_dir" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  rc=0
+  GH_TOKEN=ordinary_merge_identity FM_TEST_CHECKS_APP=1 FM_TEST_APP_HEAD_RACE=1 \
+    run_pr_merge "$case_dir" task-x1 https://github.com/example/repo/pull/74 \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  expect_code 1 "$rc" 'App checks: changed head must refuse'
+  assert_grep 'head changed between metadata and checks reads' "$case_dir/stderr" 'App checks: race refusal missing'
+  assert_no_grep 'pr merge' "$case_dir/gh.log" 'App checks: head race reached forge'
+  pass 'App-authenticated checks preserve user merge identity, head binding, and red refusal'
+}
+
+if [ "${1:-}" = --checks-app-only ]; then
+  test_checks_app_preserves_merge_identity_and_red_guards
+  exit 0
+fi
+
+test_checks_app_preserves_merge_identity_and_red_guards
 test_gitlab_head_override_args_refuse_before_recording
 test_secondmate_merge_reports_upward_once
 test_secondmate_merge_reports_on_the_local_route

@@ -106,7 +106,7 @@ esac
 GH_STDERR=$(mktemp "${TMPDIR:-/tmp}/fm-pr-state.XXXXXX") \
   || die "could not create temporary file"
 trap 'rm -f "$GH_STDERR"' EXIT INT TERM
-if ! REQUIRED=$(gh pr checks "$URL" --required --json name,state,bucket --jq '
+if ! REQUIRED=$("$SCRIPT_DIR/fm-gh-checks-read.sh" pr checks "$URL" --required --json name,state,bucket --jq '
   .[]
   | select(.bucket != "pass" and .bucket != "skipping")
   | "REQUIRED CHECK: \(.name) (\(.state))"' 2>"$GH_STDERR"); then

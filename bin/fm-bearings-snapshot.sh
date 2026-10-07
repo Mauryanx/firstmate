@@ -292,9 +292,37 @@ EOF
     for repo in $repos; do
       if [ "$ALL_PR_REPOS" != 1 ] && [ "$nrepos" -ge "$FM_BEARINGS_PR_REPOS" ]; then break; fi
       nrepos=$((nrepos + 1))
+      pr_fields=number,title,url,headRefName,reviewDecision,mergeable,statusCheckRollup
+      if "$SCRIPT_DIR/fm-gh-checks-read.sh" configured; then
+        pr_fields=number,title,url,headRefName,reviewDecision,mergeable,headRefOid
+      fi
+      repo_deadline=$(( $(date +%s) + FM_BEARINGS_PR_TIMEOUT ))
       out=$(gh_bounded pr list --repo "$repo" --state open --limit "$pr_fetch_limit" \
-        --json number,title,url,headRefName,reviewDecision,mergeable,statusCheckRollup 2>/dev/null) \
+        --json "$pr_fields" 2>/dev/null) \
         || { nwarn=$((nwarn + 1)); continue; }
+      if "$SCRIPT_DIR/fm-gh-checks-read.sh" configured; then
+        enriched='[]'
+        failed=0
+        while IFS= read -r item; do
+          [ -n "$item" ] || continue
+          remaining=$((repo_deadline - $(date +%s)))
+          [ "$remaining" -gt 0 ] || { failed=1; break; }
+          pr_url=$(printf '%s' "$item" | jq -er '.url') || { failed=1; break; }
+          checks=$(fm_run_timed "$remaining" \
+            "$SCRIPT_DIR/fm-gh-checks-read.sh" pr view "$pr_url" \
+              --json headRefOid,statusCheckRollup 2>/dev/null) || { failed=1; break; }
+          enriched=$(jq -cn --argjson rows "$enriched" --argjson item "$item" --argjson checks "$checks" '
+            if ($item.headRefOid | type) == "string" and $item.headRefOid == $checks.headRefOid
+              and ($checks.statusCheckRollup | type) == "array"
+            then $rows + [$item + {statusCheckRollup:$checks.statusCheckRollup}]
+            else error("head changed or checks unreadable") end') || { failed=1; break; }
+        done <<PR_ITEMS
+$(printf '%s' "$out" | jq -c --argjson limit "$FM_BEARINGS_PR_LIMIT" '.[:$limit][]')
+PR_ITEMS
+        [ "$failed" = 0 ] || { nwarn=$((nwarn + 1)); continue; }
+        out=$(jq -cn --argjson original "$out" --argjson enriched "$enriched" --argjson limit "$FM_BEARINGS_PR_LIMIT" \
+          '$enriched + $original[$limit:]')
+      fi
       [ -n "$out" ] || out='[]'
       repo_result=$(printf '%s' "$out" | jq --arg repo "$repo" --argjson limit "$FM_BEARINGS_PR_LIMIT" '
         [ .[] | {
