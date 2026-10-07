@@ -566,14 +566,30 @@ github_checks_not_green() {
   ' 2>/dev/null || return 1
 }
 
-# Pre-merge conditions for a GitHub pull request, read from one live view.
+# Pre-merge conditions for a GitHub pull request, read live.
+# Configured App checks and ordinary-user metadata must report the same head.
 # Sets FM_PR_MERGE_HEAD to the verified head on success.
 github_verify_mergeable() {
   local json fields line red name covered
   local total=0 named=0 refusals=''
   local state='' draft='' mergeable='' merge_state='' live_head='' base=''
 
-  if ! json=$("$SCRIPT_DIR/fm-gh-checks-read.sh" pr view "$URL" --json state,isDraft,mergeable,mergeStateStatus,headRefOid,baseRefName,statusCheckRollup 2>/dev/null) \
+  local checks core_head checks_head
+  if "$SCRIPT_DIR/fm-gh-checks-read.sh" configured; then
+    if ! json=$(gh pr view "$URL" --json state,isDraft,mergeable,mergeStateStatus,headRefOid,baseRefName 2>/dev/null) \
+      || ! checks=$("$SCRIPT_DIR/fm-gh-checks-read.sh" pr view "$URL" --json headRefOid,statusCheckRollup); then
+      echo "error: could not read the GitHub pull request state before merging" >&2
+      return 1
+    fi
+    core_head=$(printf '%s' "$json" | jq -er '.headRefOid' 2>/dev/null) || return 1
+    checks_head=$(printf '%s' "$checks" | jq -er '.headRefOid' 2>/dev/null) || return 1
+    if ! fm_pr_head_valid "$core_head" || [ "$core_head" != "$checks_head" ]; then
+      echo "error: GitHub pull request head changed between metadata and checks reads" >&2
+      return 1
+    fi
+    json=$(jq -cn --argjson core "$json" --argjson checks "$checks" \
+      '$core + {statusCheckRollup:$checks.statusCheckRollup}') || return 1
+  elif ! json=$(gh pr view "$URL" --json state,isDraft,mergeable,mergeStateStatus,headRefOid,baseRefName,statusCheckRollup 2>/dev/null) \
     || [ -z "$json" ]; then
     echo "error: could not read the GitHub pull request state before merging" >&2
     return 1

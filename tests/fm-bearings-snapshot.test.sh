@@ -53,6 +53,24 @@ SH
 echo "gh $*" >> "$NET_LOG"
 if [ "${FAKE_GH_FAIL:-0}" = 1 ]; then exit 1; fi
 if [ "${FAKE_GH_SLEEP:-0}" = 1 ]; then sleep 30; fi
+if [ "${FAKE_GH_APP:-0}" = 1 ]; then
+  case "${1:-} ${2:-}" in
+    'pr list')
+      [ "${GH_TOKEN:-}" = ordinary_bearings_user ] || exit 81
+      case " $* " in *statusCheckRollup*) exit 82 ;; esac
+      printf '%s\n' '[{"number":9,"title":"Ship the thing","url":"https://github.com/kunchenguid/firstmate/pull/9","headRefName":"fm/ship-task","headRefOid":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","reviewDecision":"APPROVED","mergeable":"MERGEABLE"}]'
+      ;;
+    'pr view')
+      [ "${GH_TOKEN:-}" = bearings_app_secret ] || exit 83
+      case " $* " in *reviewDecision*|*mergeable*) exit 84 ;; esac
+      head=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      [ "${FAKE_GH_APP_RACE:-0}" != 1 ] || head=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      printf '{"headRefOid":"%s","statusCheckRollup":[{"status":"COMPLETED","conclusion":"SUCCESS"}]}\n' "$head"
+      ;;
+    *) exit 85 ;;
+  esac
+  exit 0
+fi
 if [ "${FAKE_GH_MANY:-0}" = 1 ]; then
   cat <<'JSON'
 [{"number":1,"title":"One","url":"https://github.com/acme/repo/pull/1","headRefName":"fm/one","reviewDecision":"","mergeable":"MERGEABLE","statusCheckRollup":[]},{"number":2,"title":"Two","url":"https://github.com/acme/repo/pull/2","headRefName":"fm/two","reviewDecision":"","mergeable":"MERGEABLE","statusCheckRollup":[]},{"number":3,"title":"Three","url":"https://github.com/acme/repo/pull/3","headRefName":"fm/three","reviewDecision":"","mergeable":"MERGEABLE","statusCheckRollup":[]}]
@@ -1414,6 +1432,32 @@ test_include_prs_is_the_only_fetch_path() {
     .candidate_prs | any(.[]; .num == "9" and .task == "ship-task" and .checks == "passing" and .review == "APPROVED")
   ' >/dev/null || fail "candidate_prs must carry the fetched PR cross-referenced to its task: $json"
   pass "--include-prs is the only path that fetches, and it enriches correctly"
+}
+
+test_checks_app_enrichment_binds_user_metadata() {
+  local home fakebin json
+  home=$(make_home app-prs); write_fixture "$home"
+  fakebin=$(make_fakebin "$home")
+  openssl genrsa -out "$home/key.pem" 2048 2>/dev/null
+  chmod 600 "$home/key.pem"
+  jq -n --arg key "$home/key.pem" '{app_id:"5219477",installation_id:"168738038",key_path:$key}' \
+    > "$home/config/gh-checks-app.json"
+  cat > "$fakebin/curl" <<'SH'
+#!/usr/bin/env bash
+cat >/dev/null
+case "${*: -1}" in
+  */installation) printf '{"id":168738038,"account":{"login":"kunchenguid"}}\n200' ;;
+  *) printf '{"token":"bearings_app_secret","expires_at":"2099-01-01T00:00:00Z"}' ;;
+esac
+SH
+  chmod +x "$fakebin/curl"
+  json=$(GH_TOKEN=ordinary_bearings_user FAKE_GH_APP=1 run "$home" "$fakebin" --include-prs --json)
+  printf '%s' "$json" | jq -e '.candidate_prs | any(.checks == "passing" and .review == "APPROVED")' >/dev/null \
+    || fail 'App bearings read lost ordinary-user metadata or checks'
+  json=$(GH_TOKEN=ordinary_bearings_user FAKE_GH_APP=1 FAKE_GH_APP_RACE=1 run "$home" "$fakebin" --include-prs --json)
+  printf '%s' "$json" | jq -e '(.candidate_prs | length) == 0 and (.prs | contains("unavailable"))' >/dev/null \
+    || fail 'App bearings published checks from a different head'
+  pass 'App bearings keeps metadata under user login and refuses checks from a different head'
 }
 
 test_partial_github_failure_degrades() {
@@ -3356,6 +3400,7 @@ test_completed_scout_report_not_pending
 test_open_decision_surfaces_end_to_end
 test_report_pointers_surface
 test_queued_item_prose_never_hides_it
+test_checks_app_enrichment_binds_user_metadata
 test_include_prs_is_the_only_fetch_path
 test_partial_github_failure_degrades
 test_perl_fallback_bounds_github_call

@@ -539,8 +539,10 @@ Install the App on the repositories to inspect with Checks read, Commit statuses
 Keep its private key owned by the local user with mode `600` or `400`.
 The configuration is local to each `FM_HOME`; it is not inherited into secondmate homes.
 Merge preflight, PR blocker reporting, and optional live bearings enrichment use [`bin/fm-gh-checks-read.sh`](../bin/fm-gh-checks-read.sh), whose header owns configuration validation and token handling.
-Without configuration those reads use the existing login; configured authentication failures refuse the read.
+Pull-request metadata uses the normal login, with checks bound to that metadata head before merge.
+Without configuration those reads use the existing login; repositories outside the installation fall back to that login with a diagnostic, while other configured authentication failures refuse the read.
 The helper uses `curl`, `jq`, and `openssl`, explicitly requests only read permissions, and retains tokens only for the current read.
+The separate no-mistakes CI monitor uses its own GitHub reader and does not use this helper.
 [`tests/fm-gh-checks-read.test.sh`](../tests/fm-gh-checks-read.test.sh) exercises authentication, expiry refresh, and secret handling.
 
 ## Toolchain

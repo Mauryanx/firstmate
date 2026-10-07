@@ -149,11 +149,18 @@ case "${1:-} ${2:-}" in
   "pr view")
     case " $* " in
       *statusCheckRollup*)
-        cat "$FM_TEST_GH_VIEW_JSON"
+        if [ -n "${FM_TEST_APP_HEAD_RACE:-}" ]; then
+          jq '.headRefOid = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"' "$FM_TEST_GH_VIEW_JSON"
+        else
+          cat "$FM_TEST_GH_VIEW_JSON"
+        fi
         if [ -f "${FM_TEST_AWAY_RECORD_AFTER_VIEW:-}" ]; then
           cp "$FM_TEST_AWAY_RECORD_AFTER_VIEW" "$FM_STATE_OVERRIDE/.afk-contract"
         fi
         exit 0
+        ;;
+      *state,isDraft,mergeable,mergeStateStatus,headRefOid,baseRefName*)
+        cat "$FM_TEST_GH_VIEW_JSON"
         ;;
       *headRefOid*)
         cat "$FM_TEST_GH_HEAD"
@@ -3085,6 +3092,9 @@ test_checks_app_preserves_merge_identity_and_red_guards() {
   cat > "$case_dir/fakebin/curl" <<'SH'
 #!/usr/bin/env bash
 cat >/dev/null
+case "${*: -1}" in
+  */installation) printf '{"id":168738038,"account":{"login":"example"}}\n200'; exit 0 ;;
+esac
 printf '%s' '{"token":"installation_merge_secret","expires_at":"2099-01-01T00:00:00Z"}'
 SH
   chmod +x "$case_dir/fakebin/curl"
@@ -3102,6 +3112,15 @@ SH
     > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
   expect_code 1 "$rc" 'App checks: red checks must refuse'
   assert_no_grep 'pr merge' "$case_dir/gh.log" 'App checks: red merge reached forge'
+  : > "$case_dir/gh.log"
+  write_github_live_json "$case_dir" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  rc=0
+  GH_TOKEN=ordinary_merge_identity FM_TEST_CHECKS_APP=1 FM_TEST_APP_HEAD_RACE=1 \
+    run_pr_merge "$case_dir" task-x1 https://github.com/example/repo/pull/74 \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  expect_code 1 "$rc" 'App checks: changed head must refuse'
+  assert_grep 'head changed between metadata and checks reads' "$case_dir/stderr" 'App checks: race refusal missing'
+  assert_no_grep 'pr merge' "$case_dir/gh.log" 'App checks: head race reached forge'
   pass 'App-authenticated checks preserve user merge identity, head binding, and red refusal'
 }
 
