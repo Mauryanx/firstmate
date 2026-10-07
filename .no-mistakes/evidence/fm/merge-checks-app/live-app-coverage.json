@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "actions": "read",
+    "checks": "read",
+    "metadata": "read",
+    "pull_requests": "read",
+    "statuses": "read"
+  },
+  "expires_at": "2026-10-07T20:14:12Z",
+  "total_count": 18,
+  "repositories": [
+    {
+      "full_name": "Mauryanx/firstmate",
+      "private": false
+    },
+    {
+      "full_name": "Mauryanx/firstmate-voice",
+      "private": true
+    }
+  ],
+  "repository_list_filtered_for_relevant_test_targets": true
+}

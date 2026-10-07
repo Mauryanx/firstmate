@@ -1,0 +1,13 @@
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+●  WATCHER DOWN - SUPERVISION IS OFF
+●  2 task(s) in flight, but no watcher has a fresh beacon (last beat: never, grace 300s).
+●  Trust the emitted supervision protocol for this harness; do not use shell & for watcher repair.
+●  This is a supervision warning only; the guarded operation WILL still run.
+●  repair missing watcher supervision according to the session-start block for this harness; do not use shell &.
+●━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+error: refusing to merge https://github.com/Mauryanx/firstmate/pull/2
+  - mergeable is "CONFLICTING", not MERGEABLE
+  - mergeStateStatus is DIRTY (conflicts)
+  - check 'Behavior portable parallel 1' is not green
+  - check 'PR must be raised via no-mistakes' is not green
+error: these checks are not green: Behavior portable parallel 1, PR must be raised via no-mistakes

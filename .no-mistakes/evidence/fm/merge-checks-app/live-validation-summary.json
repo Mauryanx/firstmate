@@ -1,0 +1,114 @@
+{
+  "private_repo": {
+    "full_name": "Mauryanx/firstmate-voice",
+    "private": true
+  },
+  "normal_metadata": {
+    "baseRefName": "main",
+    "headRefOid": "91f56fb0ce1d8c088ca64b3af41dcd3696109cdc",
+    "state": "OPEN"
+  },
+  "app_checks": {
+    "statusCheckRollup": [
+      {
+        "__typename": "CheckRun",
+        "name": "Test suite",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "startedAt": "2026-10-07T06:15:01Z",
+        "completedAt": "2026-10-07T06:18:42Z",
+        "detailsUrl": "https://github.com/Mauryanx/firstmate-voice/actions/runs/37580481756/job/112658751986"
+      },
+      {
+        "__typename": "CheckRun",
+        "name": "Courier OS acceptance (offline)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "startedAt": "2026-10-07T06:15:01Z",
+        "completedAt": "2026-10-07T06:15:21Z",
+        "detailsUrl": "https://github.com/Mauryanx/firstmate-voice/actions/runs/37580481756/job/112658752262"
+      }
+    ],
+    "headRefOid": "91f56fb0ce1d8c088ca64b3af41dcd3696109cdc"
+  },
+  "permissions": {
+    "actions": "read",
+    "checks": "read",
+    "metadata": "read",
+    "pull_requests": "read",
+    "statuses": "read"
+  },
+  "server_workflow_identity_and_required_classification": [
+    {
+      "__typename": "CheckRun",
+      "name": "Test suite",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "startedAt": "2026-10-07T06:15:01Z",
+      "completedAt": "2026-10-07T06:18:42Z",
+      "detailsUrl": "https://github.com/Mauryanx/firstmate-voice/actions/runs/37580481756/job/112658751986",
+      "isRequired": false,
+      "checkSuite": {
+        "workflowRun": {
+          "event": "pull_request",
+          "workflow": {
+            "name": "CI"
+          }
+        }
+      }
+    },
+    {
+      "__typename": "CheckRun",
+      "name": "Courier OS acceptance (offline)",
+      "status": "COMPLETED",
+      "conclusion": "SUCCESS",
+      "startedAt": "2026-10-07T06:15:01Z",
+      "completedAt": "2026-10-07T06:15:21Z",
+      "detailsUrl": "https://github.com/Mauryanx/firstmate-voice/actions/runs/37580481756/job/112658752262",
+      "isRequired": false,
+      "checkSuite": {
+        "workflowRun": {
+          "event": "pull_request",
+          "workflow": {
+            "name": "CI"
+          }
+        }
+      }
+    }
+  ],
+  "blocker_report": "CHECKS: no required check has reported; readiness unconfirmed",
+  "bearings": {
+    "prs": "checked (2 repos, 2 open)",
+    "candidate_prs": [
+      {
+        "num": "45",
+        "repo": "Mauryanx/firstmate-voice",
+        "task": "courier-room",
+        "url": "https://github.com/Mauryanx/firstmate-voice/pull/45",
+        "review": "",
+        "mergeable": "MERGEABLE",
+        "checks": "passing"
+      },
+      {
+        "num": "2",
+        "repo": "Mauryanx/firstmate",
+        "task": "fv-13-voice-notes-first-fork",
+        "url": "https://github.com/Mauryanx/firstmate/pull/2",
+        "review": "",
+        "mergeable": "CONFLICTING",
+        "checks": "failing"
+      }
+    ]
+  },
+  "merge_refusal": " to merge https://github.com/Mauryanx/firstmate/pull/2\n  - mergeable is \"CONFLICTING\", not MERGEABLE\n  - mergeStateStatus is DIRTY (conflicts)\n  - check 'Behavior portable parallel 1' is not green\n  - check 'PR must be raised via no-mistakes' is not green\nerror: these checks are not green: Behavior portable parallel 1, PR must be raised via no-mistakes\n",
+  "unconfigured_and_outside_installation_equal_normal_login": true,
+  "outside_installation_reason": "gh checks App: repository is outside the configured installation; using normal login",
+  "unsafe_configuration": "gh checks App: invalid configuration",
+  "insecure_key": "gh checks App: private key must be owned by this uid with mode 600 or 400",
+  "missing_pr_error": "gh: Could not resolve to a PullRequest with the number of 9999999.\ngh checks App: could not read pull-request and rollup identity with normal login",
+  "trace": "+ set -eu\n+ case $- in\n+ set +x\n",
+  "write_attempts": 0,
+  "ordinary_private_checks_error": "GraphQL: Resource not accessible by personal access token (repository.pullRequest.statusCheckRollup.nodes.0.commit.statusCheckRollup.contexts.nodes.0), Resource not accessible by personal access token (repository.pullRequest.statusCheckRollup.nodes.0.commit.statusCheckRollup.contexts.nodes.1)",
+  "normal_login_fallback_head": "731e9b50e46abbc19c3f78ae0631ada7c773feac",
+  "normal_login_fallback_repository": "cli/cli"
+}

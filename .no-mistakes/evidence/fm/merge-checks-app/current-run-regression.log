@@ -1,0 +1,33 @@
+Historical helper: parent of 371d32320e68f3be606df740548567ca4219f2a6 (3c4b4bd).
+Target helper: 371d32320e68f3be606df740548567ca4219f2a6.
+Disposable copies ran the same current behavioral test; its fake mint transport accepted either approved four-read or five-read request so authentication did not mask the current-run regression.
+GitHub responses were simulated; this is regression evidence, not live forge evidence.
+
+BEFORE
+FM_TEST_BEGIN 2026-10-07T19:23:31Z .live-checks-validation/before/tests/fm-gh-checks-read.test.sh family=pr-forge expected_gate_skip=none
+ok - unconfigured reads use the ordinary login without minting
+ok - configured reads verify RS256 JWT and pass secrets without argv/debug/trace leakage
+not ok - server required classification or context ordering changed
+FM_TEST_END 2026-10-07T19:23:33Z .live-checks-validation/before/tests/fm-gh-checks-read.test.sh exit=1 duration_ms=1559 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=1 skipped_gate=0 duration_ms=1765
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=1559 failed=1
+FM_TEST_SLOWEST rank=1 script=.live-checks-validation/before/tests/fm-gh-checks-read.test.sh duration_ms=1559
+
+
+AFTER
+FM_TEST_BEGIN 2026-10-07T19:24:19Z .live-checks-validation/before/tests/fm-gh-checks-read.test.sh family=pr-forge expected_gate_skip=none
+ok - unconfigured reads use the ordinary login without minting
+ok - configured reads verify RS256 JWT and pass secrets without argv/debug/trace leakage
+ok - normal-login rollup identity and paginated App contexts preserve required-check behavior
+ok - expired token refuses after a single mint
+ok - a new read refreshes credentials after an expired response
+ok - missing installation and different installation preserve ordinary-login reads
+ok - coverage authentication errors refuse instead of falling back
+ok - failed App token mint refuses without falling back to the ordinary login
+ok - insecure private key permissions refuse authentication
+ok - invalid configuration fails closed
+ok - helper refuses write commands
+FM_TEST_END 2026-10-07T19:24:45Z .live-checks-validation/before/tests/fm-gh-checks-read.test.sh exit=0 duration_ms=26042 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=26278
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=26042 failed=0
+FM_TEST_SLOWEST rank=1 script=.live-checks-validation/before/tests/fm-gh-checks-read.test.sh duration_ms=26042

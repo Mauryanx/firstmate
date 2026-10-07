@@ -1,0 +1,194 @@
+FM_TEST_BEGIN 2026-10-07T19:12:44Z tests/fm-pr-merge.test.sh family=pr-forge expected_gate_skip=none
+ok - fm-pr-merge reports exact queue retry flags after a zero-exit false success
+ok - fm-pr-merge omits merge-queue retry guidance for a closed GitHub PR
+ok - fm-pr-merge aggregates agreeing merge-queue rules
+ok - fm-pr-merge reports ambiguity for conflicting merge-queue rules
+ok - fm-pr-merge records pr= and pr_head= for a verified GitHub merge
+ok - fm-pr-merge records pr= before the forge call can land the merge
+ok - fm-pr-merge propagates a real merge failure without silently succeeding
+ok - fm-pr-merge refuses a GitHub merge call that leaves the PR open and unqueued
+ok - fm-pr-merge keeps PR bookkeeping when it cannot read a successful merge call's outcome
+ok - fm-pr-merge refuses with the forge's own output quoted apart from its verdict
+ok - fm-pr-merge quotes the forge output when it cannot read the outcome either
+ok - fm-pr-merge does not echo back queue flags the caller already used
+ok - fm-pr-merge still names retry flags when the caller used a different method
+ok - fm-pr-merge names the queue requirement even when its method is unrecognised
+ok - fm-pr-merge distinguishes unreadable branch rules from a base with no merge queue
+ok - fm-pr-merge reads a plan-gated 403 on branch rules as no merge queue, not unreadable
+ok - fm-pr-merge says nothing about a merge queue when the base branch has no queue rule
+ok - fm-pr-merge accepts only a proved merge from the gh-axi fallback
+ok - fm-pr-merge explains an armed auto-merge that landed nothing on a queue-less base
+ok - fm-pr-merge never reports auto-merge as armed when the merge command failed
+ok - fm-pr-merge claims no acceptance for a failed merge command carrying queue flags
+ok - fm-pr-merge falls back to the gh-axi view when gh's read fails
+ok - fm-pr-merge names a landed state hiding behind a failed GitHub merge command
+ok - fm-pr-merge refuses a GitHub merge when gh is missing, before recording
+ok - fm-pr-merge refuses a GitHub merge when gh is missing rather than merging blind
+ok - fm-pr-merge verifies a genuinely merged GitHub pull request
+ok - fm-pr-merge refuses to claim a merge when poll recording fails
+ok - fm-pr-merge accepts and accurately reports a GitHub merge-queue entry
+ok - fm-pr-merge explains how to retry with the required GitHub merge queue method
+ok - fm-pr-merge refuses branch deletion unless --attended-override is passed
+ok - fm-pr-merge refuses before merging when task meta is missing
+ok - fm-pr-merge refuses malformed PR URLs before calling gh-axi
+ok - fm-pr-merge refuses unsafe PR URL segments before recording state
+ok - fm-pr-merge refuses repo override args before recording state
+ok - fm-pr-merge refuses a bundled short-option repo override and refuses -d unless attended
+ok - fm-pr-merge does not add default --squash when the caller passes an explicit merge method
+ok - fm-pr-merge respects --method=<value> as an explicit merge method
+ok - fm-pr-merge parses a GitHub PR URL into gh-axi number and --repo arguments
+ok - fm-pr-merge refuses a caller --sha on GitHub because the head comes from the live read
+ok - fm-pr-merge merges a GitLab merge request through glab instead of refusing it
+ok - fm-pr-merge takes the GitLab instance from the URL rather than assuming one
+ok - fm-pr-merge imposes no merge method on GitLab, leaving the project's own one
+ok - fm-pr-merge refuses GitLab source-branch deletion unless --attended-override is passed
+ok - fm-pr-merge propagates a real glab merge failure without silently succeeding
+ok - fm-pr-merge refuses on each GitLab pre-merge condition independently
+ok - fm-pr-merge reports every failing GitLab condition, not only the first
+ok - fm-pr-merge reports a stale recorded head and verifies the live one
+ok - fm-pr-merge refuses an unreadable GitLab merge request state rather than merging blind
+ok - fm-pr-merge refuses a GitLab head commit it cannot validate
+ok - fm-pr-merge refuses before recording anything when glab or jq is absent
+ok - App-authenticated checks preserve user merge identity, head binding, and red refusal
+ok - fm-pr-merge refuses a GitLab head override before recording state
+ok - a merge a secondmate home performs itself is reported upward exactly once
+ok - a locally routed secondmate home reports the landed PR into its parent's own channel
+ok - a landed GitLab merge request is reported upward on the same channel
+ok - a queued GitLab merge stays silent and leaves confirmation to the armed poll
+ok - a refused or failed merge reports no outcome
+ok - a GitLab merge refused before the forge call reports no outcome
+ok - a merge a main home performs itself leaves one durable wake naming the PR
+ok - a queued GitHub merge stays silent and leaves confirmation to the armed poll
+ok - distinct merged PRs for one task retain distinct captain-facing wakes
+ok - an uncommitted marker retry preserves at least one durable outcome
+ok - a secondmate home that cannot report upward says so instead of merging in silence
+ok - fm-pr-merge proceeds when the home carries no backlog at all
+ok - fm-pr-merge refuses when the backlog exists but cannot be read
+ok - fm-pr-merge refuses when its configured backend cannot be read
+ok - fm-pr-merge refuses when its user backend configuration cannot be read
+ok - fm-pr-merge refuses when its user backend configuration directory cannot be traversed
+ok - fm-pr-merge proceeds once when its user configuration directory and backlog are genuinely absent
+ok - fm-pr-merge honors a backend override over an unreadable user configuration
+ok - fm-pr-merge refuses red GitHub checks and waives only a named --allow-red check
+ok - fm-pr-merge merges when a failed check run was replaced by a passing re-run
+ok - fm-pr-merge never lets a check run supersede a legacy status context
+ok - fm-pr-merge still refuses when a check's current run failed after an earlier pass
+ok - fm-pr-merge uses start order when the old success finishes last
+ok - fm-pr-merge supersedes an old cancellation that finishes last
+ok - fm-pr-merge keeps a check red while its re-run is still in flight
+ok - fm-pr-merge never lets one check's pass clear another check's failure
+ok - fm-pr-merge clears a failure only on a proven later pass of the same check
+ok - fm-pr-merge keeps --allow-red scoped to its named check beside a superseded failure
+ok - fm-pr-merge rechecks away presence before an attended red merge
+ok - fm-pr-merge accepts exactly one separately named red-check waiver
+ok - away merges require yolo or a grant, and --attended-override does not skip that
+ok - away posture permits immediate merges but refuses every asynchronous path
+ok - away merge proceeds on a plan-gated 403 because that repository cannot have a merge queue
+ok - a grant does not bypass red checks, and a recorded pr= must match the URL
+ok - an unreadable away-posture record refuses the merge instead of skipping the grant
+ok - no away-record archive or grant revocation lands between the authority read and the merge
+ok - a grant revoked before the merge's own authority read refuses the merge
+ok - a merge that cannot lock the away record refuses instead of merging unlocked
+ok - fm-pr-merge refuses --allow-red on GitLab
+FM_TEST_END 2026-10-07T19:26:25Z tests/fm-pr-merge.test.sh exit=0 duration_ms=820765 gate_skip=false
+FM_TEST_BEGIN 2026-10-07T19:26:25Z tests/fm-gh-checks-read.test.sh family=pr-forge expected_gate_skip=none
+FM_TEST_BEGIN 2026-10-07T19:26:25Z tests/fm-pr-state.test.sh family=pr-forge expected_gate_skip=none
+ok - a passing required check and a skipped one leave nothing to report
+ok - a terminal pull request reports that state and nothing else
+ok - draft state blocks readiness
+ok - stale changes-requested verdicts explain a blocking review decision
+ok - approved PR ignores stale changes-requested history
+ok - current changes-requested review blocks readiness
+ok - a CHANGES_REQUESTED decision is always reported
+ok - the author's own review is never listed as a blocker
+ok - a pending approval is not reported as a blocker
+ok - required failure blocks readiness
+ok - given gh's sentence, an unreported required check is unconfirmed, other check lookup failures refuse
+ok - given gh's sentence, a head with no reported checks is unverified rather than ready
+ok - help states what empty output means and what is out of scope
+ok - unknown and conflicting mergeability block readiness
+ok - argument and lookup refusals exit nonzero
+FM_TEST_END 2026-10-07T19:26:27Z tests/fm-pr-state.test.sh exit=0 duration_ms=2271 gate_skip=false
+ok - unconfigured reads use the ordinary login without minting
+ok - configured reads verify RS256 JWT and pass secrets without argv/debug/trace leakage
+ok - normal-login rollup identity and paginated App contexts preserve required-check behavior
+ok - expired token refuses after a single mint
+ok - a new read refreshes credentials after an expired response
+ok - missing installation and different installation preserve ordinary-login reads
+ok - coverage authentication errors refuse instead of falling back
+ok - failed App token mint refuses without falling back to the ordinary login
+ok - insecure private key permissions refuse authentication
+ok - invalid configuration fails closed
+ok - helper refuses write commands
+FM_TEST_END 2026-10-07T19:26:50Z tests/fm-gh-checks-read.test.sh exit=0 duration_ms=24774 gate_skip=false
+FM_TEST_BEGIN 2026-10-07T19:26:50Z tests/fm-bearings-snapshot.test.sh family=snapshot-bearings expected_gate_skip=optional-binary
+ok - task teardown during metadata capture is omitted without aborting the snapshot
+ok - current state and decision hints share one captured status observation
+ok - reused live state is discarded when task generation changes
+ok - large local snapshot overlaps local reads with byte-identical serial and concurrent projections
+ok - remote ledgers collect concurrently under one budget, reuse aged cache, and cancel wedged collectors
+ok - a missing remote ledger stays explicitly unreadable without remote summary computation
+ok - Domain Alpha structured state overrides a stale parent Phase 7 event
+ok - GNU stat file reads select -c without BSD filesystem-report pollution
+ok - parent activity evidence is bounded and disclosed
+ok - Bearings excludes a status-only child decision
+ok - a structured child captain hold reaches Captain's Call
+ok - missing, invalid, unreadable, malformed, and unavailable-child homes stay explicit unknowns
+ok - oversized ledgers stay strict unknown
+ok - secondmate and per-home child counts are bounded, disclosed, and explicitly expandable
+ok - parent decisions remain untrusted contradiction evidence
+ok - parent evidence reconciliation distinguishes matching holds, blocks, and decisions
+ok - nonprogressing child states are explicit and inconsistent terminal rows invalidate
+ok - registry unavailability and bounded truncation remain explicit
+ok - repeated snapshots keep the same current landed baseline and ignore prior reports
+ok - default output is bounded, local-only, and marks omitted surfaces
+ok - TOON and JSON are parity representations of the same model
+ok - landed includes secondmate-managed merges alongside main-home merges
+ok - landed accepts only kind-owned delivery artifacts while answered questions stay out
+ok - kind fallback matches tasks-axi word boundaries and preserves scout deliveries
+ok - kindless v1 summaries retain report artifacts from fresh and cached ledgers
+ok - default landed selection balances one dominant home with sparse homes
+ok - landed selection refills capacity after sparse homes exhaust
+ok - landed selection uses deterministic home order when homes exceed the cap
+ok - landed selection preserves deterministic home and internal tie ordering
+ok - landed selection handles no landed items
+ok - --all-landed keeps the complete global landed output
+ok - landed stays bounded with per-home + overall caps and omitted[] disclosure
+ok - Bearings keeps a live blocker in structured live state and never converts it to Charted Next queue work
+ok - action-free items (working/done/queued/landed) do not leak into Captain's Call
+ok - main orphan in-flight stays out of Underway and is disclosed in omitted/gates
+ok - main unstructured current is disclosed while structured siblings still project
+ok - counterfactual meta clears main inventory warning and projects the live task
+ok - working captain holds retain main and secondmate bucket surfaces
+ok - active children reach Underway independently of a home captain hold
+ok - blank legacy summary names use their durable identifier
+ok - newest filed gates are selected before snapshot bounds
+ok - Underway rows carry the durable task name and gates carry their filed date
+ok - mixed secondmate roles, partial state, and captain readiness project independently
+ok - main and secondmate captain actionability use the same blocker readiness
+ok - a completed scout with decision-like report prose is a pointer, not pending
+ok - an authoritative captain hold surfaces end-to-end
+ok - current report pointers surface
+ok - queued body prose never hides an item from the board
+jq: error (at <unknown>): head changed or checks unreadable
+ok - App bearings keeps metadata under user login and refuses checks from a different head
+ok - --include-prs is the only path that fetches, and it enriches correctly
+ok - a partial GitHub failure degrades gracefully
+ok - Perl fallback bounds stalled GitHub calls without coreutils timeout
+ok - all fleet-sized sections are capped with counted opt-in expansion
+ok - captain-held tasks of any kind reach Captain's Call, deferral is honored, and landed excludes answered calls
+ok - structured hold buckets decide Captain's Call, Charted Next, and the reveal
+ok - a blocked deferred hold stays gated when its date arrives and is revealed by --all-decisions
+ok - revealed deferred holds display their deferral reason while live calls stay unannotated
+ok - live PR enrichment caps repositories with counted expansion
+ok - per-repository open-PR caps are disclosed with an expansion knob
+ok - projection and TOON rendering failures exit nonzero with diagnostics
+FM_TEST_END 2026-10-07T19:35:57Z tests/fm-bearings-snapshot.test.sh exit=0 duration_ms=546640 gate_skip=false
+FM_TEST_SUMMARY total=4 failed=0 skipped_gate=0 duration_ms=1393195
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=3 duration_ms=847810 failed=0
+FM_TEST_SUMMARY_FAMILY family=snapshot-bearings count=1 duration_ms=546640 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-merge.test.sh duration_ms=820765
+FM_TEST_SLOWEST rank=2 script=tests/fm-bearings-snapshot.test.sh duration_ms=546640
+FM_TEST_SLOWEST rank=3 script=tests/fm-gh-checks-read.test.sh duration_ms=24774
+FM_TEST_SLOWEST rank=4 script=tests/fm-pr-state.test.sh duration_ms=2271
+fm-test-run: wrote timing artifact: /home/firstmate/.no-mistakes/evidence/01M4BD74QXF41NY8AJW6TSBZD7/targeted-timing.json
