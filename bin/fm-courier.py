@@ -16,11 +16,15 @@ An existing ID.json refuses; retry/edit after claim uses the same ID, while a
 new intentional message needs a new ID. Attachment snapshots remain in outbox.
 Results prints ALL matching immutable snapshots, not a guessed latest status.
 No receipt exits 4 with an empty list. Refusal exits 1; usage exits 2.
-Only courier can approve, enforce policy/limits, or contact a provider.
+Only courier can approve, enforce policy/limits, authorize owner-only native
+polls, or contact a provider. Optional poll_options and confirmed provider/poll
+receipt fields follow firstmate-voice/docs/courier-notify-interface.txt.
 Notify is the Firstmate active-alert adapter: it assigns a fresh ID, publishes
-the text-only imessage proposal and checks matching receipts. Delivery checks
-that same ID/digest later. Both print submission identity, all receipts and a
-delivered flag; only a matching sent receipt exits 0. Unconfirmed delivery
+the text-only imessage proposal and prints submission metadata without reading
+receipts. Publication exits 0, never confirms delivery. Capture the identity
+before separately bounding delivery ID DIGEST. Delivery prints the identity,
+all receipts and a delivered flag; only a matching sent receipt exits 0.
+Unconfirmed delivery
 (including waiting, approved, unknown or denied snapshots) exits 4. Receipt
 refusal exits 1 while preserving the published identity on stdout for recovery.
 Never retry notify to poll or resolve an unknown send; use delivery instead.
@@ -73,7 +77,7 @@ def submit():
 
 def publish_request(row):
     row = fields(row,
-                 {"id", "channel", "to", "text", "purpose", "attachments"}, {"approval_ref"})
+                 {"id", "channel", "to", "text", "purpose", "attachments"}, {"approval_ref", "poll_options"})
     identity(row["id"])
     if row["channel"] != "imessage":
         raise Refused()  # Other adapters are intentionally unreviewed/denied.
@@ -83,6 +87,12 @@ def publish_request(row):
     text(row["purpose"], 500)
     if "approval_ref" in row:
         identity(row["approval_ref"])  # Opaque correlation, NEVER approval.
+    if "poll_options" in row:
+        if (not isinstance(row["poll_options"], list) or not 2 <= len(row["poll_options"]) <= 10
+                or not row["text"].strip()):
+            raise Refused()
+        for option in row["poll_options"]:
+            single_line(option, 150)
     if (not isinstance(row["attachments"], list) or len(row["attachments"]) > 16
             or (not row["text"].strip() and not row["attachments"])):
         raise Refused()
@@ -108,6 +118,8 @@ def publish_request(row):
         snapshots.append((data, {"name": name, "content_type": content_type, "sha256": digest}))
     payload = {k: row[k] for k in ("channel", "to", "text", "purpose")}
     payload["attachments"] = [record for _, record in snapshots]
+    if "poll_options" in row:
+        payload["poll_options"] = row["poll_options"]
     digest = hashlib.sha256(canonical(payload)).hexdigest()
     wire = dict(row, attachments=[{"path": "blob-" + record["sha256"],
                                    "name": record["name"], "content_type": record["content_type"]}
@@ -143,7 +155,8 @@ def results(identity_value, digest):
             if not RECEIPT.fullmatch(name):
                 continue  # Never ingest ordinary inbound messages as receipts.
             row = fields(strict_json(read_at(parent, name, JSON_LIMIT, uid=uid, mode=0o640)),
-                         {"kind", "id", "digest", "result", "approval_ref", "idempotency_key"})
+                         {"kind", "id", "digest", "result", "approval_ref", "idempotency_key"},
+                         {"message_id", "poll_message_id", "options"})
             identity(row["id"])
             if (row["kind"] != "courier-result" or not isinstance(row["digest"], str)
                     or not DIGEST.fullmatch(row["digest"]) or not isinstance(row["result"], str)
@@ -153,11 +166,31 @@ def results(identity_value, digest):
                 raise Refused()
             if row["approval_ref"] is not None:
                 identity(row["approval_ref"])
+            provider_fields = set(row) & {"message_id", "poll_message_id", "options"}
+            if provider_fields:
+                if row["result"] != "sent" or "message_id" not in row:
+                    raise Refused()
+                single_line(row["message_id"], JSON_LIMIT)
+                if provider_fields != {"message_id"}:
+                    if provider_fields != {"message_id", "poll_message_id", "options"}:
+                        raise Refused()
+                    single_line(row["poll_message_id"], JSON_LIMIT)
+                    if not isinstance(row["options"], dict) or not 2 <= len(row["options"]) <= 10:
+                        raise Refused()
+                    for option_id, label in row["options"].items():
+                        single_line(option_id, JSON_LIMIT)
+                        single_line(label, 150)
             if row["id"] == identity_value and row["digest"] == digest:
                 found.append(row)
         return found
     finally:
         os.close(parent)
+
+
+def single_line(value, limit):
+    text(value, limit)
+    if any(ord(c) < 32 or ord(c) == 127 or c in "\x85\u2028\u2029" for c in value):
+        raise Refused()
 
 
 def delivery(identity_value, digest):
@@ -173,12 +206,9 @@ def delivery(identity_value, digest):
 
 def notify(recipient):
     message = sys.stdin.buffer.read(40001).decode("utf-8")
-    submitted = publish_request({"id": "notify-" + secrets.token_hex(16), "channel": "imessage",
-                                 "to": recipient, "text": message,
-                                 "purpose": "Firstmate active notification", "attachments": []})
-    row, status = delivery(submitted["id"], submitted["digest"])
-    row["submission"] = submitted
-    return row, status
+    return publish_request({"id": "notify-" + secrets.token_hex(16), "channel": "imessage",
+                            "to": recipient, "text": message,
+                            "purpose": "Firstmate active notification", "attachments": []})
 
 
 def main():
@@ -199,7 +229,7 @@ def main():
         return 3
     try:
         if args.operation == "notify":
-            result, status = notify(args.to)
+            result, status = notify(args.to), 0
         elif args.operation == "delivery":
             identity(args.id)
             if not DIGEST.fullmatch(args.digest):

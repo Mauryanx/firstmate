@@ -905,7 +905,7 @@ wedge_alarm_via_command() {  # <cmd> <summary>
 }
 
 wedge_alarm_via_courier() {
-  local summary=$1 output output_file rc
+  local summary=$1 publication output output_file notification_id notification_digest rc
   if [ "${WEDGE_ALARM_EMIT_ACTIVE:-}" != 1 ]; then
     wedge_alarm_emit courier "$summary"
     return $?
@@ -917,12 +917,28 @@ wedge_alarm_via_courier() {
   wedge_alarm_run_bounded courier python3 "$FM_DAEMON_DIR/fm-courier.py" \
     notify "${FM_COURIER_NOTIFY_TO:-}" <<< "$summary" > "$output_file" 2>/dev/null
   rc=$?
+  publication=$(cat "$output_file")
+  if [ "$rc" -ne 0 ]; then
+    rm -f -- "$output_file"
+    log "wedge alarm: courier notification failed (exit $rc); marker retained; publication metadata: $publication"
+    return "$rc"
+  fi
+  log "wedge alarm: courier notification published; recovery identity: $publication"
+  if ! read -r notification_id notification_digest < <(python3 -c \
+    'import json, sys; row = json.load(sys.stdin); print(row["id"], row["digest"])' < "$output_file"); then
+    rm -f -- "$output_file"
+    log "wedge alarm: courier publication identity could not be read; marker retained"
+    return 1
+  fi
+  wedge_alarm_run_bounded courier-delivery python3 "$FM_DAEMON_DIR/fm-courier.py" \
+    delivery "$notification_id" "$notification_digest" > "$output_file" 2>/dev/null
+  rc=$?
   output=$(cat "$output_file")
   rm -f -- "$output_file"
   case "$rc" in
     0) log "wedge alarm: courier delivery confirmed: $output" ;;
     4) log "wedge alarm: courier delivery unconfirmed; poll with fm-courier.py delivery using this identity: $output" ;;
-    *) log "wedge alarm: courier notification failed (exit $rc); marker retained; publication metadata: $output" ;;
+    *) log "wedge alarm: courier delivery failed (exit $rc); marker retained; publication metadata: $publication; receipt evidence: $output" ;;
   esac
   return "$rc"
 }

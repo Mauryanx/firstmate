@@ -8,6 +8,7 @@ from pathlib import Path
 import pwd
 import subprocess
 import sys
+import time
 import unittest
 
 ROOT, TEMP = map(Path, sys.argv[1:3])
@@ -258,18 +259,16 @@ sys.stdout.buffer.write((p / 'answer').read_bytes())
         print("ok - courier rejects modified receipt hashes and symlink receipts")
 
     def test_notification_publication_and_exact_delivery_polling(self):
-        result = self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"The work is ready.", 4)
-        notification = json.loads(result.stdout)
-        submitted = notification["submission"]
-        self.assertEqual(notification["id"], submitted["id"])
-        self.assertEqual(notification["digest"], submitted["digest"])
-        self.assertFalse(notification["delivered"])
-        self.assertEqual(notification["receipts"], [])
+        result = self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"The work is ready.")
+        submitted = json.loads(result.stdout)
+        self.assertEqual(submitted["result"], "submitted")
+        self.assertNotIn("delivered", submitted)
         wire = json.loads((self.home / "outbox" / (submitted["id"] + ".json")).read_bytes())
         self.assertEqual(wire, {"id": submitted["id"], "channel": "imessage", "to": self.request["to"],
                                "text": "The work is ready.", "purpose": "Firstmate active notification",
                                "attachments": []})
         args = ["delivery", submitted["id"], submitted["digest"]]
+        self.assertFalse(json.loads(self.run_cli("fm-courier.py", args, code=4).stdout)["delivered"])
         for status in ("waiting", "approved", "unknown", "denied"):
             self.receipt(submitted, status)
             polled = json.loads(self.run_cli("fm-courier.py", args, code=4).stdout)
@@ -292,14 +291,13 @@ sys.stdout.buffer.write((p / 'answer').read_bytes())
             self.run_cli("fm-courier.py", ["notify", recipient], message, 1)
         self.assertEqual(list((self.home / "outbox").iterdir()), [])
         self.env["FM_COURIER_INBOX"] = str(self.home / "absent")
-        failed = json.loads(self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"Notification", 1).stdout)
-        self.assertFalse(failed["delivered"])
-        self.assertIsNone(failed["receipts"])
+        failed = json.loads(self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"Notification").stdout)
+        self.assertEqual(failed["result"], "submitted")
         self.assertTrue((self.home / "outbox" / (failed["id"] + ".json")).exists())
         args = ["delivery", failed["id"], failed["digest"]]
         self.assertEqual(json.loads(self.run_cli("fm-courier.py", args, code=1).stdout)["id"], failed["id"])
         self.env["FM_COURIER_INBOX"] = str(self.home / "inbox")
-        sent = self.receipt(failed["submission"], "sent")
+        sent = self.receipt(failed, "sent")
         sent.chmod(0o660)
         self.assertFalse(json.loads(self.run_cli("fm-courier.py", args, code=1).stdout)["delivered"])
         sent.chmod(0o640)
@@ -308,6 +306,56 @@ sys.stdout.buffer.write((p / 'answer').read_bytes())
             refused = self.run_cli("fm-courier.py", ["delivery", identity, digest], code=1)
             self.assertEqual(refused.stdout, b"")
         print("ok - invalid notifications refuse; receipt failure preserves publication identity for safe polling recovery")
+
+    def test_poll_proposal_digest_and_receipt_wire_compatibility(self):
+        proposal = dict(self.request, text="Choose an option:\n1. Ready\n2. Wait", purpose="decision",
+                        poll_options=["Ready", "Wait"])
+        submitted = json.loads(self.submit(proposal).stdout)
+        payload = {name: proposal[name] for name in ("channel", "to", "text", "purpose", "attachments", "poll_options")}
+        self.assertEqual(submitted["digest"], hashlib.sha256(canonical(payload)).hexdigest())
+        wire = json.loads((self.home / "outbox/message.json").read_bytes())
+        self.assertEqual(wire["poll_options"], ["Ready", "Wait"])
+        self.receipt(submitted, "sent", message_id="confirmed-question", poll_message_id="confirmed-poll",
+                     options={"provider-a": "Ready", "provider-b": "Wait"})
+        polled = json.loads(self.run_cli("fm-courier.py", ["delivery", submitted["id"], submitted["digest"]]).stdout)
+        self.assertTrue(polled["delivered"])
+        self.assertEqual(polled["receipts"][0]["options"], {"provider-a": "Ready", "provider-b": "Wait"})
+        self.receipt(dict(submitted, id="other"), "sent", message_id="other-confirmed",
+                     idempotency_key="courier-" + hashlib.sha256(canonical(["other", submitted["digest"]])).hexdigest())
+        self.assertEqual(len(json.loads(self.run_cli("fm-courier.py", ["results", submitted["id"], submitted["digest"]]).stdout)), 1)
+        for options in (None, "Ready", ["Ready"], ["Ready"] * 11, ["Ready", ""], ["Ready", "a" * 151],
+                        ["Ready", "two\nlines"], ["Ready", True], ["Ready", "two\u2028lines"]):
+            self.submit(dict(proposal, id="bad", poll_options=options), code=1)
+        self.submit(dict(proposal, id="bad", text=" "), code=1)
+        self.submit(dict(proposal, id="bad", message_id="caller-authority"), code=1)
+        self.assertFalse((self.home / "outbox/bad.json").exists())
+        print("ok - poll proposal digests preserve offered order and confirmed provider/poll receipts remain compatible")
+
+    def test_receipt_provider_fields_require_well_formed_confirmation(self):
+        submitted = json.loads(self.submit().stdout)
+        args = ["delivery", submitted["id"], submitted["digest"]]
+        for status, additions in (
+                ("approved", {"message_id": "unconfirmed"}), ("unknown", {"message_id": "unconfirmed"}),
+                ("sent", {"message_id": True}), ("sent", {"message_id": ""}),
+                ("sent", {"message_id": "bad\nidentity"}), ("sent", {"message_id": "bad\x85identity"}),
+                ("sent", {"poll_message_id": "poll", "options": {"a": "Ready", "b": "Wait"}}),
+                ("sent", {"message_id": "text", "poll_message_id": "poll"}),
+                ("sent", {"message_id": "text", "options": {"a": "Ready", "b": "Wait"}}),
+                ("sent", {"message_id": "text", "poll_message_id": "", "options": {"a": "Ready", "b": "Wait"}}),
+                ("sent", {"message_id": "text", "poll_message_id": "poll", "options": ["Ready", "Wait"]}),
+                ("sent", {"message_id": "text", "poll_message_id": "poll", "options": {"a": "Ready"}}),
+                ("sent", {"message_id": "text", "poll_message_id": "poll", "options": {"": "Ready", "b": "Wait"}}),
+                ("sent", {"message_id": "text", "poll_message_id": "poll", "options": {"a": "Ready", "b": ""}}),
+                ("sent", {"message_id": "text", "poll_message_id": "poll", "options": {"a": "Ready", "b": "a" * 151}}),
+                ("sent", {"message_id": "text", "authenticated": True})):
+            path = self.receipt(submitted, status, **additions)
+            refused = json.loads(self.run_cli("fm-courier.py", args, code=1).stdout)
+            self.assertFalse(refused["delivered"])
+            self.assertIsNone(refused["receipts"])
+            path.unlink()
+        self.receipt(submitted, "sent", message_id="confirmed-text")
+        self.assertTrue(json.loads(self.run_cli("fm-courier.py", args).stdout)["delivered"])
+        print("ok - unconfirmed, incomplete or malformed provider/poll authority refuses before delivery confirmation")
 
     def alarm(self, **changes):
         env = dict(self.env, FM_HOME=str(self.home), FM_ROOT_OVERRIDE=str(self.home),
@@ -328,8 +376,8 @@ sys.stdout.buffer.write((p / 'answer').read_bytes())
         log = self.alarm()
         self.assertIn("courier delivery unconfirmed", log)
         self.assertNotIn("delivery confirmed:", log)
-        notification = json.loads(log.split("identity: ", 1)[1].strip())
-        submitted = notification["submission"]
+        submitted = json.loads(next(line.split("recovery identity: ", 1)[1] for line in log.splitlines()
+                                    if "recovery identity: " in line))
         wire = json.loads((self.home / "outbox" / (submitted["id"] + ".json")).read_bytes())
         self.assertEqual(wire["to"], self.request["to"])
         self.assertEqual(wire["text"], "Example alarm summary\n")
@@ -342,13 +390,55 @@ sys.stdout.buffer.write((p / 'answer').read_bytes())
         self.env["FM_COURIER_OUTBOX"] = str(self.home / "outbox")
         self.env["FM_COURIER_INBOX"] = str(self.home / "absent")
         log = self.alarm()
-        recovery = json.loads(log.rsplit("publication metadata: ", 1)[1].strip())
-        self.assertIsNone(recovery["receipts"])
-        self.assertFalse(recovery["delivered"])
+        failure_line = next(line for line in reversed(log.splitlines()) if "courier delivery failed (exit 1)" in line)
+        recovery = json.loads(failure_line.split("publication metadata: ", 1)[1].split("; receipt evidence: ", 1)[0])
+        evidence = json.loads(failure_line.split("; receipt evidence: ", 1)[1])
+        self.assertIsNone(evidence["receipts"])
+        self.assertFalse(evidence["delivered"])
         self.assertTrue((self.home / "outbox" / (recovery["id"] + ".json")).exists())
         self.assertEqual(list((self.home / "state").iterdir()), [])
         self.assertEqual(marker.read_text(), "Durable alarm evidence")
         print("ok - actual active-alert caller publishes courier proposals, logs pending identity and failures, and retains alarm evidence")
+
+    def test_active_alert_logs_identity_before_receipt_watchdog_expiry(self):
+        fixture = self.home / "fakebin/sitecustomize.py"
+        fixture.write_text('''
+import os, time
+from pathlib import Path
+original_listdir = os.listdir
+def slow_inbox(descriptor):
+    if isinstance(descriptor, int):
+        inbox = os.stat(os.environ["FM_COURIER_INBOX"])
+        opened = os.fstat(descriptor)
+        if (opened.st_dev, opened.st_ino) == (inbox.st_dev, inbox.st_ino):
+            home = Path(os.environ["FIXTURE_HOME"])
+            proposal = next(Path(os.environ["FM_COURIER_OUTBOX"]).glob("notify-*.json"))
+            (home / "claimed.json").write_bytes(proposal.read_bytes())
+            proposal.unlink()
+            (home / "scan-started").write_text("receipt scan blocked")
+            time.sleep(30)
+    return original_listdir(descriptor)
+os.listdir = slow_inbox
+''')
+        start = time.monotonic()
+        log = self.alarm(PYTHONPATH=str(self.home / "fakebin"), FM_WEDGE_ALARM_TIMEOUT_SECS="1")
+        self.assertLess(time.monotonic() - start, 6)
+        self.assertTrue((self.home / "scan-started").exists())
+        self.assertIn("courier delivery failed (exit 124)", log)
+        self.assertLess(log.index("recovery identity: "), log.index("notifier timed out"))
+        submitted = json.loads(next(line.split("recovery identity: ", 1)[1] for line in log.splitlines()
+                                    if "recovery identity: " in line))
+        claimed = json.loads((self.home / "claimed.json").read_bytes())
+        payload = {name: claimed[name] for name in ("channel", "to", "text", "purpose", "attachments")}
+        self.assertEqual(submitted["id"], claimed["id"])
+        self.assertEqual(submitted["digest"], hashlib.sha256(canonical(payload)).hexdigest())
+        self.assertEqual(list((self.home / "outbox").glob("*.json")), [])
+        self.receipt(submitted, "sent", message_id="dummy-confirmed-after-timeout")
+        recovered = json.loads(self.run_cli("fm-courier.py", ["delivery", submitted["id"], submitted["digest"]]).stdout)
+        self.assertTrue(recovered["delivered"])
+        self.assertEqual(list((self.home / "outbox").glob("*.json")), [])
+        self.assertEqual(list((self.home / "state").iterdir()), [])
+        print("ok - receipt watchdog expiry after courier claim preserves logged ID/digest for recovery without resubmission")
 
     def test_active_alert_opt_in_off_and_notifier_safety(self):
         self.alarm(FM_WEDGE_ALARM_CHANNEL="courier\noff")
@@ -408,7 +498,7 @@ sys.stdout.buffer.write((p / 'answer').read_bytes())
         self.submit()
         rig.courier.tick()
         self.assertEqual(rig.job("unlisted")["result"], "denied")
-        notified = json.loads(self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"Notification", 4).stdout)
+        notified = json.loads(self.run_cli("fm-courier.py", ["notify", self.request["to"]], b"Notification").stdout)
         rig.courier.tick()
         self.assertEqual(rig.job(notified["id"])["result"], "denied")
         polled = json.loads(self.run_cli("fm-courier.py", ["delivery", notified["id"], notified["digest"]], code=4).stdout)

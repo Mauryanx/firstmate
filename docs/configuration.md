@@ -34,9 +34,12 @@ Proposal submission is not delivery: only courier's recipient/channel policy, le
 Receipt snapshots are returned together for the exact ID/digest because the upstream protocol supplies no ordering field; they are not a latest-status event stream.
 The Firstmate-owned active-alert caller uses the explicit `courier` channel described in [wedge-alarm.md](wedge-alarm.md); ordinary task steering remains with `fm-send.sh`.
 The existing phone/text notification transport is firstmate-voice's `deploy/fm-notify` and `bridge/imessage/notify.py`, with conversation delivery in its poller.
-Cross-project acceptance remains blocked on main coordinating that adapter against this boundary without editing another project here: its enabled notification branch must publish through `submit` or `notify`, retain the returned ID/digest, and poll `delivery` for confirmed sends while preserving existing unconfigured routing and caller failures.
-Its authenticated reaction/poll path must remain courier-owned; producer approval references and an `approved` snapshot must never count as delivery or authorize a send.
-Main must prove that adapter's approval, edit, denial, ambiguous-send and error paths with the reviewed release and dummy providers before closing this dependency or approving a cutover.
+That adapter's single wire owner is `firstmate-voice/docs/courier-notify-interface.txt` at revision `41ea2049433c5353b97bb50cd1739cb66fdcfd01`, SHA256 `36f5cc52d55d56f4da14fa9d6ec3d24938581db72dd32f29076fe7aca0bec0eb`.
+Its `FM_NOTIFY_COURIER=1` opt-in preserves the existing owner-only `fm-notify` CLI, native polls, reactions and unconfigured errors; it is separate from this repository's low-level `FM_COURIER_ENABLED` proposal client.
+This producer accepts that wire's poll options and validates its added confirmed provider/poll receipt fields; courier retains owner-only native-poll authorization and exact-message approval for ordinary team proposals.
+Fresh correlated vote requests and consumption remain with the owned notification adapter wire, rather than a second Firstmate vote protocol.
+Cross-project acceptance remains incomplete until main tests the actual adapter against the final verified courier revision with dummy data, including poll retry, fresh vote consumption, approval, edit, denial, ambiguous-send and caller errors.
+Older courier fixtures and a contract revision alone do not close that dependency, and this worktree does not modify the sibling project.
 This change performs no adapter deployment, credential migration or real sends.
 
 Both clients are disabled by default and refuse unavailable configured endpoints without a legacy or raw-access fallback.
@@ -45,7 +48,8 @@ Alternate paths or result identities are fixture/operator settings, not proof of
 Client defaults use the physical zone directories because the installer creates symlink aliases and these file clients reject symlink traversal; the fixed installed brainreader wrapper addresses the same request/result files through its installer-owned alias.
 Root must separately install the reviewed zones, group membership, ACLs and privilege rules before enabling either client.
 This preparation neither installs services nor changes credentials, live configuration, worker environments or disk-unlock restart behavior.
-Portable acceptance is `bin/fm-test-run.sh tests/fm-zones.test.sh`; its header documents optional parity with a reviewed courier release using dummy loopback providers.
+Portable acceptance is `bin/fm-test-run.sh tests/fm-zones.test.sh`; its header documents optional generic courier parity with a reviewed release using dummy loopback providers.
+That optional parity does not prove the actual notification adapter, native poll retry or fresh vote consumption against its final verified revision.
 Real OS isolation and real delivery remain unverified until the separately approved VM acceptance and supervised cutover are performed.
 
 ## Session startup
