@@ -7,6 +7,9 @@ The shared no-mistakes gate refusal for fleet lifecycle entrypoints is summarize
 
 | Script                   | Purpose                                                                              |
 | ------------------------ | ------------------------------------------------------------------------------------ |
+| [`fm-brain-desk.py`](../bin/fm-brain-desk.py) | Launch the opt-in bounded brain desk and validate persisted facts results |
+| [`fm-courier.py`](../bin/fm-courier.py) | Publish opt-in courier proposals and read immutable matching result snapshots |
+| `fm_zone_io.py` | Provide descriptor-based boundary file reads and durable atomic publication |
 | `fm-session-start.sh`    | Compose lock, bootstrap, and wake drain into the single ordered session-start digest |
 | `fm-sessionstart-nudge.sh` | Print the native session-start hook nudge when the primary has not already run the digest |
 | `fm-sessionstart-run.sh` | Route a native session-open hook to the full digest, a context re-emit, or the nudge |

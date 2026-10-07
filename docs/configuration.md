@@ -20,6 +20,32 @@ Untracked files and directories whose names begin with `scratchpad` are also git
 The producing PR and Relay helpers own the fields they append, `bin/fm-classify-lib.sh` owns status-event vocabulary, and `bin/fm-crew-state.sh` owns current-state reconciliation.
 Wake, watcher, away-mode, and Relay-specific state mechanics remain with their named scripts and reference sections rather than being duplicated into one exhaustive state tree here.
 
+## Optional brain-desk and courier clients
+
+[`bin/fm-brain-desk.py`](../bin/fm-brain-desk.py) connects Firstmate to the installed bounded desk; its help owns invocation, endpoint settings, input bounds and result validation.
+It is separate from ordinary ship/scout workers: `fm-spawn.sh`, `fm-send.sh` and `fm-control.sh` retain their existing launch, steer, interrupt and resume behavior.
+The historical privileged wrapper name provides a tool-less desk, never an interactive brainreader shell or a caller-selected executable.
+Desk facts are accepted only through the validated facts/citations protocol; raw reports, links and instructions refuse before reaching stdout.
+Keep journal reads on the curated view with `BRAIN_JOURNAL_VIEW=/srv/brain/view`, and operational control on the installed allowlisted `brainctl`; unavailable view data never licenses a raw-store fallback.
+
+[`bin/fm-courier.py`](../bin/fm-courier.py) publishes untrusted delivery proposals and reads immutable courier receipts; its help owns invocation, file publication and matching mechanics.
+It has no provider client, approval-input path or send credential reader.
+Proposal submission is not delivery: only courier's recipient/channel policy, leak checks and authenticated exact-message code consumption can authorize a non-owner send.
+Receipt snapshots are returned together for the exact ID/digest because the upstream protocol supplies no ordering field; they are not a latest-status event stream.
+The existing human notification transport is firstmate-voice's `deploy/fm-notify` and `bridge/imessage/notify.py`, with conversation delivery in its poller.
+Its adapter cutover, reaction/poll behavior and credential migration remain in that repository; `fm-send.sh` is task steering and must not be redirected to courier.
+
+Both clients are disabled by default and refuse unavailable configured endpoints without a legacy or raw-access fallback.
+Their help documents environment settings for explicitly prepared installations and local fixtures; production must retain the designated brainreader/courier result identities and zone-owned read-only result paths.
+Alternate paths or result identities are fixture/operator settings, not proof of OS isolation.
+Client defaults use the physical zone directories because the installer creates symlink aliases and these file clients reject symlink traversal; the fixed installed brainreader wrapper addresses the same request/result files through its installer-owned alias.
+Root must separately install the reviewed zones, group membership, ACLs and privilege rules before enabling either client.
+This preparation neither installs services nor changes credentials, live configuration, worker environments or disk-unlock restart behavior.
+Portable acceptance is `bin/fm-test-run.sh tests/fm-zones.test.sh`; its header documents optional parity with a reviewed courier release using dummy loopback providers.
+Real OS isolation and real delivery remain unverified until the separately approved VM acceptance and supervised cutover are performed.
+
+## Session startup
+
 `bin/fm-session-start.sh`'s header is the single owner of session-start ordering, composed commands, digest contents, and the digest's startup mechanism.
 `bin/fm-startup-network.sh`'s header owns the deferred startup stage that keeps every external-network call and the potentially slow inactive-outcome scan off that digest's blocking path, including its state files and the safety argument for running them later.
 `docs/sessionstart-nudge.md` owns the native session-open adapter tiers that run or nudge the digest command, and the source routing between them.
