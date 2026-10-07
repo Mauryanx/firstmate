@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Run a gh checks read, optionally using a read-only GitHub App installation.
-# Usage: fm-gh-checks-read.sh pr <view|checks> <pr-url> <ordinary gh arguments...>
+# Usage: fm-gh-checks-read.sh pr view <pr-url> --json <statusCheckRollup|headRefOid,statusCheckRollup>
+#        fm-gh-checks-read.sh pr checks <pr-url> --required [--json name,state,bucket --jq <filter>]
 #        fm-gh-checks-read.sh configured (exit 0 when App configuration exists)
 # Only these read commands are accepted; writes always use the normal gh login.
+# Configured reads accept the arguments above; unconfigured or uncovered reads
+# forward the caller's view/checks arguments unchanged to gh.
 # Opt-in: $FM_HOME/config/gh-checks-app.json with positive decimal string fields
 # app_id, installation_id, and an absolute key_path. The key must be a regular,
 # nonsymlink file owned by this uid with mode 600 or 400. Missing config executes
@@ -15,6 +18,12 @@
 # never argv. Repositories outside this installation use the normal login with
 # a one-line diagnostic; every other authentication failure refuses.
 # Shell tracing and gh/curl debug output are disabled for secrets.
+# Normal login resolves PR/head/rollup identity before and after App reads.
+# Changed identity, GraphQL errors, malformed data, or incomplete pagination
+# refuse output. Views retain every context for merge verification.
+# Required-check reporting selects the newest start per name/workflow/event
+# before filtering by server isRequired; absent workflow fields use empty values,
+# and legacy statuses group separately by context name.
 set -eu
 case $- in *x*) set +x ;; esac
 set -o pipefail

@@ -543,7 +543,7 @@ Pull-request and rollup identity metadata use the normal login; the App reads pa
 Without configuration those reads use the existing login; repositories outside the installation fall back to that login with a diagnostic, while other configured authentication failures refuse the read.
 The helper uses `curl`, `jq`, and `openssl`, explicitly requests only read permissions, and retains tokens only for the current read.
 The separate no-mistakes CI monitor uses its own GitHub reader and does not use this helper.
-[`tests/fm-gh-checks-read.test.sh`](../tests/fm-gh-checks-read.test.sh) exercises authentication, expiry refresh, and secret handling.
+[`tests/fm-gh-checks-read.test.sh`](../tests/fm-gh-checks-read.test.sh) exercises authentication, single-mint expiry refusal, paginated contexts, current-run reporting, head-change refusal, and secret handling.
 
 ## Toolchain
 
