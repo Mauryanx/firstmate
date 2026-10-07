@@ -139,6 +139,12 @@ SH
   cat > "$case_dir/fakebin/gh" <<'SH'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$FM_TEST_GH_LOG"
+if [ -n "${FM_TEST_CHECKS_APP:-}" ]; then
+  case " $* " in
+    *statusCheckRollup*) [ "${GH_TOKEN:-}" = installation_merge_secret ] || exit 90 ;;
+    *) [ "${GH_TOKEN:-}" = ordinary_merge_identity ] || exit 91 ;;
+  esac
+fi
 case "${1:-} ${2:-}" in
   "pr view")
     case " $* " in
@@ -3067,6 +3073,39 @@ test_allow_red_refused_on_gitlab() {
   pass "fm-pr-merge refuses --allow-red on GitLab"
 }
 
+test_checks_app_preserves_merge_identity_and_red_guards() {
+  local case_dir rc
+  case_dir=$(make_case github-checks-app)
+  add_gh_mocks "$case_dir" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  openssl genrsa -out "$case_dir/key.pem" 2048 2>/dev/null
+  chmod 600 "$case_dir/key.pem"
+  jq -n --arg key "$case_dir/key.pem" \
+    '{app_id:"5219477",installation_id:"168738038",key_path:$key}' \
+    > "$case_dir/home/config/gh-checks-app.json"
+  cat > "$case_dir/fakebin/curl" <<'SH'
+#!/usr/bin/env bash
+cat >/dev/null
+printf '%s' '{"token":"installation_merge_secret","expires_at":"2099-01-01T00:00:00Z"}'
+SH
+  chmod +x "$case_dir/fakebin/curl"
+  GH_TOKEN=ordinary_merge_identity FM_TEST_CHECKS_APP=1 \
+    run_pr_merge "$case_dir" task-x1 https://github.com/example/repo/pull/74 \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" \
+    || fail "App checks: ordinary-identity merge failed: $(cat "$case_dir/stderr")"
+  assert_logged_gh_merge "$case_dir" 74 example/repo --squash
+  assert_no_grep 'installation_merge_secret' "$case_dir/gh.log" "App token leaked in argv"
+  : > "$case_dir/gh.log"
+  write_github_red_json "$case_dir" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ci
+  rc=0
+  GH_TOKEN=ordinary_merge_identity FM_TEST_CHECKS_APP=1 \
+    run_pr_merge "$case_dir" task-x1 https://github.com/example/repo/pull/74 \
+    > "$case_dir/stdout" 2> "$case_dir/stderr" || rc=$?
+  expect_code 1 "$rc" 'App checks: red checks must refuse'
+  assert_no_grep 'pr merge' "$case_dir/gh.log" 'App checks: red merge reached forge'
+  pass 'App-authenticated checks preserve user merge identity, head binding, and red refusal'
+}
+
+test_checks_app_preserves_merge_identity_and_red_guards
 test_gitlab_head_override_args_refuse_before_recording
 test_secondmate_merge_reports_upward_once
 test_secondmate_merge_reports_on_the_local_route

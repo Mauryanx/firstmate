@@ -522,6 +522,27 @@ The resolver sends the key to `curl` only as a header read from a file descripto
 The resolver fixes the endpoint at `https://api.typesafe.ai`, model at `jev-latest`, confidence floor at 0.6, and request timeout at 5 seconds; `TYPESAFE_API_KEY` is its only resolver-specific environment setting.
 The live rule-match evidence is recorded in [`verification/dispatch-resolve.md`](verification/dispatch-resolve.md).
 
+## GitHub checks authentication
+
+An optional GitHub App can read check runs when the normal GitHub login cannot, while merges and Git pushes retain the normal user credentials.
+Create the private home file `config/gh-checks-app.json`:
+
+```json
+{
+  "app_id": "12345",
+  "installation_id": "67890",
+  "key_path": "/absolute/path/to/gh-checks-app.pem"
+}
+```
+
+Install the App on the repositories to inspect with Checks read, Commit statuses read, and Metadata read permissions.
+Keep its private key owned by the local user with mode `600` or `400`.
+The configuration is local to each `FM_HOME`; it is not inherited into secondmate homes.
+Merge preflight, PR blocker reporting, and optional live bearings enrichment use [`bin/fm-gh-checks-read.sh`](../bin/fm-gh-checks-read.sh), whose header owns configuration validation and token handling.
+Without configuration those reads use the existing login; configured authentication failures refuse the read.
+The helper uses `curl`, `jq`, and `openssl`, explicitly requests only read permissions, and retains tokens only for the current read.
+[`tests/fm-gh-checks-read.test.sh`](../tests/fm-gh-checks-read.test.sh) exercises authentication, expiry refresh, and secret handling.
+
 ## Toolchain
 
 On session start the first mate detects what its required toolchain is missing or too old and lists each problem with either an exact install command or manual instructions.
