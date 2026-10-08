@@ -98,9 +98,9 @@ class SharedInterface:
         name = str(relative)
         if name in ('.wake-queue', '.wake-queue.seq', '.watcher-down'):
             return 'wake'
-        if re.fullmatch(r'\.(?:wake-queue|watcher-down)\.lock(?:\.steal)?\.owner\.[A-Za-z0-9]+', name):
+        if re.fullmatch(r'\.(?:wake-queue|watcher-down)\.lock(?:\.steal)*\.owner\.[A-Za-z0-9]+', name):
             return 'wake-lock'
-        if re.fullmatch(r'\.(?:wake-queue|watcher-down)\.lock(?:\.steal)?\.owner\.[A-Za-z0-9]+/pid', name):
+        if re.fullmatch(r'\.(?:wake-queue|watcher-down)\.lock(?:\.steal)*\.owner\.[A-Za-z0-9]+/pid', name):
             return 'wake'
         return None
 

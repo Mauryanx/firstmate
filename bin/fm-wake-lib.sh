@@ -59,11 +59,17 @@ fm_current_pid() {  # [output-variable]
 }
 
 fm_pid_alive() {
-  local pid=$1
+  local pid=$1 error
   case "$pid" in
     ''|*[!0-9]*) return 1 ;;
   esac
-  kill -0 "$pid" 2>/dev/null
+  if error=$(LC_ALL=C builtin kill -0 "$pid" 2>&1); then
+    return 0
+  fi
+  case "$error" in
+    *'Operation not permitted'|*'Permission denied') return 0 ;;
+    *) return 1 ;;
+  esac
 }
 
 fm_pid_identity() {

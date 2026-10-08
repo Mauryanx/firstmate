@@ -62,6 +62,30 @@ def access(path, mode, named='rw-'):
         output = subprocess.check_output(['getfacl', '-cpn', str(path)], text=True)
         assert f'user:{peer}:{named}\n' in output and '#effective:' not in output, output
 
+try:
+    os.kill(1, 0)
+except PermissionError:
+    denied_pid = 1
+else:
+    denied_pid = None
+    print('SKIP: permission-denied liveness needs a process the test user cannot signal')
+
+for family in ('.wake-queue.lock', '.watcher-down.lock'):
+    for depth in range(4):
+        name = family + '.steal' * depth
+        owner = Path(shell(f'fm_lock_try_acquire "$STATE/{name}"; readlink "$STATE/{name}"'))
+        access(owner, 0o770, 'rwx')
+        access(owner / 'pid', 0o660)
+        if denied_pid is not None:
+            (owner / 'pid').write_text(str(denied_pid) + '\n')
+            os.utime(owner, (1, 1))
+            shell(f'fm_lock_try_acquire "$STATE/{name}"', code=1)
+            assert (state / name).readlink() == owner
+            assert (owner / 'pid').read_text().strip() == str(denied_pid)
+            shell(f'fm_lock_recheck_stale_owner "$STATE/{name}" "{owner}" {denied_pid}', code=1)
+            shell(f'fm_pid_alive {denied_pid}')
+        shell(f'fm_lock_remove_path "$STATE/{name}"')
+
 # Live queue and recovery locks expose only the dedicated dynamic owner dirs.
 for name in ('.wake-queue.lock', '.watcher-down.lock'):
     owner = Path(shell(f'fm_lock_try_acquire "$STATE/{name}"; readlink "$STATE/{name}"'))
@@ -102,10 +126,11 @@ access(state / '.wake-queue', 0o660)
 assert len((state / '.wake-queue').read_text().splitlines()) == 3
 
 # A shared marker does not grant any other lock or private artifact access.
-private = Path(shell('fm_lock_try_acquire "$STATE/.private.lock"; readlink "$STATE/.private.lock"'))
-assert stat.S_IMODE(private.stat().st_mode) == 0o700
-assert stat.S_IMODE((private / 'pid').stat().st_mode) == 0o600
-shell('fm_lock_remove_path "$STATE/.private.lock"')
+for name in ('.private.lock', '.private.lock.steal.steal', '.watch.lock.steal.steal'):
+    private = Path(shell(f'fm_lock_try_acquire "$STATE/{name}"; readlink "$STATE/{name}"'))
+    assert stat.S_IMODE(private.stat().st_mode) == 0o700
+    assert stat.S_IMODE((private / 'pid').stat().st_mode) == 0o600
+    shell(f'fm_lock_remove_path "$STATE/{name}"')
 normal = temp / 'normal-interface'
 (normal / 'state').mkdir(parents=True, mode=0o700)
 shell('fm_wake_append check synthetic private', extra={'FM_HOME': str(normal)})
@@ -125,6 +150,9 @@ shell('fm_wake_append check synthetic rejected', code=2, extra={'FM_HOME': str(l
 stage.chmod(0o750)
 dead = subprocess.Popen(['true'])
 dead.wait()
+shell(f'fm_pid_alive {dead.pid}', code=1)
+shell('fm_pid_alive ""', code=1)
+shell('fm_pid_alive invalid', code=1)
 for template in ('wake', 'wake-lock'):
     path = stage / template
     mode = stat.S_IMODE(path.stat().st_mode)
@@ -171,6 +199,9 @@ assert shell('fm_wake_queued_keys check') == 'restored\nsynthetic'
 assert (state / '.wake-queue').read_text().splitlines()[-1].endswith('\tcheck\tsynthetic\trepaired')
 print('PASS: staged wake modes/group/effective ACLs survive restart, recovery, stale locks and queue replacement')
 print('PASS: rejected templates return 2 across creation, reclaim and wait paths')
+print('PASS: recursive steal locks retain shared access')
+if denied_pid is not None:
+    print('PASS: permission-denied live owners are never reclaimed')
 print('PASS: write+traverse needs no state listing; normal wake and unrelated locks remain private')
 PY
   pass 'shared wake access preserves recovery generations and private defaults'
