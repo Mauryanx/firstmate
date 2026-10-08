@@ -18,6 +18,199 @@ GUARD="$ROOT/bin/fm-guard.sh"
 
 TMP_ROOT=$(fm_test_tmproot fm-wake-tests)
 
+test_shared_interface_access() {
+  python3 - "$ROOT" "$TMP_ROOT" <<'PY' || fail 'shared wake access'
+import os
+from pathlib import Path
+import pwd
+import shutil
+import stat
+import subprocess
+import sys
+
+root, temp = map(Path, sys.argv[1:])
+env = {k: v for k, v in os.environ.items() if not k.startswith('FM_') and k != 'STATE'}
+lib = root / 'bin/fm-wake-lib.sh'
+home = temp / 'shared-interface'
+home.mkdir(mode=0o700)
+state = home / 'state'
+state.mkdir(mode=0o700)
+env['FM_HOME'] = str(home)
+stage = home / '.fm-voice-shared-interface'
+stage.mkdir(mode=0o750)
+acl = shutil.which('setfacl') and shutil.which('getfacl')
+peer = pwd.getpwnam('nobody').pw_uid if acl else None
+for name, mode in [('wake', 0o660), ('wake-lock', 0o770)]:
+    path = stage / name
+    path.write_text('metadata only\n')
+    path.chmod(mode)
+    if acl:
+        subprocess.run(['setfacl', '-m', f'u:{peer}:' + ('rwx' if name == 'wake-lock' else 'rw-'), str(path)], check=True)
+
+def shell(body, code=0, extra=None, error=False):
+    result = subprocess.run(['bash', '-c', 'set -e; umask 077; . "$1"; ' + body, '_', str(lib)],
+                            env=dict(env, **(extra or {})), capture_output=True, text=True, timeout=10)
+    assert result.returncode == code, result
+    if error:
+        assert 'fm shared interface:' in result.stderr, result
+    return result.stdout.strip()
+
+def access(path, mode, named='rw-'):
+    assert stat.S_IMODE(path.stat().st_mode) == mode, (path, oct(path.stat().st_mode))
+    assert path.stat().st_gid == stage.stat().st_gid
+    if acl:
+        output = subprocess.check_output(['getfacl', '-cpn', str(path)], text=True)
+        assert f'user:{peer}:{named}\n' in output and '#effective:' not in output, output
+
+try:
+    os.kill(1, 0)
+except PermissionError:
+    denied_pid = 1
+else:
+    denied_pid = None
+    print('SKIP: permission-denied liveness needs a process the test user cannot signal')
+
+for family in ('.wake-queue.lock', '.watcher-down.lock'):
+    for depth in range(4):
+        name = family + '.steal' * depth
+        owner = Path(shell(f'fm_lock_try_acquire "$STATE/{name}"; readlink "$STATE/{name}"'))
+        access(owner, 0o770, 'rwx')
+        access(owner / 'pid', 0o660)
+        if denied_pid is not None:
+            (owner / 'pid').write_text(str(denied_pid) + '\n')
+            os.utime(owner, (1, 1))
+            shell(f'fm_lock_try_acquire "$STATE/{name}"', code=1)
+            assert (state / name).readlink() == owner
+            assert (owner / 'pid').read_text().strip() == str(denied_pid)
+            shell(f'fm_lock_recheck_stale_owner "$STATE/{name}" "{owner}" {denied_pid}', code=1)
+            shell(f'fm_pid_alive {denied_pid}')
+        shell(f'fm_lock_remove_path "$STATE/{name}"')
+
+# Live queue and recovery locks expose only the dedicated dynamic owner dirs.
+for name in ('.wake-queue.lock', '.watcher-down.lock'):
+    owner = Path(shell(f'fm_lock_try_acquire "$STATE/{name}"; readlink "$STATE/{name}"'))
+    access(owner, 0o770, 'rwx')
+    access(owner / 'pid', 0o660)
+    # The creator has exited: real stale reclaim, including its steal lock.
+    os.utime(owner, (1, 1))
+    shell(f'fm_lock_try_acquire "$STATE/{name}"; fm_lock_release "$STATE/{name}"')
+    assert not owner.exists() and not (state / name).exists()
+    shell(f'fm_lock_try_acquire "$STATE/{name}"; '
+          + f'fm_lock_try_acquire "$STATE/{name}"; fm_lock_release "$STATE/{name}"')
+    shell(f'fm_lock_acquire_wait_bounded "$STATE/{name}" 1; fm_lock_release "$STATE/{name}"')
+
+if os.geteuid() != 0:
+    state.chmod(0o300)
+    assert subprocess.run(['ls', str(state)], capture_output=True).returncode != 0
+shell('fm_wake_append check synthetic first')
+for name in ('.wake-queue', '.wake-queue.seq', '.watcher-down'):
+    access(state / name, 0o660)
+generation = (state / '.watcher-down').read_text().strip().split(':')[-1]
+inode = (state / '.watcher-down').stat().st_ino
+shell('fm_wake_append check synthetic second')
+assert (state / '.watcher-down').stat().st_ino != inode
+assert (state / '.watcher-down').read_text().strip().split(':')[-1] == generation
+assert (state / '.wake-queue.seq').read_text().strip() == '2'
+shell('fm_recovery_marker_begin_handling "$STATE/.watcher-down" ' + generation)
+access(state / '.watcher-down', 0o660)
+shell('fm_recovery_marker_ack "$STATE/.watcher-down" wrong-generation', code=3)
+assert (state / '.watcher-down').read_text().startswith('pending:handling:')
+shell('fm_recovery_marker_ack "$STATE/.watcher-down" ' + generation)
+assert (state / '.watcher-down').read_text().strip() == 'acked:handling:' + generation
+access(state / '.watcher-down', 0o660)
+# Restoring/replacing a queue also publishes the reviewed metadata.
+drained = home / 'drained'
+drained.write_text('0\t0\tcheck\trestored\tfixture\n')
+shell('fm_wake_restore_queue "$FM_HOME/drained"')
+access(state / '.wake-queue', 0o660)
+assert len((state / '.wake-queue').read_text().splitlines()) == 3
+
+# A shared marker does not grant any other lock or private artifact access.
+for name in ('.private.lock', '.private.lock.steal.steal', '.watch.lock.steal.steal'):
+    private = Path(shell(f'fm_lock_try_acquire "$STATE/{name}"; readlink "$STATE/{name}"'))
+    assert stat.S_IMODE(private.stat().st_mode) == 0o700
+    assert stat.S_IMODE((private / 'pid').stat().st_mode) == 0o600
+    shell(f'fm_lock_remove_path "$STATE/{name}"')
+normal = temp / 'normal-interface'
+(normal / 'state').mkdir(parents=True, mode=0o700)
+shell('fm_wake_append check synthetic private', extra={'FM_HOME': str(normal)})
+for name in ('.wake-queue', '.wake-queue.seq', '.watcher-down'):
+    assert stat.S_IMODE((normal / 'state' / name).stat().st_mode) == 0o600
+    if acl:
+        assert f'user:{peer}:' not in subprocess.check_output(['getfacl', '-cpn', str(normal / 'state' / name)], text=True)
+state.chmod(0o700)
+# A symlinked home names the same staged directory, and a rejected staging is
+# terminal: the append returns its error instead of retrying until timeout.
+link = temp / 'shared-link'
+link.symlink_to(home)
+shell('fm_wake_append check synthetic linked', extra={'FM_HOME': str(link)})
+access(state / '.wake-queue', 0o660)
+stage.chmod(0o777)
+shell('fm_wake_append check synthetic rejected', code=2, extra={'FM_HOME': str(link)})
+stage.chmod(0o750)
+dead = subprocess.Popen(['true'])
+dead.wait()
+shell(f'fm_pid_alive {dead.pid}', code=1)
+shell('fm_pid_alive ""', code=1)
+shell('fm_pid_alive invalid', code=1)
+for template in ('wake', 'wake-lock'):
+    path = stage / template
+    mode = stat.S_IMODE(path.stat().st_mode)
+    for invalid in ('missing', 'mode'):
+        if invalid == 'missing':
+            path.rename(stage / (template + '.saved'))
+        else:
+            path.chmod(0o600)
+        try:
+            for name in ('.wake-queue.lock', '.watcher-down.lock'):
+                for acquire in ('fm_lock_acquire_wait', 'fm_lock_try_create',
+                                'fm_lock_try_acquire', 'fm_lock_acquire_wait_bounded'):
+                    call = acquire + f' "$STATE/{name}"'
+                    if acquire == 'fm_lock_acquire_wait_bounded':
+                        call += ' 1'
+                    shell(call, code=2, error=True)
+                    assert not (state / name).exists()
+                    assert not list(state.glob(name + '.owner.*')), (template, invalid, acquire, name)
+                for holder in ('self', 'stale'):
+                    setup = f'mkdir "$STATE/{name}"; '
+                    if holder == 'self':
+                        setup += f'fm_current_pid > "$STATE/{name}/pid"; '
+                    else:
+                        setup += f'printf "%s\\n" "{dead.pid}" > "$STATE/{name}/pid"; '
+                        setup += f'touch -t 200001010000 "$STATE/{name}"; '
+                    for acquire in ('fm_lock_try_acquire', 'fm_lock_acquire_wait'):
+                        shell(setup + f'rc=0; {acquire} "$STATE/{name}" || rc=$?; '
+                              + f'fm_lock_remove_path "$STATE/{name}" || true; exit "$rc"',
+                              code=2, error=True)
+                        assert not list(state.glob(name + '.owner.*')), (template, invalid, holder, acquire, name)
+                        assert not (state / (name + '.steal')).exists()
+                        assert not list(state.glob(name + '.steal.owner.*'))
+            queue = (state / '.wake-queue').read_bytes()
+            shell('fm_wake_append check synthetic rejected-template', code=2, error=True)
+            shell('fm_wake_queued_keys check', code=2, error=True)
+            assert (state / '.wake-queue').read_bytes() == queue
+        finally:
+            if invalid == 'missing':
+                (stage / (template + '.saved')).rename(path)
+            else:
+                path.chmod(mode)
+shell('fm_wake_append check synthetic repaired')
+assert shell('fm_wake_queued_keys check') == 'restored\nsynthetic'
+assert (state / '.wake-queue').read_text().splitlines()[-1].endswith('\tcheck\tsynthetic\trepaired')
+print('PASS: staged wake modes/group/effective ACLs survive restart, recovery, stale locks and queue replacement')
+print('PASS: rejected templates return 2 across creation, reclaim and wait paths')
+print('PASS: recursive steal locks retain shared access')
+if denied_pid is not None:
+    print('PASS: permission-denied live owners are never reclaimed')
+print('PASS: write+traverse needs no state listing; normal wake and unrelated locks remain private')
+PY
+  pass 'shared wake access preserves recovery generations and private defaults'
+}
+
+if [ "${1:-}" = --shared-interface ]; then
+  test_shared_interface_access
+  exit 0
+fi
 
 test_concurrent_append_and_drain() {
   local dir state out1 out2 pids i pid count unique malformed sequence generation
@@ -69,7 +262,8 @@ test_signal_catchup_without_running_watcher() {
   # tested.
   printf 'blocked: first\n' > "$status_file"
   PATH="$fakebin:$PATH" FM_STATE_OVERRIDE="$state" FM_POLL=1 FM_SIGNAL_GRACE=1 FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
-  wait_for_exit "$!" 40 || fail "watcher did not exit for first signal"
+  # Allow startup plus polling on slower runners while keeping the wait bounded.
+  wait_for_exit "$!" 100 || fail "watcher did not exit for first signal"
   grep -F "signal: $status_file" "$out" >/dev/null || fail "watcher did not print first signal"
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$drain_out" 2> "$drain_err" || fail "drain after first signal failed"
   grep "$(printf '\tsignal\t')" "$drain_out" | grep -F "$status_file" >/dev/null || fail "first signal was not queued"
@@ -81,7 +275,7 @@ test_signal_catchup_without_running_watcher() {
   printf 'done: second\n' >> "$status_file"
   : > "$out"
   PATH="$fakebin:$PATH" FM_STATE_OVERRIDE="$state" FM_POLL=1 FM_SIGNAL_GRACE=1 FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
-  wait_for_exit "$!" 40 || fail "watcher did not exit for second signal"
+  wait_for_exit "$!" 100 || fail "watcher did not exit for second signal"
   grep -F "signal: $status_file" "$out" >/dev/null || fail "signal written with no watcher was not caught"
   pass "signal written while no watcher runs is caught on next run"
 }
@@ -108,7 +302,7 @@ test_stale_enqueue_before_suppressor() {
   printf '%s' "$pane_hash" > "$state/.hash-$key"
   printf '1\n' > "$state/.count-$key"
   PATH="$fakebin:$PATH" FM_FAKE_TMUX_WINDOW="$window" FM_FAKE_TMUX_CAPTURE="$capture_file" FM_STATE_OVERRIDE="$state" FM_POLL=1 FM_SIGNAL_GRACE=1 FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
-  wait_for_exit "$!" 40 || fail "watcher did not exit for stale pane"
+  wait_for_exit "$!" 100 || fail "watcher did not exit for stale pane"
   grep -Fx "stale: $window" "$out" >/dev/null || fail "watcher did not print stale wake"
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$drain_out" || fail "drain after stale wake failed"
   grep "$(printf '\tstale\t')" "$drain_out" | grep -F "$window" >/dev/null || fail "stale wake was not queued"
@@ -145,7 +339,7 @@ test_not_working_stale_enqueue_before_suppressor() {
   PATH="$fakebin:$PATH" FM_FAKE_TMUX_WINDOW="$window" FM_FAKE_TMUX_CAPTURE="$capture_file" \
     FM_STATE_OVERRIDE="$state" FM_CREW_STATE_BIN="$fakebin/fm-crew-state.sh" \
     FM_STALE_ESCALATE_SECS=999 FM_POLL=1 FM_SIGNAL_GRACE=1 FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
-  wait_for_exit "$!" 40 || fail "watcher did not surface a not-provably-working stale"
+  wait_for_exit "$!" 100 || fail "watcher did not surface a not-provably-working stale"
   grep -Fx "stale: $window" "$out" >/dev/null || fail "watcher did not print the immediate stale wake"
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$drain_out" || fail "drain after the immediate stale wake failed"
   grep "$(printf '\tstale\t')" "$drain_out" | grep -F "$window" >/dev/null || fail "immediate stale wake was not queued"
@@ -170,7 +364,7 @@ SH
   FM_STATE_OVERRIDE="$state" "$ROOT/bin/fm-check-register.sh" task >/dev/null \
     || fail "could not register queue custom check"
   PATH="$fakebin:$PATH" FM_STATE_OVERRIDE="$state" FM_POLL=1 FM_SIGNAL_GRACE=1 FM_CHECK_INTERVAL=0 FM_HEARTBEAT=999999 "$WATCH" > "$out" &
-  wait_for_exit "$!" 40 || fail "watcher did not exit for check output"
+  wait_for_exit "$!" 100 || fail "watcher did not exit for check output"
   grep -F "check: $check_file: merged: https://example.test/pr/1" "$out" >/dev/null || fail "watcher did not print check wake"
   FM_STATE_OVERRIDE="$state" "$DRAIN" > "$drain_out" || fail "drain after check wake failed"
   grep "$(printf '\tcheck\t')" "$drain_out" | grep -F "$check_file" | grep -F 'merged: https://example.test/pr/1' >/dev/null || fail "check wake was not queued"
@@ -262,7 +456,9 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-first.out" 2> "$dir/watch-first.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-first.out" 2> "$dir/watch-first.err" || true
+  assert_grep $'1000\t100-7' "$state/.secondmate-wake-progress-mate" \
+    "the first checkpoint did not observe the foreign queue"
   [ ! -s "$state/.wake-queue" ] \
     || fail "the first observation of an old foreign row produced an age-only alert"
 
@@ -274,14 +470,16 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-progress.out" 2> "$dir/watch-progress.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-progress.out" 2> "$dir/watch-progress.err" || true
+  assert_grep $'1002\t100-8' "$state/.secondmate-wake-progress-mate" \
+    "the progress checkpoint did not observe the advancing foreign queue"
   [ ! -s "$state/.wake-queue" ] \
     || fail "an advancing foreign queue produced a stall alert because its oldest row was old"
 
   # With no further sequence progress, the same queue must still expose the real
   # failure after the configured interval. Every checkpoint that asserts an alert
-  # gets 4s rather than 1s: reaching the alert costs a pane capture in the
-  # active-turn gate, and a 1s bound sits under that cost on a loaded machine.
+  # gets 4s rather than 1s, as do the observation checkpoints: startup and the
+  # active-turn pane capture can each exceed a 1s bound on a loaded machine.
   # The bound is only a ceiling - the checkpoint returns on the first actionable
   # wake - so a healthy watcher still finishes in well under a second.
   printf '1004\n' > "$dir/now"
@@ -313,7 +511,9 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-next.out" 2> "$dir/watch-next.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-next.out" 2> "$dir/watch-next.err" || true
+  assert_grep $'1010\t100-9' "$state/.secondmate-wake-progress-mate" \
+    "the later checkpoint did not observe the next foreign queue position"
   [ ! -s "$state/.wake-queue" ] \
     || fail "a newly-oldest row cascaded an immediate second alert after progress"
   cp "$sub/state/.wake-queue" "$row_after"
@@ -362,13 +562,13 @@ EOF
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-first.out" 2> "$dir/watch-first.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-first.out" 2> "$dir/watch-first.err" || true
   printf '5000\n' > "$dir/now"
   PATH="$fakebin:$PATH" FM_FAKE_NOW_FILE="$dir/now" FM_HOME="$dir" FM_ROOT_OVERRIDE="$ROOT" \
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-second.out" 2> "$dir/watch-second.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-second.out" 2> "$dir/watch-second.err" || true
   [ ! -s "$state/.wake-queue" ] \
     || fail "declared external-wait rows fed the secondmate wake-loop escalation"
   ! grep -F 'secondmate wake-loop stalled' "$dir/watch-first.out" "$dir/watch-second.out" >/dev/null \
@@ -410,7 +610,9 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-old.out" 2> "$dir/watch-old.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-old.out" 2> "$dir/watch-old.err" || true
+  assert_grep $'1000\t100-9' "$state/.secondmate-wake-progress-mate" \
+    "the retired generation was not observed before reprovisioning"
   [ ! -s "$state/.wake-queue" ] || fail "the first observation of the retired generation alerted"
 
   # Reprovisioning under the same task id restarts the sequence on 9 again, long
@@ -422,7 +624,9 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-regen.out" 2> "$dir/watch-regen.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-regen.out" 2> "$dir/watch-regen.err" || true
+  assert_grep $'1010\t200-9' "$state/.secondmate-wake-progress-mate" \
+    "the reprovisioned generation was not observed before its stall interval"
   [ ! -s "$state/.wake-queue" ] \
     || fail "a reprovisioned queue generation inherited the retired generation's idle interval and alerted"
 
@@ -1980,6 +2184,7 @@ test_historical_annotation_skips_announced_status() {
   pass "historical annotations replay nothing already announced and keep everything new"
 }
 
+test_shared_interface_access
 test_self_held_lock_reclaims_instead_of_deadlocking
 test_subshell_lock_ownership_without_bashpid
 test_bounded_lock_handoff_after_contention

@@ -5,6 +5,7 @@
 The voice interface keeps the first mate responsible for the conversation and uses voice only to carry input and deliver replies the first mate explicitly published.
 `bin/fm-inbox.sh conversation --help` is the owner of its commands, event schema, recovery boundaries and publication restrictions.
 Its regression is `bin/fm-test-run.sh tests/fm-inbox-conversation.test.sh`, which drives the transport through that public CLI with no client, browser or speech provider taking part.
+The optional, administrator-staged two-peer filesystem contract is owned by `python3 bin/fm_shared_interface.py --help`; its focused checks are `FM_CONVERSATION_CASE=shared bash tests/fm-inbox-conversation.test.sh` and `bash tests/fm-wake-queue.test.sh --shared-interface`.
 
 A captured turn lands as `state/inbox/vc-<hash>.note` and appends one ordinary `check` wake, so the first mate finds it in the same drain as everything else.
 From there it is not an ordinary note.
