@@ -298,7 +298,7 @@ def main():
             row, status = control(args.operation, args.name)
         sys.stdout.buffer.write(canonical(row) + b"\n")
         return status
-    except (OSError, ValueError, KeyError, RecursionError, UnicodeError, subprocess.TimeoutExpired):
+    except (OSError, ValueError, KeyError, TypeError, RecursionError, UnicodeError, subprocess.TimeoutExpired):
         print("brain desk refused request or result", file=sys.stderr)
         return 1
 

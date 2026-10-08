@@ -522,7 +522,6 @@ The resolver sends the key to `curl` only as a header read from a file descripto
 The resolver fixes the endpoint at `https://api.typesafe.ai`, model at `jev-latest`, confidence floor at 0.6, and request timeout at 5 seconds; `TYPESAFE_API_KEY` is its only resolver-specific environment setting.
 The live rule-match evidence is recorded in [`verification/dispatch-resolve.md`](verification/dispatch-resolve.md).
 
-<<<<<<< HEAD
 ## GitHub checks authentication
 
 An optional GitHub App can read check runs when the normal GitHub login cannot, while merges and Git pushes retain the normal user credentials.
@@ -543,16 +542,14 @@ Merge preflight, PR blocker reporting, and optional live bearings enrichment use
 Pull-request and rollup identity metadata use the normal login; the App reads paginated contexts directly from that rollup, with checks bound to the metadata head before merge.
 Without configuration those reads use the existing login; repositories outside the installation fall back to that login with a diagnostic, while other configured authentication failures refuse the read.
 The helper uses `curl`, `jq`, and `openssl`, explicitly requests only read permissions, and retains tokens only for the current read.
-The no-mistakes CI monitor uses its own GitHub login by default.
-Opting into this App for CI requires a no-mistakes build with the `github_ci_reader` hook (v1.91.0 plus the hook); set its global `github_ci_reader` to this helper using the token invocation documented in the helper's header.
+The separate no-mistakes CI monitor uses its own GitHub reader and does not use this helper.
 [`tests/fm-gh-checks-read.test.sh`](../tests/fm-gh-checks-read.test.sh) exercises authentication, single-mint expiry refusal, paginated contexts, current-run reporting, head-change refusal, and secret handling.
-=======
+
 ## Brain-room client (FM_BRAIN_DESK_ENABLED)
 
 [`bin/fm-brain-desk.py`](../bin/fm-brain-desk.py) is Firstmate's client for the installed brain rooms: desk questions, the morning-brief `brainctl` verbs, and the journal-input export; its help owns invocation, endpoints, bounds and result validation.
 It is off unless `FM_BRAIN_DESK_ENABLED=1`, so callers keep their direct brain path until the rooms are activated, and an enabled but unavailable room refuses rather than falling back to raw brain access.
 Phone and text notifications, including their optional courier route, belong to firstmate-voice's `fm-notify`; the wedge alarm reaches it through a `command:` directive ([wedge-alarm.md](wedge-alarm.md#channels)).
->>>>>>> fe4f05c (docs: point the configuration reference at the brain-room client and fm-notify)
 
 ## Toolchain
 
