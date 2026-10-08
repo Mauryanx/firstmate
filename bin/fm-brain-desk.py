@@ -122,7 +122,9 @@ def subdirectory(parent, name):
 
 def readable_fact(text):
     return (10 <= len(text) <= 300 and FACT.search(text) and not UNSAFE.search(text)
-            and not any(ord(c) < 32 for c in text))
+            and not any(ord(c) < 32 for c in text)
+            and all(re.fullmatch(r"[A-Z][A-Za-z]{0,3}", boundary.group(1))
+                    for boundary in re.finditer(r"(\w*)\.(?=\s+[A-Z])", text)))
 
 
 def checked(data):
