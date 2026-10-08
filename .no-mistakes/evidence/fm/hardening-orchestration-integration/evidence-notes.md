@@ -1,0 +1,19 @@
+# Validation scope and reproducibility
+
+Source under test: e5a3c9db81e902e71f90a6fe2978612a867e14d1, compared with b529e180f72cf47b7fc0cb3d9e603ae4a5b03b39.
+
+The targeted transcript comes from real shipped entry points where the individual cases launch them. The brain-desk suite supplies a fixture sudo and fixture room responses: its client-side input validation, prompt publication, output filtering and journal export are exercised, but installed sudo/brainctl/brainreader behavior and OS zone isolation are not established. Its timeout case proves the client's TERM-before-KILL behavior with a simulated sudo relay, not the installed privileged launcher.
+
+The conversation suite launches fm-inbox.sh for its assertions, with a copied bash executable named codex solely for the supported session-ancestry contract. It launches no vendor agent or voice/provider service. The shared cases verify effective named-user ACLs on actual CLI publications, new inodes, reused locks, fresh processes, wake-drain acknowledgements, private policy, and the directory permission boundary. These do not establish distinct-service UID/mount/PID isolation in the installed VM.
+
+manual-shared-cli.py additionally launches the real fm-inbox.sh conversation capture against disposable homes. PID 1 is a real live process the test UID cannot signal. Both wake-lock families, including .steal.steal contention, must remain intact while capture saves its turn and waits; after release, retry must enqueue the saved turn. Missing or wrong-mode templates must return promptly without losing the saved input and retry must succeed after repair. Test-owned timed-out process groups are terminated.
+
+Regression counterfactuals use disposable executable copies, not imports of the product: lock-before-fix.txt replaces the two relevant bin files with their b62088c versions; staging-before-fix.txt replaces fm-wake-lib.sh with bc80625; brain-before-fix.txt executes fm-brain-desk.py from 6a2c539 with the current behavioral suite. Their failures are expected evidence of the old defects, not failures of the target commit.
+
+The daemon-routing check runs the real test runner's --list --changed --base HEAD interface inside a disposable repository containing copied bin and tests directories, with only fm-supervise-daemon.sh changed. Its output demonstrates broad selection; the selected suites are not all executed.
+
+capabilities.txt records only the specified product paths and identities, PATH tools, and PID 1 permission check. No machine-wide search, global configuration change, real fleet worker, metered agent harness, provider notification, credential change, or VM provisioning was performed.
+
+The initial selected run failed the watcher signal case at its 40-poll (roughly four-second) test wait and interrupted fm-test-run.test.sh at the explicitly chosen 300-second script bound. A separate public watcher/drain reproduction completed both first announcement and restart catch-up in five seconds. Replacing the lock library with its pre-R5 version also completed both in five seconds, disconfirming a new lock regression as the explanation for this delay. The five short watcher waits in the existing wake suite were increased to 100 polls (roughly ten seconds); behavior assertions are unchanged. wake-rerun.txt and runner-rerun.txt rerun only those affected scripts with a 900-second script bound. The original transcript and prior-version comparisons are retained rather than presenting the initial run as clean.
+
+Final local outcome: both affected reruns exited 0 with no skipped cases. All manual current-version CLI checks passed. The disposable .test-tmp tree was removed; the only retained working-tree change is the five bounded watcher test waits and their comment in tests/fm-wake-queue.test.sh. Installed-zone and final courier acceptance remain untested; no prior decision was waived.

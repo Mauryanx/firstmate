@@ -1,0 +1,16 @@
+LIVE: capture preserves live EPERM owner at .wake-queue.lock; request stays saved
+LIVE: retry after releasing .wake-queue.lock queues the same saved turn
+LIVE: capture preserves live EPERM owner at .wake-queue.lock.steal.steal; request stays saved
+LIVE: retry after releasing .wake-queue.lock queues the same saved turn
+LIVE: capture preserves live EPERM owner at .watcher-down.lock; request stays saved
+LIVE: retry after releasing .watcher-down.lock queues the same saved turn
+LIVE: capture preserves live EPERM owner at .watcher-down.lock.steal.steal; request stays saved
+LIVE: retry after releasing .watcher-down.lock queues the same saved turn
+LIVE: capture via symlinked FM_HOME refuses missing wake template promptly; turn stays saved
+LIVE: repaired wake template lets capture retry enqueue the saved turn
+LIVE: capture via symlinked FM_HOME refuses mode wake template promptly; turn stays saved
+LIVE: repaired wake template lets capture retry enqueue the saved turn
+LIVE: capture via symlinked FM_HOME refuses missing wake-lock template promptly; turn stays saved
+LIVE: repaired wake-lock template lets capture retry enqueue the saved turn
+LIVE: capture via symlinked FM_HOME refuses mode wake-lock template promptly; turn stays saved
+LIVE: repaired wake-lock template lets capture retry enqueue the saved turn

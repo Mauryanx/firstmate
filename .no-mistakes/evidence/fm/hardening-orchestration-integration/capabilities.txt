@@ -1,0 +1,10 @@
+brainreader: identity absent
+brain: identity absent
+courier: identity absent
+/srv/brain/brainreader/requests: absent
+/srv/brain/journal-input: absent
+/usr/local/bin/fm-brainreader-shell: absent
+/usr/local/bin/brainctl: absent
+fm-notify on PATH: absent
+setfacl/getfacl on PATH: True
+PID 1: live, signal check denied (EPERM)

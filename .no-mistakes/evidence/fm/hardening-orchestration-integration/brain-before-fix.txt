@@ -1,0 +1,22 @@
+.....F..
+======================================================================
+FAIL: test_ordinary_answers_pass_and_one_bad_fact_is_withheld (__main__.BrainDesk.test_ordinary_answers_pass_and_one_bad_fact_is_withheld)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4E84RVA7SNS1VN09RQ8B14T/tests/fm-brain-desk-cases.py", line 139, in test_ordinary_answers_pass_and_one_bad_fact_is_withheld
+    self.assertEqual(row, {"facts": [fact("Dr. Cohen is the dentist.")], "withheld": len(batch)})
+    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: {'facts': [{'citations': [{'page': 'projects/example',[450 chars]': 1} != {'facts': [{'text': 'Dr. Cohen is the dentist.', 'cita[67 chars]': 4}
+Diff is 770 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 8 tests in 11.105s
+
+FAILED (failures=1)
+ok - desk launcher uses fixed argv and a 0640 prompt published once per task
+ok - brainctl verbs use fixed argv, pass text and status through, and refuse non-JSON
+ok - opt-in off does no I/O and enabled missing endpoints refuse
+ok - journal export replaces only journal records atomically as 0640 with source mtimes
+ok - malformed results, unsafe citations, bad input and room failure expose nothing
+ok - a symlinked request ancestor refuses without privilege calls or writes
+ok - an expired desk call relays SIGTERM through sudo so no room child survives

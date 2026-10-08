@@ -1,0 +1,5 @@
+signal: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4E84RVA7SNS1VN09RQ8B14T/.test-tmp/fm-manual-watcher.vXlypx/signal/state/task.status
+First watcher announced the actionable signal in 5 seconds.
+1791483132	2	signal	task.status	signal: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4E84RVA7SNS1VN09RQ8B14T/.test-tmp/fm-manual-watcher.vXlypx/signal/state/task.status
+signal: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4E84RVA7SNS1VN09RQ8B14T/.test-tmp/fm-manual-watcher.vXlypx/signal/state/task.status
+Restarted watcher caught the status written while stopped in 5 seconds.

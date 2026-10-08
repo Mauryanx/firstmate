@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4E84RVA7SNS1VN09RQ8B14T/.test-tmp/manual-shared-cli.py", line 68, in <module>
+    held_capture(home, event)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4E84RVA7SNS1VN09RQ8B14T/.test-tmp/manual-shared-cli.py", line 48, in held_capture
+    raise AssertionError(('capture reclaimed a live unsignalable lock', p.returncode, output))
+AssertionError: ('capture reclaimed a live unsignalable lock', 0, ('{"request_id":"r1","state":"saved"}\n', ''))

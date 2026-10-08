@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4E84RVA7SNS1VN09RQ8B14T/.test-tmp/manual-shared-cli.py", line 99, in <module>
+    p = invoke(home, 'capture', event, expected=2)
+  File "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4E84RVA7SNS1VN09RQ8B14T/.test-tmp/manual-shared-cli.py", line 30, in invoke
+    raise AssertionError('conversation ' + verb + ' did not return promptly') from None
+AssertionError: conversation capture did not return promptly
