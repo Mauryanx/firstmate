@@ -18,6 +18,107 @@ GUARD="$ROOT/bin/fm-guard.sh"
 
 TMP_ROOT=$(fm_test_tmproot fm-wake-tests)
 
+test_shared_interface_access() {
+  python3 - "$ROOT" "$TMP_ROOT" <<'PY' || fail 'shared wake access'
+import os
+from pathlib import Path
+import pwd
+import shutil
+import stat
+import subprocess
+import sys
+
+root, temp = map(Path, sys.argv[1:])
+env = {k: v for k, v in os.environ.items() if not k.startswith('FM_') and k != 'STATE'}
+lib = root / 'bin/fm-wake-lib.sh'
+home = temp / 'shared-interface'
+home.mkdir(mode=0o700)
+state = home / 'state'
+state.mkdir(mode=0o700)
+env['FM_HOME'] = str(home)
+stage = home / '.fm-voice-shared-interface'
+stage.mkdir(mode=0o750)
+acl = shutil.which('setfacl') and shutil.which('getfacl')
+peer = pwd.getpwnam('nobody').pw_uid if acl else None
+for name, mode in [('wake', 0o660), ('wake-lock', 0o770)]:
+    path = stage / name
+    path.write_text('metadata only\n')
+    path.chmod(mode)
+    if acl:
+        subprocess.run(['setfacl', '-m', f'u:{peer}:' + ('rwx' if name == 'wake-lock' else 'rw-'), str(path)], check=True)
+
+def shell(body, code=0, extra=None):
+    result = subprocess.run(['bash', '-c', 'set -e; umask 077; . "$1"; ' + body, '_', str(lib)],
+                            env=dict(env, **(extra or {})), capture_output=True, text=True, timeout=10)
+    assert result.returncode == code, result
+    return result.stdout.strip()
+
+def access(path, mode, named='rw-'):
+    assert stat.S_IMODE(path.stat().st_mode) == mode, (path, oct(path.stat().st_mode))
+    assert path.stat().st_gid == stage.stat().st_gid
+    if acl:
+        output = subprocess.check_output(['getfacl', '-cpn', str(path)], text=True)
+        assert f'user:{peer}:{named}\n' in output and '#effective:' not in output, output
+
+# Live queue and recovery locks expose only the dedicated dynamic owner dirs.
+for name in ('.wake-queue.lock', '.watcher-down.lock'):
+    owner = Path(shell(f'fm_lock_try_acquire "$STATE/{name}"; readlink "$STATE/{name}"'))
+    access(owner, 0o770, 'rwx')
+    access(owner / 'pid', 0o660)
+    # The creator has exited: real stale reclaim, including its steal lock.
+    os.utime(owner, (1, 1))
+    shell(f'fm_lock_try_acquire "$STATE/{name}"; fm_lock_release "$STATE/{name}"')
+    assert not owner.exists() and not (state / name).exists()
+
+if os.geteuid() != 0:
+    state.chmod(0o300)
+    assert subprocess.run(['ls', str(state)], capture_output=True).returncode != 0
+shell('fm_wake_append check synthetic first')
+for name in ('.wake-queue', '.wake-queue.seq', '.watcher-down'):
+    access(state / name, 0o660)
+generation = (state / '.watcher-down').read_text().strip().split(':')[-1]
+inode = (state / '.watcher-down').stat().st_ino
+shell('fm_wake_append check synthetic second')
+assert (state / '.watcher-down').stat().st_ino != inode
+assert (state / '.watcher-down').read_text().strip().split(':')[-1] == generation
+assert (state / '.wake-queue.seq').read_text().strip() == '2'
+shell('fm_recovery_marker_begin_handling "$STATE/.watcher-down" ' + generation)
+access(state / '.watcher-down', 0o660)
+shell('fm_recovery_marker_ack "$STATE/.watcher-down" wrong-generation', code=3)
+assert (state / '.watcher-down').read_text().startswith('pending:handling:')
+shell('fm_recovery_marker_ack "$STATE/.watcher-down" ' + generation)
+assert (state / '.watcher-down').read_text().strip() == 'acked:handling:' + generation
+access(state / '.watcher-down', 0o660)
+# Restoring/replacing a queue also publishes the reviewed metadata.
+drained = home / 'drained'
+drained.write_text('0\t0\tcheck\trestored\tfixture\n')
+shell('fm_wake_restore_queue "$FM_HOME/drained"')
+access(state / '.wake-queue', 0o660)
+assert len((state / '.wake-queue').read_text().splitlines()) == 3
+
+# A shared marker does not grant any other lock or private artifact access.
+private = Path(shell('fm_lock_try_acquire "$STATE/.private.lock"; readlink "$STATE/.private.lock"'))
+assert stat.S_IMODE(private.stat().st_mode) == 0o700
+assert stat.S_IMODE((private / 'pid').stat().st_mode) == 0o600
+shell('fm_lock_remove_path "$STATE/.private.lock"')
+normal = temp / 'normal-interface'
+(normal / 'state').mkdir(parents=True, mode=0o700)
+shell('fm_wake_append check synthetic private', extra={'FM_HOME': str(normal)})
+for name in ('.wake-queue', '.wake-queue.seq', '.watcher-down'):
+    assert stat.S_IMODE((normal / 'state' / name).stat().st_mode) == 0o600
+    if acl:
+        assert f'user:{peer}:' not in subprocess.check_output(['getfacl', '-cpn', str(normal / 'state' / name)], text=True)
+state.chmod(0o700)
+print('PASS: staged wake modes/group/effective ACLs survive restart, recovery, stale locks and queue replacement')
+print('PASS: write+traverse needs no state listing; normal wake and unrelated locks remain private')
+PY
+  pass 'shared wake access preserves recovery generations and private defaults'
+}
+
+if [ "${1:-}" = --shared-interface ]; then
+  test_shared_interface_access
+  exit 0
+fi
 
 test_concurrent_append_and_drain() {
   local dir state out1 out2 pids i pid count unique malformed sequence generation
@@ -1980,6 +2081,7 @@ test_historical_annotation_skips_announced_status() {
   pass "historical annotations replay nothing already announced and keep everything new"
 }
 
+test_shared_interface_access
 test_self_held_lock_reclaims_instead_of_deadlocking
 test_subshell_lock_ownership_without_bashpid
 test_bounded_lock_handoff_after_contention

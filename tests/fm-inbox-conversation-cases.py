@@ -2,6 +2,8 @@
 import concurrent.futures
 import json
 import os
+import shutil
+import stat
 from pathlib import Path
 import subprocess
 import sys
@@ -26,6 +28,137 @@ catalog = {'ack': 'Certainly, sir. Let me check.',
            'question': 'Should I compare the two public options?',
            'answer': 'Option A is probably faster, but it does not support offline use.',
            'later': 'The public benchmark measured 12.5 seconds, not 1.25 seconds.'}
+
+
+def shared_publication():
+    """Real CLI publication with explicitly staged artifact metadata, under 0077.
+
+    Named ACL checks examine effective permissions, not distinct-user or VM
+    isolation. The installed identities/mounts/PID namespace remain acceptance.
+    """
+    home = temp / 'shared-home'
+    env['FM_HOME'] = str(home)
+    run('lab-init', {'speech_catalog': catalog})
+    (home / 'state/.lock').write_text(owner + '\n')
+    access = home / '.fm-voice-shared-interface'
+    access.mkdir(mode=0o750)
+    acl = shutil.which('setfacl') and shutil.which('getfacl')
+    # A named, real Unix identity distinct from the writer; no UID mocking.
+    import pwd
+    peer = pwd.getpwnam('nobody').pw_uid if acl else None
+    for name, mode in [('conversation', 0o660), ('note', 0o640),
+                       ('wake', 0o660), ('wake-lock', 0o770)]:
+        template = access / name
+        template.write_text('metadata only\n')
+        template.chmod(mode)
+        if acl:
+            permission = 'r--' if name == 'note' else ('rwx' if name == 'wake-lock' else 'rw-')
+            subprocess.run(['setfacl', '-m', f'u:{peer}:{permission}', str(template)], check=True)
+
+    def permissions(path, mode, named='rw-'):
+        assert stat.S_IMODE(path.stat().st_mode) == mode, (path, oct(path.stat().st_mode))
+        assert path.stat().st_gid == access.stat().st_gid
+        if acl:
+            output = subprocess.check_output(['getfacl', '-cpn', str(path)], text=True)
+            assert f'user:{peer}:{named}\n' in output, output
+            assert '#effective:' not in output, output
+
+    connection = run('bind', {'conversation_id': 'shared', 'authenticated_principal': 'captain'})
+    journal = home / 'state/voice-conversation/journal.json'
+    created_mode = stat.S_IMODE(journal.stat().st_mode)
+    # Pre-stage the existing target too: an atomic replacement must retain
+    # reviewed access even when the parent has no default ACL.
+    journal.chmod(0o660)
+    if acl:
+        subprocess.run(['setfacl', '-m', f'u:{peer}:rw-', str(journal)], check=True)
+    message = dict(connection, turn_id='t1', request_id='r1', committed_transcript='Synthetic shared turn',
+                   revision=1, previous_turn_id=None, created_at='2026-10-07T00:00:00Z')
+    run('capture', message, code=86, extra={'FM_VOICE_FAULT': 'mapping'})
+    permissions(journal, 0o660)
+    assert created_mode == 0o660  # the first publication also used reviewed access
+    permissions(home / 'state/voice-conversation/lock', 0o660)
+    note = next((home / 'state/inbox').glob('vc-*.note'))
+    permissions(note, 0o640, 'r--')
+    # Capture has already saved the turn. Traverse alone cannot enqueue its
+    # wake; write+traverse suffices even though listing the parent is forbidden.
+    if os.geteuid() != 0:
+        state = home / 'state'
+        state.chmod(0o100)
+        try:
+            refused = run('capture', message, code=2)
+            assert 'input saved' in refused.stderr and 'write and traverse' in refused.stderr
+        finally:
+            state.chmod(0o300)
+        assert subprocess.run(['ls', str(state)], capture_output=True).returncode != 0
+    # A retry comes from a fresh process and creates the first wake files.
+    assert run('capture', message)['state'] == 'saved'
+    generation = (home / 'state/.watcher-down').read_text().split(':')[-1].strip()
+    first_inode = journal.stat().st_ino
+    assert run('capture', message)['state'] == 'saved'
+    assert journal.stat().st_ino == first_inode  # duplicate capture has no journal write
+    for name in ('.wake-queue', '.wake-queue.seq', '.watcher-down'):
+        permissions(home / 'state' / name, 0o660)
+    assert (home / 'state/.watcher-down').read_text().split(':')[-1].strip() == generation
+    accepted = run('accept', {'conversation_id': 'shared'})
+    assert accepted['dispatch'] and accepted['input']['request_id'] == 'r1'
+    permissions(journal, 0o660)
+    assert journal.stat().st_ino != first_inode
+    permissions(home / 'state/inbox/handled' / note.name, 0o640, 'r--')
+    run('publish', dict(conversation_id='shared', request_id='r1', response_id='a1', sequence=1,
+                        kind='answer', speech_key='answer', final=True))
+    assert run('poll', connection)['replies'][0]['response_id'] == 'a1'
+    assert run('deliver', dict(connection, response_id='a1', generation='g1'))['speech_text'] == catalog['answer']
+    run('playback', dict(connection, response_id='a1', generation='g1', state='completed', position_ms=100))
+    permissions(journal, 0o660)
+    assert run('poll', connection)['replies'][0]['delivery']['state'] == 'completed'
+    run('poll', dict(connection, credential='wrong'), code=2)
+    run('accept', {'conversation_id': 'shared'}, code=6, extra={'FM_SUPERVISION_ACTOR': 'branch'})
+    (home / 'state/.lock').write_text('1\n')
+    run('accept', dict(connection), code=1)
+    (home / 'state/.lock').write_text(owner + '\n')
+    assert stat.S_IMODE((home / 'state/voice-conversation/catalog.json').stat().st_mode) == 0o600
+    assert stat.S_IMODE((home / '.voice-conversation-lab').stat().st_mode) == 0o600
+    # A genuinely new owner process resumes a saved turn with the old credential.
+    message2 = dict(message, turn_id='t2', request_id='r2', previous_turn_id='t1')
+    run('capture', message2)
+    successor = temp / 'shared-successor.sh'
+    successor.write_text('set -e\necho "$$" > "$FM_HOME/state/.lock"\n'
+                         'printf \'%s\' \'{"conversation_id":"shared"}\' | "$1" conversation accept\n')
+    result = subprocess.run([str(temp / 'codex'), str(successor), str(cli)],
+                            env=env, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result
+    assert json.loads(result.stdout)['input']['request_id'] == 'r2'
+    assert run('poll', connection)['requests'][-1]['state'] == 'accepted'
+    permissions(journal, 0o660)
+    (home / 'state/.lock').write_text(owner + '\n')
+
+    # Live policy publication stays private even in a staged interface; any
+    # read-only service exposure must be staged separately by the zone owner.
+    pilot = temp / 'shared-pilot'
+    (pilot / 'state').mkdir(parents=True, mode=0o700)
+    pilot.chmod(0o700)
+    (pilot / 'state/.lock').write_text(owner + '\n')
+    shutil.copytree(access, pilot / access.name)
+    override = {'FM_HOME': str(pilot)}
+    run('pilot-init', {'publication_policy': 'owner-authored-elevenlabs-v1'}, extra=override)
+    policy = pilot / 'state/voice-conversation/policy.json'
+    assert stat.S_IMODE(policy.stat().st_mode) == 0o600
+    run('pilot-init', {'publication_policy': 'owner-authored-v2', 'destinations': ['elevenlabs']}, extra=override)
+    assert stat.S_IMODE(policy.stat().st_mode) == 0o600
+    if acl:
+        assert f'user:{peer}:' not in subprocess.check_output(['getfacl', '-cpn', str(policy)], text=True)
+    # An over-broad template cannot turn an immutable note into shared mutable state.
+    (access / 'note').chmod(0o660)
+    run('capture', dict(message, turn_id='t3', request_id='r3', previous_turn_id='t2'), code=2)
+    assert len(run('poll', connection)['requests']) == 2
+    (access / 'note').chmod(0o640)
+    (home / 'state').chmod(0o700)  # let the suite remove its fixture
+    print('PASS: shared CLI keeps staged modes/group/effective ACLs across atomic writes and fresh processes')
+
+
+if len(sys.argv) > 4 and sys.argv[4] == 'shared':
+    shared_publication()
+    sys.exit(0)
 run('lab-init', {'speech_catalog': catalog})
 (home / 'state/.lock').write_text(owner + '\n')
 run('lab-init', {'speech_catalog': catalog}, code=2)
@@ -496,3 +629,5 @@ refused = run('publish', dict(later, destination='elevenlabs'), code=2)
 assert 'bound to destination imessage' in refused.stderr, refused.stderr
 assert owning('audit', cid='text')['destination'] == 'imessage'
 print('PASS: a destination withdrawn from the policy can no longer be published to')
+
+shared_publication()

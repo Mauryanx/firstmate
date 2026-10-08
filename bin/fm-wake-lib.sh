@@ -15,6 +15,19 @@ FM_LOCK_STALE_AFTER="${FM_LOCK_STALE_AFTER:-2}"
 _FM_UNAME=$(uname 2>/dev/null || echo unknown)
 mkdir -p "$STATE"
 
+# Only an explicitly staged dedicated voice interface shares these artifacts.
+# The metadata helper owns the allowlist; ordinary operational locks stay private.
+_fm_shared_wake_access() { # <publication-path> [<opened-temporary-path>]
+  [ -e "$FM_HOME/.fm-voice-shared-interface" ] \
+    || [ -L "$FM_HOME/.fm-voice-shared-interface" ] || return 0
+  FM_HOME="$FM_HOME" python3 "$FM_WAKE_LIB_DIR/fm_shared_interface.py" "$1" "${2:-$1}"
+}
+
+_fm_wake_prepare_file() {
+  : >> "$1" || return 1
+  _fm_shared_wake_access "$1"
+}
+
 # Most wake-library consumers need only queue and lock primitives, including
 # deliberately minimal recovery fixtures and remote installations.
 # Load the classifier only when a status presentation helper is actually used.
@@ -453,15 +466,21 @@ fm_lock_abs_path() {
 }
 
 fm_lock_owner_dir() {
-  local lockdir=$1 lock_abs
+  local lockdir=$1 lock_abs ownerdir
   lock_abs=$(fm_lock_abs_path "$lockdir") || return 1
-  mktemp -d "${lock_abs}.owner.XXXXXX" 2>/dev/null
+  ownerdir=$(mktemp -d "${lock_abs}.owner.XXXXXX" 2>/dev/null) || return 1
+  if ! _fm_shared_wake_access "$ownerdir"; then
+    rmdir "$ownerdir"
+    return 1
+  fi
+  printf '%s\n' "$ownerdir"
 }
 
 fm_lock_prepare_owner() {
   local ownerdir=$1 mypid back
   fm_current_pid mypid || return 1
   printf '%s\n' "$mypid" > "$ownerdir/pid" 2>/dev/null || return 1
+  _fm_shared_wake_access "$ownerdir/pid" || return 1
   back=$(cat "$ownerdir/pid" 2>/dev/null || true)
   [ "$back" = "$mypid" ]
 }
@@ -627,6 +646,7 @@ fm_recovery_marker_read() {
 }
 
 _fm_atomic_replace() {
+  _fm_shared_wake_access "$2" "$1" || return 1
   mv -f -- "$1" "$2"
 }
 
@@ -747,7 +767,7 @@ _fm_recovery_marker_ack() {
   tmp=$(mktemp "${marker}.tmp.XXXXXX") || { fm_lock_release "$lock"; return 1; }
   if ! printf '%s\n' "$line" > "$tmp" \
     || ! chmod 0600 "$tmp" \
-    || ! mv -f -- "$tmp" "$marker"; then
+    || ! _fm_atomic_replace "$tmp" "$marker"; then
     rm -f -- "$tmp"
     fm_lock_release "$lock"
     return 1
@@ -1838,10 +1858,18 @@ fm_wake_append_locked() {
       ''|*[!0-9]*) seq=0 ;;
     esac
     seq=$((seq + 1))
-    printf '%s\n' "$seq" > "$seq_file" || status=$?
+    if _fm_wake_prepare_file "$seq_file"; then
+      printf '%s\n' "$seq" > "$seq_file" || status=$?
+    else
+      status=$?
+    fi
   fi
   if [ "$status" -eq 0 ]; then
-    printf '%s\t%s\t%s\t%s\t%s\n' "$epoch" "$seq" "$kind" "$clean_key" "$clean_payload" >> "$FM_WAKE_QUEUE" || status=$?
+    if _fm_wake_prepare_file "$FM_WAKE_QUEUE"; then
+      printf '%s\t%s\t%s\t%s\t%s\n' "$epoch" "$seq" "$kind" "$clean_key" "$clean_payload" >> "$FM_WAKE_QUEUE" || status=$?
+    else
+      status=$?
+    fi
   fi
   return "$status"
 }
@@ -1955,9 +1983,9 @@ fm_wake_restore_queue() {
   local drained=$1 restore
   restore="$STATE/.wake-queue.restore.$(fm_current_pid)"
   if [ -e "$FM_WAKE_QUEUE" ]; then
-    cat "$drained" "$FM_WAKE_QUEUE" > "$restore" && mv "$restore" "$FM_WAKE_QUEUE"
+    cat "$drained" "$FM_WAKE_QUEUE" > "$restore" && _fm_atomic_replace "$restore" "$FM_WAKE_QUEUE"
   else
-    mv "$drained" "$FM_WAKE_QUEUE"
+    _fm_atomic_replace "$drained" "$FM_WAKE_QUEUE"
   fi
 }
 
