@@ -25,6 +25,9 @@ test_primary_and_secondmate_instruction_generation() {
     "generated implementation brief does not prohibit silent ask-user auto-resolution"
   assert_grep 'It auto-resolves every gate including ask-user findings with no escalation' "$ship" \
     "generated implementation brief does not explain the ask-user authority bypass"
+  # shellcheck disable=SC2016 # Backticks are literal generated Markdown.
+  assert_grep 'A fix response must name every finding at the gate in `--findings` or `--ignore`' "$ship" \
+    "generated implementation brief lets a fix response leave a finding unnamed and the gate parked"
   assert_no_grep 'the captain, not you, owns the ask-user decisions' "$ship" \
     "generated implementation brief retained conflicting captain-only wording"
 

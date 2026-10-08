@@ -104,8 +104,10 @@ case "${1:-}" in
     printf '%s\n' "${FM_FAKE_RUNS_LIST:-}" ;;
   daemon)
     # FM_FAKE_DAEMON_DOWN: the explicit down-probe fails, as the real
-    # `no-mistakes daemon status` does when the daemon is not running.
+    # `no-mistakes daemon status` does when the daemon is not running; =text
+    # is v1.91.0's down answer, which exits zero.
     [ "${FM_FAKE_DAEMON_DOWN:-0}" = 1 ] && exit 1
+    [ "${FM_FAKE_DAEMON_DOWN:-0}" = text ] && { printf '%s\n' '  ○ daemon not running'; exit 0; }
     printf '%s\n' 'daemon running (pid 4242)'
     exit 0 ;;
 esac
@@ -468,6 +470,20 @@ run:
   pr: "https://github.com/o/r/pull/1"
   findings: none
 outcome: passed
+EOF
+}
+
+run_passed_with_override() {  # <branch>
+  cat <<EOF
+run:
+  id: "01RUN"
+  branch: $1
+  status: completed
+  head: "${FM_FAKE_RUN_HEAD:-abc1234}"
+  pr: "https://github.com/o/r/pull/1"
+  findings: none
+outcome: passed-with-override
+test_override_reason: "approved exception"
 EOF
 }
 
@@ -1114,6 +1130,19 @@ test_terminal_passed() {
   pass "terminal passed run is authoritative"
 }
 
+test_terminal_passed_with_override() {
+  reset_fakes
+  local d; d=$(new_case passed-override)
+  make_repo_on_branch "$d/wt" fm/feat-doverride
+  make_fakebin "$d" >/dev/null
+  fm_write_meta "$d/state/feat-doverride.meta" "window=fm:fm-feat-doverride" "worktree=$d/wt" "kind=ship"
+  FM_FAKE_AXI_STATUS="$(run_passed_with_override fm/feat-doverride)"
+  local out; out=$(run_crew_state "$d" feat-doverride)
+  assert_contains "$out" "state: done" "passed-with-override run -> done"
+  assert_contains "$out" "run passed: PR merged (approved override)" "the override stays visible beside the PR outcome"
+  pass "terminal passed-with-override run reads done with the override named"
+}
+
 test_terminal_passed_uses_matching_retirement_receipt_without_forge() {
   reset_fakes
   local d url read_log out
@@ -1427,6 +1456,11 @@ test_coarse_failed_ledger_with_daemon_down_reports_unknown() {
     "the unverified detail names the dead instrument"
   assert_not_contains "$out" "state: failed" "an instrument failure never reads as work failure"
   assert_contains "$out" "source: run-step" "the ledger row is still this branch's attributed run"
+
+  # v1.91.0 answers a crashed daemon with exit 0 and "daemon not running".
+  FM_FAKE_DAEMON_DOWN=text
+  out=$(run_crew_state "$d" feat-coarsedown)
+  assert_contains "$out" "state: unknown" "a zero-exit daemon-not-running answer is still down"
 
   # Daemon provably up again: the same row stays a failure.
   FM_FAKE_DAEMON_DOWN=0
@@ -3561,6 +3595,7 @@ test_ci_fixing_after_green_stays_working
 test_top_level_fixing_ci_running_after_green_stays_working
 test_top_level_fixing_done_log_stays_working
 test_terminal_passed
+test_terminal_passed_with_override
 test_terminal_passed_uses_matching_retirement_receipt_without_forge
 test_terminal_passed_no_forge_switch_skips_read_but_keeps_receipt
 test_terminal_passed_with_open_pr_does_not_claim_merged

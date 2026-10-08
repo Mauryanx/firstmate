@@ -3,6 +3,9 @@
 # Usage: fm-gh-checks-read.sh pr view <pr-url> --json <statusCheckRollup|headRefOid,statusCheckRollup>
 #        fm-gh-checks-read.sh pr checks <pr-url> --required [--json name,state,bucket --jq <filter>]
 #        fm-gh-checks-read.sh configured (exit 0 when App configuration exists)
+#        fm-gh-checks-read.sh token github.com OWNER/REPO (print the narrowed mint's
+#          {token,expires_at,permissions}; never falls back). This is the
+#          no-mistakes github_ci_reader command: args ["token"].
 # Only these read commands are accepted; writes always use the normal gh login.
 # Configured reads accept the arguments above; unconfigured or uncovered reads
 # forward the caller's view/checks arguments unchanged to gh.
@@ -15,8 +18,9 @@
 # permissions to checks/statuses/metadata/pull_requests/actions read for the target repository on github.com.
 # Tokens are never stored or cached: each read mints one fresh token and rejects
 # expired responses. Secrets reach curl via stdin and gh only via GH_TOKEN,
-# never argv. Repositories outside this installation use the normal login with
-# a one-line diagnostic; every other authentication failure refuses.
+# never argv; token mode prints its one token only on stdout. Outside token
+# mode, repositories outside this installation use the normal login with a
+# one-line diagnostic; every other authentication failure refuses.
 # Shell tracing and gh/curl debug output are disabled for secrets.
 # Normal login resolves PR/head/rollup identity before and after App reads.
 # Changed identity, GraphQL errors, malformed data, or incomplete pagination
@@ -36,17 +40,22 @@ if [ "${1:-}" = configured ]; then
   [ -e "$CONFIG" ] || [ -L "$CONFIG" ]
   exit $?
 fi
-[ "$#" -ge 2 ] && [ "$1" = pr ] || exit 2
-case "$2" in view|checks) ;; *) exit 2 ;; esac
+if [ "${1:-}" = token ]; then
+  [ "$#" = 3 ] && [ "$2" = github.com ] || exit 2
+else
+  [ "$#" -ge 2 ] && [ "$1" = pr ] || exit 2
+  case "$2" in view|checks) ;; *) exit 2 ;; esac
+fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FM_ROOT="${FM_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 FM_HOME="${FM_HOME:-$FM_ROOT}"
 CONFIG="$FM_HOME/config/gh-checks-app.json"
+die() { printf 'gh checks App: %s\n' "$1" >&2; exit 1; }
 if [ ! -e "$CONFIG" ] && [ ! -L "$CONFIG" ]; then
+  [ "$1" != token ] || die 'configuration is unavailable'
   exec gh "$@"
 fi
 
-die() { printf 'gh checks App: %s\n' "$1" >&2; exit 1; }
 [ -f "$CONFIG" ] && [ ! -L "$CONFIG" ] && [ -r "$CONFIG" ] \
   || die 'configuration is unavailable'
 for tool in curl jq openssl; do
@@ -69,8 +78,13 @@ case "$KEY_STAT" in "$(id -u):600"|"$(id -u):400") ;; *) die 'private key must b
 # Parse the canonical github.com target before any secret-bearing request.
 # shellcheck source=bin/fm-pr-lib.sh
 . "$SCRIPT_DIR/fm-pr-lib.sh"
-fm_pr_url_parse "${3:-}" && [ "$FM_PR_PROVIDER" = github ] \
-  || die 'expected a canonical GitHub pull-request URL'
+if [ "$1" = token ]; then
+  # Reuse the canonical owner/repository validation of a GitHub PR URL.
+  fm_pr_url_parse "https://github.com/$3/pull/1" || die 'expected OWNER/REPO'
+else
+  fm_pr_url_parse "${3:-}" && [ "$FM_PR_PROVIDER" = github ] \
+    || die 'expected a canonical GitHub pull-request URL'
+fi
 REPO=$FM_PR_PATH
 REPO_NAME=${REPO#*/}
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
@@ -99,6 +113,7 @@ if [ "$HTTP_CODE" = 200 ]; then
   ' 2>/dev/null) || die 'invalid repository installation response'
 fi
 if [ "$HTTP_CODE" = 404 ] || { [ "$HTTP_CODE" = 200 ] && [ "$COVERED_ID" != "$INSTALLATION_ID" ]; }; then
+  [ "$1" != token ] || die 'repository is outside the configured installation'
   printf 'gh checks App: repository is outside the configured installation; using normal login\n' >&2
   unset JWT SIGNATURE RESPONSE
   exec gh "$@"
@@ -123,9 +138,13 @@ TOKEN=$(printf '%s' "$RESPONSE" | jq -er '
 ' 2>/dev/null) || die 'invalid installation token response'
 EXPIRES=$(printf '%s' "$RESPONSE" | jq -er '.expires_at | fromdateiso8601' 2>/dev/null) \
   || die 'invalid installation token expiry'
-unset RESPONSE
 NOW=$(date +%s)
 [ "$EXPIRES" -gt "$((NOW + 60))" ] || die 'installation token expired'
+if [ "$1" = token ]; then
+  printf '%s' "$RESPONSE" | jq -c '{token,expires_at,permissions}'
+  exit 0
+fi
+unset RESPONSE
 MODE=$2
 shift 3
 FILTER=.
