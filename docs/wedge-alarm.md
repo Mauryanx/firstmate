@@ -29,7 +29,7 @@ This is deliberate because the alarm fires only after a genuine max-defer wedge 
 
 Each channel is best-effort.
 A missing binary or non-zero exit logs a warning and continues to the next channel without crashing the daemon loop.
-Every invocation is process-group bounded by `FM_WEDGE_ALARM_TIMEOUT_SECS`, which defaults to 10 seconds, including `command:`, `osascript`, `herdr`, and the test seam.
+Each notifier stage is process-group bounded by `FM_WEDGE_ALARM_TIMEOUT_SECS`; unset, invalid or zero values use 10 seconds.
 Courier publication and delivery polling each receive that bound independently.
 On timeout or daemon shutdown, the notifier process group is terminated and the next configured channel may run.
 AppleScript receives the summary as an argv item rather than interpolated source, so summary text cannot alter the script.

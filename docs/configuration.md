@@ -1225,9 +1225,9 @@ FM_SUPERVISOR_TARGET=              # optional supervisor pane target override; t
 FM_INJECT_SKIP=heartbeat           # |-prefixes force-self-handled bypassing classification; empty disables
 FM_ESCALATE_BATCH_SECS=90          # buffer window for batched escalation digests; 0 = flush immediately
 FM_MAX_DEFER_SECS=300              # max buffered escalation age before retry plus wedge alarm; 0 disables
-FM_WEDGE_ALARM_CHANNEL=            # override config/wedge-alarm with one active-alert directive for the wedge alarm; off|auto|osascript|herdr|command:<cmd>; absent = auto (macOS -> an OS notification)
-FM_WEDGE_ALARM_EXEC=              # notifier seam: route every channel (osascript, herdr, command:) through this command as `<cmd> <channel> <summary>`; "discard" fires nothing; unset in production; the daemon defaults it to "discard" when sourced so no test posts a real notification (docs/wedge-alarm.md)
-FM_WEDGE_ALARM_TIMEOUT_SECS=10    # maximum seconds for each osascript, herdr, override, or command: notifier before its watchdog terminates it and continues to the next channel; invalid or zero values use 10
+FM_WEDGE_ALARM_CHANNEL=            # channel override; directives and defaults: docs/wedge-alarm.md "Channels"
+FM_WEDGE_ALARM_EXEC=              # notifier seam; invocation and safe defaults: docs/wedge-alarm.md "Test safety"
+FM_WEDGE_ALARM_TIMEOUT_SECS=10    # notifier watchdog; per-stage bounds: docs/wedge-alarm.md "Channels"
 FM_INJECT_FAIL_SLEEP=30            # seconds to back off when the supervisor pane is unavailable
 FM_INJECT_CONFIRM_RETRIES=3        # daemon Enter-retry attempts after typing a digest once
 FM_INJECT_CONFIRM_SLEEP=0.5        # seconds between daemon submit checks

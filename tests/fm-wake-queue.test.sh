@@ -363,7 +363,9 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-first.out" 2> "$dir/watch-first.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-first.out" 2> "$dir/watch-first.err" || true
+  assert_grep $'1000\t100-7' "$state/.secondmate-wake-progress-mate" \
+    "the first checkpoint did not observe the foreign queue"
   [ ! -s "$state/.wake-queue" ] \
     || fail "the first observation of an old foreign row produced an age-only alert"
 
@@ -375,14 +377,16 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-progress.out" 2> "$dir/watch-progress.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-progress.out" 2> "$dir/watch-progress.err" || true
+  assert_grep $'1002\t100-8' "$state/.secondmate-wake-progress-mate" \
+    "the progress checkpoint did not observe the advancing foreign queue"
   [ ! -s "$state/.wake-queue" ] \
     || fail "an advancing foreign queue produced a stall alert because its oldest row was old"
 
   # With no further sequence progress, the same queue must still expose the real
   # failure after the configured interval. Every checkpoint that asserts an alert
-  # gets 4s rather than 1s: reaching the alert costs a pane capture in the
-  # active-turn gate, and a 1s bound sits under that cost on a loaded machine.
+  # gets 4s rather than 1s, as do the observation checkpoints: startup and the
+  # active-turn pane capture can each exceed a 1s bound on a loaded machine.
   # The bound is only a ceiling - the checkpoint returns on the first actionable
   # wake - so a healthy watcher still finishes in well under a second.
   printf '1004\n' > "$dir/now"
@@ -414,7 +418,9 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-next.out" 2> "$dir/watch-next.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-next.out" 2> "$dir/watch-next.err" || true
+  assert_grep $'1010\t100-9' "$state/.secondmate-wake-progress-mate" \
+    "the later checkpoint did not observe the next foreign queue position"
   [ ! -s "$state/.wake-queue" ] \
     || fail "a newly-oldest row cascaded an immediate second alert after progress"
   cp "$sub/state/.wake-queue" "$row_after"
@@ -463,13 +469,13 @@ EOF
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-first.out" 2> "$dir/watch-first.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-first.out" 2> "$dir/watch-first.err" || true
   printf '5000\n' > "$dir/now"
   PATH="$fakebin:$PATH" FM_FAKE_NOW_FILE="$dir/now" FM_HOME="$dir" FM_ROOT_OVERRIDE="$ROOT" \
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-second.out" 2> "$dir/watch-second.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-second.out" 2> "$dir/watch-second.err" || true
   [ ! -s "$state/.wake-queue" ] \
     || fail "declared external-wait rows fed the secondmate wake-loop escalation"
   ! grep -F 'secondmate wake-loop stalled' "$dir/watch-first.out" "$dir/watch-second.out" >/dev/null \
@@ -511,7 +517,9 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-old.out" 2> "$dir/watch-old.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-old.out" 2> "$dir/watch-old.err" || true
+  assert_grep $'1000\t100-9' "$state/.secondmate-wake-progress-mate" \
+    "the retired generation was not observed before reprovisioning"
   [ ! -s "$state/.wake-queue" ] || fail "the first observation of the retired generation alerted"
 
   # Reprovisioning under the same task id restarts the sequence on 9 again, long
@@ -523,7 +531,9 @@ SH
     FM_STATE_OVERRIDE="$state" FM_FAKE_TMUX_WINDOW='firstmate:fm-mate' \
     FM_SECONDMATE_WAKE_STALL_SECS=1 FM_POLL=1 FM_SIGNAL_GRACE=0 \
     FM_CHECK_INTERVAL=999999 FM_HEARTBEAT=999999 \
-    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 1 > "$dir/watch-regen.out" 2> "$dir/watch-regen.err" || true
+    "$ROOT/bin/fm-watch-checkpoint.sh" --seconds 4 > "$dir/watch-regen.out" 2> "$dir/watch-regen.err" || true
+  assert_grep $'1010\t200-9' "$state/.secondmate-wake-progress-mate" \
+    "the reprovisioned generation was not observed before its stall interval"
   [ ! -s "$state/.wake-queue" ] \
     || fail "a reprovisioned queue generation inherited the retired generation's idle interval and alerted"
 

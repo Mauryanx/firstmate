@@ -2,6 +2,7 @@
 import concurrent.futures
 import json
 import os
+import re
 import shutil
 import stat
 from pathlib import Path
@@ -90,8 +91,17 @@ def shared_publication():
         finally:
             state.chmod(0o300)
         assert subprocess.run(['ls', str(state)], capture_output=True).returncode != 0
+    abandoned = []
+    for family in ('wake-queue', 'watcher-down'):
+        stale = home / 'state' / ('.' + family + '.lock.owner.ABANDONED')
+        stale.mkdir(mode=0o770)
+        (stale / 'pid').write_text('99999999\n')
+        os.utime(stale, (1, 1))
+        (home / 'state' / ('.' + family + '.lock')).symlink_to(stale)
+        abandoned.append(stale)
     # A retry comes from a fresh process and creates the first wake files.
     assert run('capture', message)['state'] == 'saved'
+    assert all(not stale.exists() for stale in abandoned)
     generation = (home / 'state/.watcher-down').read_text().split(':')[-1].strip()
     first_inode = journal.stat().st_ino
     assert run('capture', message)['state'] == 'saved'
@@ -99,8 +109,33 @@ def shared_publication():
     for name in ('.wake-queue', '.wake-queue.seq', '.watcher-down'):
         permissions(home / 'state' / name, 0o660)
     assert (home / 'state/.watcher-down').read_text().split(':')[-1].strip() == generation
+    # The owner's real drain replaces the shared queue during acknowledgement.
+    # It must hold a saved turn, then retire the accepted turn without losing
+    # reviewed metadata on either replacement or the recovery marker.
+    (home / 'state').chmod(0o700)
+
+    def drain_and_ack():
+        drain_env = dict(env, FM_ROOT_OVERRIDE=str(home))
+        command = [str(root / 'bin/fm-wake-drain.sh')]
+        presented = subprocess.run(command, env=drain_env, capture_output=True, text=True, timeout=30)
+        assert presented.returncode == 0, presented
+        boundary = re.search(r'--ack-through ([0-9]+) --recovery-generation ([A-Za-z0-9._-]+)',
+                             presented.stderr)
+        assert boundary, presented
+        acknowledged = subprocess.run(command + ['--ack-through', boundary[1],
+                                                '--recovery-generation', boundary[2]],
+                                      env=drain_env, capture_output=True, text=True, timeout=30)
+        assert acknowledged.returncode == 0, acknowledged
+        permissions(home / 'state/.wake-queue', 0o660)
+        permissions(home / 'state/.watcher-down', 0o660)
+
+    drain_and_ack()
+    assert (home / 'state/.wake-queue').stat().st_size > 0
     accepted = run('accept', {'conversation_id': 'shared'})
     assert accepted['dispatch'] and accepted['input']['request_id'] == 'r1'
+    drain_and_ack()
+    assert (home / 'state/.wake-queue').stat().st_size == 0
+    assert (home / 'state/.watcher-down').read_text().strip() == 'acked:handling:' + generation
     permissions(journal, 0o660)
     assert journal.stat().st_ino != first_inode
     permissions(home / 'state/inbox/handled' / note.name, 0o640, 'r--')
@@ -154,6 +189,8 @@ def shared_publication():
     (access / 'note').chmod(0o640)
     (home / 'state').chmod(0o700)  # let the suite remove its fixture
     print('PASS: shared CLI keeps staged modes/group/effective ACLs across atomic writes and fresh processes')
+    print('PASS: real capture reclaims abandoned shared queue and recovery locks while state listing stays denied')
+    print('PASS: real wake drain holds saved turns and acknowledges accepted turns with shared queue/recovery ACLs intact')
 
 
 if len(sys.argv) > 4 and sys.argv[4] == 'shared':
