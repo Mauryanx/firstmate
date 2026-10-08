@@ -117,15 +117,11 @@
 #                                   alarm fires (default 300; 0 disables)
 #          FM_WEDGE_ALARM_CHANNEL   override config/wedge-alarm with a single
 #                                   active-alert directive for that wedge alarm
-#                                   (off|auto|osascript|herdr|courier|command:<cmd>). An
+#                                   (off|auto|osascript|herdr|command:<cmd>). An
 #                                   absent file/var means auto: on macOS that is
 #                                   an OS-level notification, so the alarm is
 #                                   never silent. See wedge_alarm_notify below
 #                                   and docs/configuration.md.
-#          FM_COURIER_NOTIFY_TO     imessage recipient for the explicit courier
-#                                   alert channel; FM_COURIER_ENABLED=1 also
-#                                   required. fm-courier.py's help owns the
-#                                   proposal and delivery-result contract.
 #          FM_WEDGE_ALARM_EXEC      notifier seam: when set, every notifier
 #                                   channel routes through this command as
 #                                   `<cmd> <channel> <summary>` instead of
@@ -904,45 +900,6 @@ wedge_alarm_via_command() {  # <cmd> <summary>
   return 1
 }
 
-wedge_alarm_via_courier() {
-  local summary=$1 publication output output_file notification_id notification_digest rc
-  if [ "${WEDGE_ALARM_EMIT_ACTIVE:-}" != 1 ]; then
-    wedge_alarm_emit courier "$summary"
-    return $?
-  fi
-  output_file=$(mktemp "$(_state_root)/.courier-notification.XXXXXX") || {
-    log "wedge alarm: courier notification failed to prepare result capture; marker retained"
-    return 1
-  }
-  wedge_alarm_run_bounded courier python3 "$FM_DAEMON_DIR/fm-courier.py" \
-    notify "${FM_COURIER_NOTIFY_TO:-}" <<< "$summary" > "$output_file" 2>/dev/null
-  rc=$?
-  publication=$(cat "$output_file")
-  if [ "$rc" -ne 0 ]; then
-    rm -f -- "$output_file"
-    log "wedge alarm: courier notification failed (exit $rc); marker retained; publication metadata: $publication"
-    return "$rc"
-  fi
-  log "wedge alarm: courier notification published; recovery identity: $publication"
-  if ! read -r notification_id notification_digest < <(python3 -c \
-    'import json, sys; row = json.load(sys.stdin); print(row["id"], row["digest"])' < "$output_file"); then
-    rm -f -- "$output_file"
-    log "wedge alarm: courier publication identity could not be read; marker retained"
-    return 1
-  fi
-  wedge_alarm_run_bounded courier-delivery python3 "$FM_DAEMON_DIR/fm-courier.py" \
-    delivery "$notification_id" "$notification_digest" > "$output_file" 2>/dev/null
-  rc=$?
-  output=$(cat "$output_file")
-  rm -f -- "$output_file"
-  case "$rc" in
-    0) log "wedge alarm: courier delivery confirmed: $output" ;;
-    4) log "wedge alarm: courier delivery unconfirmed; poll with fm-courier.py delivery using this identity: $output" ;;
-    *) log "wedge alarm: courier delivery failed (exit $rc); marker retained; publication metadata: $publication; receipt evidence: $output" ;;
-  esac
-  return "$rc"
-}
-
 wedge_alarm_emit() {  # <channel> <summary>
   local channel=$1 summary=$2 cmd=${3:-} rc exec_override=${FM_WEDGE_ALARM_EXEC:-} WEDGE_ALARM_EMIT_ACTIVE=1
   case "$exec_override" in
@@ -958,7 +915,6 @@ wedge_alarm_emit() {  # <channel> <summary>
   case "$channel" in
     osascript) wedge_alarm_via_osascript "$summary" ;;
     herdr) wedge_alarm_via_herdr "$summary" ;;
-    courier) wedge_alarm_via_courier "$summary" ;;
     command) wedge_alarm_via_command "$cmd" "$summary" ;;
   esac
 }
@@ -982,7 +938,7 @@ wedge_alarm_notify() {  # <summary> <marker>
     case "$ch" in auto|default) ch=$(wedge_alarm_platform_default) ;; esac
     case "$ch" in
       '') log "wedge alarm: no OS-level alert channel on $(uname); durable marker $marker is the only signal - set config/wedge-alarm (e.g. a command: directive)" ;;
-      osascript|herdr|courier) wedge_alarm_emit "$ch" "$summary" || true ;;
+      osascript|herdr) wedge_alarm_emit "$ch" "$summary" || true ;;
       command:*) wedge_alarm_emit command "$summary" "${ch#command:}" || true ;;
       *) log "wedge alarm: unrecognized active-alert channel directive (redacted); marker still written" ;;
     esac

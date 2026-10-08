@@ -16,21 +16,15 @@ It lists channel directives, one per non-empty, non-comment line, and every list
   Other platforms have no built-in OS channel, so configure `command:` when a durable marker alone is insufficient.
 - `osascript` posts a macOS Notification Center banner outside the terminal pane.
 - `herdr` calls `herdr notification show` outside the supervised pane.
-- `courier` invokes the Firstmate notification adapter in [`fm-courier.py`](../bin/fm-courier.py), using `FM_COURIER_NOTIFY_TO` as the recipient and requiring `FM_COURIER_ENABLED=1`.
-  Both settings and the explicit channel are required; ordinary unconfigured alerts retain their current channels.
-  The caller publishes and logs the submission ID/digest before separately bounded receipt polling, so receipt timeout after a courier claim retains a recovery identity.
-  It distinguishes unconfirmed delivery from a matching `sent` receipt and retains the alarm marker on pending approval, refusal or endpoint failure.
-  Use the adapter's `delivery` operation with that logged identity for subsequent polling; repeating `notify` creates a new intentional proposal.
-  Courier alone owns recipient policy and authenticated exact-message approval; the adapter never falls back to a legacy provider when courier is unavailable.
 - `command:<cmd>` runs `<cmd>` through `sh -c` with the alarm summary as `$1` and on stdin, allowing delivery to a phone or pager service.
+  On a host with firstmate-voice, `command:fm-notify --kind update -` texts the captain through its owner-only notifier; that notifier's own `FM_NOTIFY_COURIER=1` opt-in routes the message through the courier, whose wire contract it owns.
 
 An absent `config/wedge-alarm` behaves as `auto`, which is default-on on macOS.
 This is deliberate because the alarm fires only after a genuine max-defer wedge and is rate-limited to at most once per max-defer window.
 
 Each channel is best-effort.
 A missing binary or non-zero exit logs a warning and continues to the next channel without crashing the daemon loop.
-Each notifier stage is process-group bounded by `FM_WEDGE_ALARM_TIMEOUT_SECS`; unset, invalid or zero values use 10 seconds.
-Courier publication and delivery polling each receive that bound independently.
+Every invocation is process-group bounded by `FM_WEDGE_ALARM_TIMEOUT_SECS`, which defaults to 10 seconds, including `command:`, `osascript`, `herdr`, and the test seam.
 On timeout or daemon shutdown, the notifier process group is terminated and the next configured channel may run.
 AppleScript receives the summary as an argv item rather than interpolated source, so summary text cannot alter the script.
 See [`examples/wedge-alarm`](examples/wedge-alarm) for a copyable config.
@@ -43,5 +37,4 @@ When the daemon is sourced as a library, that seam defaults to `discard`, so a t
 Production leaves the seam unset and uses the configured real channels.
 
 `tests/fm-daemon.test.sh` covers directive parsing, rate limiting, timeout and process-group cleanup, argv-safe dispatch, channel fallback, and safe `command:` summary delivery.
-`tests/fm-zones.test.sh` drives courier notification publication, delivery polling, provider/poll receipt validation and the actual active-alert caller's recovery after a blocked receipt scan against isolated local endpoints, without sending messages.
 [`verification/supervision.md`](verification/supervision.md#wedge-alarm-channels) records the bounded manual macOS and Herdr channel proof.
