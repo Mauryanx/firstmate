@@ -47,10 +47,12 @@ for name, mode in [('wake', 0o660), ('wake-lock', 0o770)]:
     if acl:
         subprocess.run(['setfacl', '-m', f'u:{peer}:' + ('rwx' if name == 'wake-lock' else 'rw-'), str(path)], check=True)
 
-def shell(body, code=0, extra=None):
+def shell(body, code=0, extra=None, error=False):
     result = subprocess.run(['bash', '-c', 'set -e; umask 077; . "$1"; ' + body, '_', str(lib)],
                             env=dict(env, **(extra or {})), capture_output=True, text=True, timeout=10)
     assert result.returncode == code, result
+    if error:
+        assert 'fm shared interface:' in result.stderr, result
     return result.stdout.strip()
 
 def access(path, mode, named='rw-'):
@@ -69,6 +71,9 @@ for name in ('.wake-queue.lock', '.watcher-down.lock'):
     os.utime(owner, (1, 1))
     shell(f'fm_lock_try_acquire "$STATE/{name}"; fm_lock_release "$STATE/{name}"')
     assert not owner.exists() and not (state / name).exists()
+    shell(f'fm_lock_try_acquire "$STATE/{name}"; '
+          + f'fm_lock_try_acquire "$STATE/{name}"; fm_lock_release "$STATE/{name}"')
+    shell(f'fm_lock_acquire_wait_bounded "$STATE/{name}" 1; fm_lock_release "$STATE/{name}"')
 
 if os.geteuid() != 0:
     state.chmod(0o300)
@@ -118,7 +123,54 @@ access(state / '.wake-queue', 0o660)
 stage.chmod(0o777)
 shell('fm_wake_append check synthetic rejected', code=2, extra={'FM_HOME': str(link)})
 stage.chmod(0o750)
+dead = subprocess.Popen(['true'])
+dead.wait()
+for template in ('wake', 'wake-lock'):
+    path = stage / template
+    mode = stat.S_IMODE(path.stat().st_mode)
+    for invalid in ('missing', 'mode'):
+        if invalid == 'missing':
+            path.rename(stage / (template + '.saved'))
+        else:
+            path.chmod(0o600)
+        try:
+            for name in ('.wake-queue.lock', '.watcher-down.lock'):
+                for acquire in ('fm_lock_acquire_wait', 'fm_lock_try_create',
+                                'fm_lock_try_acquire', 'fm_lock_acquire_wait_bounded'):
+                    call = acquire + f' "$STATE/{name}"'
+                    if acquire == 'fm_lock_acquire_wait_bounded':
+                        call += ' 1'
+                    shell(call, code=2, error=True)
+                    assert not (state / name).exists()
+                    assert not list(state.glob(name + '.owner.*')), (template, invalid, acquire, name)
+                for holder in ('self', 'stale'):
+                    setup = f'mkdir "$STATE/{name}"; '
+                    if holder == 'self':
+                        setup += f'fm_current_pid > "$STATE/{name}/pid"; '
+                    else:
+                        setup += f'printf "%s\\n" "{dead.pid}" > "$STATE/{name}/pid"; '
+                        setup += f'touch -t 200001010000 "$STATE/{name}"; '
+                    for acquire in ('fm_lock_try_acquire', 'fm_lock_acquire_wait'):
+                        shell(setup + f'rc=0; {acquire} "$STATE/{name}" || rc=$?; '
+                              + f'fm_lock_remove_path "$STATE/{name}" || true; exit "$rc"',
+                              code=2, error=True)
+                        assert not list(state.glob(name + '.owner.*')), (template, invalid, holder, acquire, name)
+                        assert not (state / (name + '.steal')).exists()
+                        assert not list(state.glob(name + '.steal.owner.*'))
+            queue = (state / '.wake-queue').read_bytes()
+            shell('fm_wake_append check synthetic rejected-template', code=2, error=True)
+            shell('fm_wake_queued_keys check', code=2, error=True)
+            assert (state / '.wake-queue').read_bytes() == queue
+        finally:
+            if invalid == 'missing':
+                (stage / (template + '.saved')).rename(path)
+            else:
+                path.chmod(mode)
+shell('fm_wake_append check synthetic repaired')
+assert shell('fm_wake_queued_keys check') == 'restored\nsynthetic'
+assert (state / '.wake-queue').read_text().splitlines()[-1].endswith('\tcheck\tsynthetic\trepaired')
 print('PASS: staged wake modes/group/effective ACLs survive restart, recovery, stale locks and queue replacement')
+print('PASS: rejected templates return 2 across creation, reclaim and wait paths')
 print('PASS: write+traverse needs no state listing; normal wake and unrelated locks remain private')
 PY
   pass 'shared wake access preserves recovery generations and private defaults'

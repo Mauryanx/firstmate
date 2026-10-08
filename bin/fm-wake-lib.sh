@@ -482,7 +482,7 @@ fm_lock_prepare_owner() {
   local ownerdir=$1 mypid back
   fm_current_pid mypid || return 1
   printf '%s\n' "$mypid" > "$ownerdir/pid" 2>/dev/null || return 1
-  _fm_shared_wake_access "$ownerdir/pid" || return 1
+  _fm_shared_wake_access "$ownerdir/pid" || return 2
   back=$(cat "$ownerdir/pid" 2>/dev/null || true)
   [ "$back" = "$mypid" ]
 }
@@ -555,16 +555,18 @@ fm_lock_claim() {
 }
 
 fm_lock_try_create() {
-  local lockdir=$1 allowed_steal_owner=${2:-} ownerdir
+  local lockdir=$1 allowed_steal_owner=${2:-} ownerdir rc
   FM_LOCK_OWNER_DIR=
   ownerdir=$(fm_lock_owner_dir "$lockdir") || return
   if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
     fm_lock_discard_owner "$ownerdir"
     return 1
   fi
-  if ! fm_lock_prepare_owner "$ownerdir"; then
+  rc=0
+  fm_lock_prepare_owner "$ownerdir" || rc=$?
+  if [ "$rc" -ne 0 ]; then
     fm_lock_discard_owner "$ownerdir"
-    return 1
+    return "$rc"
   fi
   if ln -s "$ownerdir" "$lockdir" 2>/dev/null && fm_lock_points_to_owner "$lockdir" "$ownerdir"; then
     if fm_lock_claim "$lockdir" "$ownerdir" "$allowed_steal_owner"; then
@@ -956,9 +958,9 @@ fm_lock_try_acquire() {
     # - the hang reproduced by the self-held reclaim regression in
     # tests/fm-wake-queue.test.sh - so reclaim the abandoned hold instead.
     fm_lock_remove_path "$lockdir" || true
-    if fm_lock_try_create "$lockdir"; then
-      return 0
-    fi
+    rc=0
+    fm_lock_try_create "$lockdir" || rc=$?
+    [ "$rc" -eq 1 ] || return "$rc"
     FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     return 1
   fi
@@ -972,10 +974,12 @@ fm_lock_try_acquire() {
   fi
 
   steal="$lockdir.steal"
-  if ! fm_lock_try_acquire "$steal"; then
+  rc=0
+  fm_lock_try_acquire "$steal" || rc=$?
+  if [ "$rc" -ne 0 ]; then
     FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     FM_LOCK_OWNER_DIR=
-    return 1
+    return "$rc"
   fi
   steal_owner=${FM_LOCK_OWNER_DIR:-}
 
@@ -1019,11 +1023,12 @@ fm_lock_try_acquire() {
     return 1
   fi
   fm_lock_remove_path "$lockdir" || true
-  rc=1
+  rc=0
   if fm_lock_try_create "$lockdir" "$steal_owner"; then
-    rc=0
     # shellcheck disable=SC2034 # Read by sourcing callers after lock acquisition.
     FM_LOCK_RECOVERED_PID=$cur
+  else
+    rc=$?
   fi
   if [ "$rc" -ne 0 ]; then
     # shellcheck disable=SC2034 # Read by callers after fm_lock_try_acquire returns.
@@ -1053,7 +1058,7 @@ _fm_lock_acquire_wait_handoff() {  # <lockdir> <caller-pid>
   case "$caller_pid" in ''|*[!0-9]*) return 1 ;; esac
   fm_pid_alive "$caller_pid" || return 1
   trap 'fm_lock_release "$lockdir"; exit 143' TERM INT
-  fm_lock_acquire_wait "$lockdir" || return 1
+  fm_lock_acquire_wait "$lockdir" || return
   if [ -L "$lockdir" ]; then
     ownerdir=$(fm_lock_link_owner "$lockdir" 2>/dev/null) || {
       fm_lock_release "$lockdir"
@@ -1086,9 +1091,9 @@ fm_lock_acquire_wait_bounded() {
   local lockdir=$1 seconds=$2 caller_pid rc owner_pid
   case "$seconds" in ''|*[!0-9]*|0) return 2 ;; esac
   _fm_wake_require_timeout || return 1
-  if fm_lock_try_acquire "$lockdir"; then
-    return 0
-  fi
+  rc=0
+  fm_lock_try_acquire "$lockdir" || rc=$?
+  [ "$rc" -eq 1 ] || return "$rc"
 
   fm_current_pid caller_pid || return 1
   # shellcheck disable=SC2016 # Positional parameters expand in the child shell.
@@ -1114,6 +1119,8 @@ fm_lock_acquire_wait_bounded() {
   # helper cleanup cannot manufacture a false contention advisory.
   if fm_lock_try_acquire "$lockdir"; then
     return 0
+  else
+    [ "$?" -ne 2 ] || return 2
   fi
   if [ "$rc" -eq 124 ]; then
     owner_pid=$(cat "$lockdir/pid" 2>/dev/null || true)
@@ -1891,7 +1898,7 @@ fm_wake_queued_keys() {
     signal|stale|check|heartbeat) ;;
     *) printf 'fm_wake_queued_keys: invalid wake kind: %s\n' "$kind" >&2; return 2 ;;
   esac
-  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
+  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK" || return
   fm_wake_queued_keys_locked "$kind"
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
 }

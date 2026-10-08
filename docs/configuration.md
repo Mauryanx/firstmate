@@ -542,7 +542,8 @@ Merge preflight, PR blocker reporting, and optional live bearings enrichment use
 Pull-request and rollup identity metadata use the normal login; the App reads paginated contexts directly from that rollup, with checks bound to the metadata head before merge.
 Without configuration those reads use the existing login; repositories outside the installation fall back to that login with a diagnostic, while other configured authentication failures refuse the read.
 The helper uses `curl`, `jq`, and `openssl`, explicitly requests only read permissions, and retains tokens only for the current read.
-The separate no-mistakes CI monitor uses its own GitHub reader and does not use this helper.
+The no-mistakes CI monitor uses its own GitHub login by default.
+Opting into this App for CI requires a no-mistakes build with the `github_ci_reader` hook (v1.91.0 plus the hook); set its global `github_ci_reader` to this helper using the token invocation documented in the helper's header.
 [`tests/fm-gh-checks-read.test.sh`](../tests/fm-gh-checks-read.test.sh) exercises authentication, single-mint expiry refusal, paginated contexts, current-run reporting, head-change refusal, and secret handling.
 
 ## Brain-room client (FM_BRAIN_DESK_ENABLED)
