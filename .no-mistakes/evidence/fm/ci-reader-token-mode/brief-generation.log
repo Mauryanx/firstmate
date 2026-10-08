@@ -1,0 +1,7 @@
+command: FM_HOME=<throwaway-home> FM_ROOT_OVERRIDE=$PWD bin/fm-brief.sh reader-validation-worker sample --mode no-mistakes
+exit: 0
+stdout: scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4E1WDHNE0AQWWGBH80ZA2XB/.brief-live-21xyarg_/home/data/reader-validation-worker/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+stderr: <empty>
+Generated public brief text:
+A fix response must name every finding at the gate in `--findings` or `--ignore`; an unnamed finding is refused and the gate stays parked.
+result: pass (real fm-brief.sh process; instruction delivery only)

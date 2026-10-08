@@ -1,0 +1,66 @@
+SCENARIO: token mode fails closed when App configuration is absent
+command: bin/fm-gh-checks-read.sh token github.com example/repo
+exit: 1
+stdout: <empty>
+stderr: gh checks App: configuration is unavailable
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode rejects an unsupported invocation
+command: bin/fm-gh-checks-read.sh token example/repo
+exit: 2
+stdout: <empty>
+stderr: <empty>
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode rejects an unsupported invocation
+command: bin/fm-gh-checks-read.sh token ghe.example.com example/repo
+exit: 2
+stdout: <empty>
+stderr: <empty>
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode rejects an unsupported invocation
+command: bin/fm-gh-checks-read.sh token github.com example/repo extra
+exit: 2
+stdout: <empty>
+stderr: <empty>
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode refuses malformed App configuration
+command: bin/fm-gh-checks-read.sh token github.com example/repo
+exit: 1
+stdout: <empty>
+stderr: gh checks App: invalid configuration
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode rejects a noncanonical repository before authentication
+command: bin/fm-gh-checks-read.sh token github.com example/re po
+exit: 1
+stdout: <empty>
+stderr: gh checks App: expected OWNER/REPO
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode rejects a noncanonical repository before authentication
+command: bin/fm-gh-checks-read.sh token github.com example/..
+exit: 1
+stdout: <empty>
+stderr: gh checks App: expected OWNER/REPO
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode rejects a noncanonical repository before authentication
+command: bin/fm-gh-checks-read.sh token github.com ../repo
+exit: 1
+stdout: <empty>
+stderr: gh checks App: expected OWNER/REPO
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode rejects a noncanonical repository before authentication
+command: bin/fm-gh-checks-read.sh token github.com example/repo/extra
+exit: 1
+stdout: <empty>
+stderr: gh checks App: expected OWNER/REPO
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode refuses a readable but insecure private key
+command: bin/fm-gh-checks-read.sh token github.com example/repo
+exit: 1
+stdout: <empty>
+stderr: gh checks App: private key must be owned by this uid with mode 600 or 400
+result: pass (real entry point, no substituted tools)
+SCENARIO: token mode refuses a symlinked private key
+command: bin/fm-gh-checks-read.sh token github.com example/repo
+exit: 1
+stdout: <empty>
+stderr: gh checks App: private key is unavailable
+result: pass (real entry point, no substituted tools)
