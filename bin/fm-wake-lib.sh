@@ -469,9 +469,11 @@ fm_lock_owner_dir() {
   local lockdir=$1 lock_abs ownerdir
   lock_abs=$(fm_lock_abs_path "$lockdir") || return 1
   ownerdir=$(mktemp -d "${lock_abs}.owner.XXXXXX" 2>/dev/null) || return 1
+  # A rejected staged interface is configuration, not contention: return 2 so
+  # waiters stop instead of retrying a failure no other process can clear.
   if ! _fm_shared_wake_access "$ownerdir"; then
     rmdir "$ownerdir"
-    return 1
+    return 2
   fi
   printf '%s\n' "$ownerdir"
 }
@@ -555,7 +557,7 @@ fm_lock_claim() {
 fm_lock_try_create() {
   local lockdir=$1 allowed_steal_owner=${2:-} ownerdir
   FM_LOCK_OWNER_DIR=
-  ownerdir=$(fm_lock_owner_dir "$lockdir") || return 1
+  ownerdir=$(fm_lock_owner_dir "$lockdir") || return
   if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
     fm_lock_discard_owner "$ownerdir"
     return 1
@@ -938,9 +940,9 @@ fm_lock_try_acquire() {
   FM_LOCK_OWNER_DIR=
   FM_LOCK_RECOVERED_PID=
 
-  if fm_lock_try_create "$lockdir"; then
-    return 0
-  fi
+  rc=0
+  fm_lock_try_create "$lockdir" || rc=$?
+  [ "$rc" -eq 1 ] || return "$rc"
 
   fm_current_pid current || return 1
   pid=$(cat "$lockdir/pid" 2>/dev/null || true)
@@ -1033,8 +1035,11 @@ fm_lock_try_acquire() {
 }
 
 fm_lock_acquire_wait() {
-  local lockdir=$1
-  while ! fm_lock_try_acquire "$lockdir"; do
+  local lockdir=$1 rc
+  while :; do
+    rc=0
+    fm_lock_try_acquire "$lockdir" || rc=$?
+    [ "$rc" -eq 1 ] || return "$rc"
     sleep 0.1
   done
 }
@@ -1824,7 +1829,7 @@ fm_wake_clean_field() {
 
 fm_wake_append() {
   local status=0
-  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
+  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK" || return
   fm_wake_append_locked "$@" || status=$?
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   return "$status"

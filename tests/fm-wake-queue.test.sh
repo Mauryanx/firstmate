@@ -109,6 +109,15 @@ for name in ('.wake-queue', '.wake-queue.seq', '.watcher-down'):
     if acl:
         assert f'user:{peer}:' not in subprocess.check_output(['getfacl', '-cpn', str(normal / 'state' / name)], text=True)
 state.chmod(0o700)
+# A symlinked home names the same staged directory, and a rejected staging is
+# terminal: the append returns its error instead of retrying until timeout.
+link = temp / 'shared-link'
+link.symlink_to(home)
+shell('fm_wake_append check synthetic linked', extra={'FM_HOME': str(link)})
+access(state / '.wake-queue', 0o660)
+stage.chmod(0o777)
+shell('fm_wake_append check synthetic rejected', code=2, extra={'FM_HOME': str(link)})
+stage.chmod(0o750)
 print('PASS: staged wake modes/group/effective ACLs survive restart, recovery, stale locks and queue replacement')
 print('PASS: write+traverse needs no state listing; normal wake and unrelated locks remain private')
 PY

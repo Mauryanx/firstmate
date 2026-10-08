@@ -1,32 +1,19 @@
 #!/usr/bin/env python3
 """Copy staged, artifact-specific access onto opened shared-interface inodes.
 
-An administrator may stage .fm-voice-shared-interface in a dedicated FM_HOME,
-never the operational home. Its regular metadata templates are conversation
-(0660 journal/flock), note (0640 immutable vc notes), wake (0660 queue, sequence
-and recovery marker), and wake-lock (0770 dynamic queue/recovery owner dirs).
-The directory and home must be non-peer-writable, owned by the home owner or
-root; templates must have that ownership and exactly those modes. Template
-contents are unused. Group and Linux access ACLs are copied from the opened
-template to the opened new inode, before publication; no default ACL is needed.
-Staging owns the reviewed group/named-peer grants, directory/mount restrictions
-and read-only policy/session-lock exposure. Absence keeps private operation.
-No other conversation/state/config/data artifact acquires shared access.
-
-The dedicated state parent requires write+traverse for dynamic owner dirs,
-lock/steal symlinks, queue/sequence creation and recovery temp/rename/removal;
-listing is unnecessary (0300 for the writer suffices). Inbox, handled and
-voice-conversation separately need list/read/traverse and create/flock/rename/
-directory-fsync access. Protect policy and session-lock names from peer edits
-with separately owned read-only mounts/directories; never expose the complete
-operational state or use blanket default ACLs. Seed templates from the reviewed
-group/access ACLs, including both intended writer identities on mutable files
-and owner-read access on transport-created notes. Replacement reuses templates,
-not incidental permissions on the old target. Templates must be protected from
-peer metadata changes. Only the two reviewed lock families gain shared access.
-This is writer-side support, not installation or OS/VM acceptance: verify the
-distinct service identities, dedicated mounts, owner authority and private PID
-namespace against the final zone/courier revisions before enabling it.
+Opt-in: an administrator stages the real directory .fm-voice-shared-interface
+in a dedicated transport FM_HOME, never the operational home; absence keeps
+every artifact private. Home and staging directory must be non-peer-writable
+and owned by the home owner or root. Its regular templates, with that owner,
+exactly these modes and unused contents, are: conversation (0660 journal and
+flock), note (0640 vc notes), wake (0660 queue, sequence, recovery marker and
+lock pid) and wake-lock (0770 queue/recovery lock owner dirs). The template's
+group and Linux access ACL are copied to the opened new inode before it is
+published; no other artifact gains shared access and no default ACL is used.
+The dedicated state parent needs write+traverse only (0300); inbox, handled
+and voice-conversation need list/read/traverse/create/flock/rename/fsync.
+Staging owns the reviewed group and peer grants, mounts, and read-only
+exposure of policy and session-lock names; protect templates from peers.
 """
 
 import errno
@@ -55,7 +42,8 @@ def access_acl(fd):
 
 class SharedInterface:
     def __init__(self, home):
-        self.home = Path(home)
+        # Resolve once: a symlinked FM_HOME names the same protected directory.
+        self.home = Path(home).resolve()
         self.root = self.home / '.fm-voice-shared-interface'
         self.enabled = self.root.exists() or self.root.is_symlink()
         if self.enabled:
@@ -102,8 +90,9 @@ class SharedInterface:
             os.close(source)
 
     def wake_artifact(self, target):
+        target = Path(os.path.realpath(os.path.dirname(target)), os.path.basename(target))
         try:
-            relative = Path(target).relative_to(self.home / 'state')
+            relative = target.relative_to(self.home / 'state')
         except ValueError:
             return None
         name = str(relative)
