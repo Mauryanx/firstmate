@@ -14,9 +14,12 @@ ask publishes the question (stdin, 1-2000 characters, once per task name) as a
 /srv/brain/brainreader/requests), then runs the fixed
 `sudo -n -u brainreader /usr/local/bin/fm-brainreader-shell TASK`; nothing
 selects a shell, model or executable. Stdout is {"facts":[...],"withheld":N}.
-Each fact is one cited line that must pass the receiver's language check; a
-failing fact is withheld without discarding the others, and a structurally
-malformed result refuses whole.
+Each cited fact must pass the receiver's language check. A period followed by
+whitespace and an uppercase letter withholds the fact unless the preceding
+word is a one-to-four-letter abbreviation starting uppercase (Dr., St., Inc.).
+Periods before digits or at the end and colons in times are allowed. A failing
+fact is withheld without discarding the others; a structurally malformed
+result refuses whole.
 
 questions, nudges, answer and loop-add run the fixed brainctl verbs
 `questions digest`, `loops nudges`, `answer ID --text-file -` and
@@ -31,9 +34,11 @@ atomically replaced 0640 files that keep the source mtime the journal dates
 reports by. Nothing else from the home is copied.
 
 FM_BRAIN_DESK_TIMEOUT bounds each privileged call (default 210 seconds); on
-expiry it receives SIGTERM, which sudo relays to the room, then SIGKILL 5
-seconds later. Paths are opened without following symlinks. Refusals print a
-fixed, content-free error and exit 1; usage exits 2.
+expiry it receives SIGTERM, which sudo relays to the room; SIGKILL follows only
+if sudo remains running after a five-second wait. Request and export destination
+directories reject symlinked components; source-file opens reject a symlink at
+the final component. Refusals print a fixed, content-free error and exit 1;
+usage exits 2.
 """
 
 import argparse
