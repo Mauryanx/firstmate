@@ -14,7 +14,7 @@
 # The determinism lives entirely here - run-step / pane / log reads, fixed
 # mapping logic, and terminal passed-run PR detail from bounded evidence only,
 # with no heuristics and no LLM.
-# For a terminal passed no-mistakes run, a matching merge-poll retirement
+# For a terminal passed or passed-with-override no-mistakes run, a matching merge-poll retirement
 # receipt is local merged evidence; otherwise a 5s-bounded forge read is tried.
 # FM_CREW_STATE_NO_FORGE=1 keeps the receipt read but skips the forge fallback.
 # An absent or unreadable PR identity yields an honest unknown, never an
@@ -57,7 +57,9 @@
 #      disagreement reports unknown with available candidate ids.
 #      The run-step is AUTHORITATIVE: running/fixing -> working, ci -> working,
 #      awaiting_approval/fix_review -> parked (with gate findings), terminal
-#      passed/checks-passed -> done, failed/cancelled -> failed. EXCEPT: while
+#      passed/passed-with-override/checks-passed -> done, failed/cancelled -> failed.
+#      passed-with-override retains an "approved override" marker in the detail.
+#      EXCEPT: while
 #      the active step is ci, `axi status` alone cannot tell "still waiting on
 #      checks" from "checks green, waiting on merge" (see nm_ci_checks_state) -
 #      a ci-step log-tail check overrides working -> done once checks read

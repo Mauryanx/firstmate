@@ -11,8 +11,9 @@
 # forward the caller's view/checks arguments unchanged to gh.
 # Opt-in: $FM_HOME/config/gh-checks-app.json with positive decimal string fields
 # app_id, installation_id, and an absolute key_path. The key must be a regular,
-# nonsymlink file owned by this uid with mode 600 or 400. Missing config executes
-# gh unchanged; invalid config or failed App authentication refuses the read.
+# nonsymlink file owned by this uid with mode 600 or 400. Missing config forwards
+# pr reads unchanged to gh; token mode refuses. Invalid config or failed App
+# authentication refuses both modes.
 # Configured reads require the existing curl, jq, and openssl tools. JWTs use
 # RS256, iat=now-60 and exp=now+540. The installation request explicitly narrows
 # permissions to checks/statuses/metadata/pull_requests/actions read for the target repository on github.com.
@@ -22,7 +23,8 @@
 # mode, repositories outside this installation use the normal login with a
 # one-line diagnostic; every other authentication failure refuses.
 # Shell tracing and gh/curl debug output are disabled for secrets.
-# Normal login resolves PR/head/rollup identity before and after App reads.
+# For pr reads, normal login resolves PR/head/rollup identity before and after
+# App reads; token mode neither invokes gh nor resolves PR identity.
 # Changed identity, GraphQL errors, malformed data, or incomplete pagination
 # refuse output. Views retain every context for merge verification.
 # Required-check reporting selects the newest start per name/workflow/event
