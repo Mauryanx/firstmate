@@ -70,7 +70,8 @@ expiry=2099-01-01T00:00:00Z
 if [ "${FM_TEST_EXPIRED:-}" = always ] || { [ "${FM_TEST_EXPIRED:-}" = first ] && [ "$count" = 1 ]; }; then
   expiry=2000-01-01T00:00:00Z
 fi
-printf '{"token":"installation_secret.-%s","expires_at":"%s"}' "$count" "$expiry"
+printf '{"token":"installation_secret.-%s","expires_at":"%s","permissions":%s}' \
+  "$count" "$expiry" "$(printf '%s' "$request_body" | jq -c .permissions)"
 SH
 cat > "$FAKEBIN/gh" <<'SH'
 #!/usr/bin/env bash
@@ -266,6 +267,24 @@ before=$(wc -l < "$TMP_ROOT/argv")
 if FM_TEST_MINT_FAIL=1 "$SCRIPT" pr checks "$URL" > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'mint failure accepted'; fi
 [ "$(wc -l < "$TMP_ROOT/argv")" = "$before" ] || fail 'failed App authentication used the normal login'
 pass 'failed App token mint refuses without falling back to the ordinary login'
+before=$(wc -l < "$TMP_ROOT/argv")
+out=$("$SCRIPT" token github.com example/repo)
+printf '%s' "$out" | jq -e '(keys == ["expires_at","permissions","token"]) and (.token | startswith("installation_secret.-"))
+  and .permissions == {checks:"read",statuses:"read",metadata:"read",pull_requests:"read",actions:"read"}' >/dev/null \
+  || fail 'token mode did not print the narrowed mint response'
+[ "$(wc -l < "$TMP_ROOT/argv")" = "$before" ] && [ "$GH_TOKEN" = ordinary_user_token ] || fail 'token mode ran gh or changed the caller'
+pass 'token mode prints one narrowed read-only installation credential'
+for args in 'token example/repo' 'token ghe.example.com example/repo' 'token github.com example/repo extra'; do
+  # shellcheck disable=SC2086
+  if "$SCRIPT" $args > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail "token mode accepted: $args"; fi
+done
+for repo in 'example/re po' example/.. ../repo; do
+  if "$SCRIPT" token github.com "$repo" > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail "token mode accepted repository: $repo"; fi
+done
+if FM_TEST_COVERAGE=missing "$SCRIPT" token github.com example/repo > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'token mode fell back for an uncovered repository'; fi
+if FM_HOME="$TMP_ROOT/unconfigured" "$SCRIPT" token github.com example/repo > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'token mode ran without configuration'; fi
+[ "$(wc -l < "$TMP_ROOT/argv")" = "$before" ] && [ ! -s "$TMP_ROOT/out" ] || fail 'a refused token mode ran gh or printed output'
+pass 'token mode refuses bad arguments, uncovered repositories and missing configuration without falling back'
 chmod 644 "$KEY"
 if "$SCRIPT" pr checks "$URL" > "$TMP_ROOT/out" 2> "$TMP_ROOT/err"; then fail 'public key permissions accepted'; fi
 pass 'insecure private key permissions refuse authentication'

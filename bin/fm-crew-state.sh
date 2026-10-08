@@ -14,7 +14,7 @@
 # The determinism lives entirely here - run-step / pane / log reads, fixed
 # mapping logic, and terminal passed-run PR detail from bounded evidence only,
 # with no heuristics and no LLM.
-# For a terminal passed no-mistakes run, a matching merge-poll retirement
+# For a terminal passed or passed-with-override no-mistakes run, a matching merge-poll retirement
 # receipt is local merged evidence; otherwise a 5s-bounded forge read is tried.
 # FM_CREW_STATE_NO_FORGE=1 keeps the receipt read but skips the forge fallback.
 # An absent or unreadable PR identity yields an honest unknown, never an
@@ -57,7 +57,9 @@
 #      disagreement reports unknown with available candidate ids.
 #      The run-step is AUTHORITATIVE: running/fixing -> working, ci -> working,
 #      awaiting_approval/fix_review -> parked (with gate findings), terminal
-#      passed/checks-passed -> done, failed/cancelled -> failed. EXCEPT: while
+#      passed/passed-with-override/checks-passed -> done, failed/cancelled -> failed.
+#      passed-with-override retains an "approved override" marker in the detail.
+#      EXCEPT: while
 #      the active step is ci, `axi status` alone cannot tell "still waiting on
 #      checks" from "checks green, waiting on merge" (see nm_ci_checks_state) -
 #      a ci-step log-tail check overrides working -> done once checks read
@@ -582,12 +584,15 @@ nm_reclassify_failed_run_as_held_green() {
 
 # 0 when an explicit probe proves the shared daemon down: `no-mistakes daemon
 # status` is the canonical down-probe (the same one fm-brief.sh hands crews
-# before a blocked append) and exits non-zero when the daemon is not running.
+# before a blocked append); it exits non-zero, or (v1.91.0) exits zero printing
+# "daemon not running", when the daemon is down.
 # Bounded like every other CLI call; a probe that fails for any reason -
 # refused socket, timeout, non-zero answer - means the daemon is not provably
 # up, which is the only fact the coarse fallback needs.
 nm_daemon_probe_down() {
-  fm_nm_run_checked "$WT" "$NM_TIMEOUT" daemon status >/dev/null || return 0
+  local out
+  out=$(fm_nm_run_checked "$WT" "$NM_TIMEOUT" daemon status) || return 0
+  case "$out" in *"daemon not running"*) return 0 ;; esac
   return 1
 }
 
@@ -835,6 +840,8 @@ if [ "$HAVE_RUN" = 1 ]; then
     if [ -n "$outcome" ]; then
       case "$outcome" in
         passed)        RUN_STATE="done"; RUN_DETAIL=$(passed_pr_detail) ;;
+        # An explicitly approved Test exception or CI failure.
+        passed-with-override) RUN_STATE="done"; RUN_DETAIL="$(passed_pr_detail) (approved override)" ;;
         checks-passed) RUN_STATE="done"; RUN_DETAIL="checks green: PR ready for review" ;;
         failed)
           if nm_reclassify_failed_run_as_held_green; then :; else

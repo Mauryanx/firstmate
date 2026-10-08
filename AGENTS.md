@@ -379,12 +379,12 @@ Apart from that single supported abort, do not hand-edit, commit, restart, or st
 Once ownership is settled, validate exactly once against that final head so no obsolete or intermediate head is ever treated as authoritative.
 
 An ask-user finding returns as `needs-decision`; firstmate loads `ask-user-authority` and either decides or escalates per that skill.
-Send the same worker one exact decision naming the decision key, step, action, affected finding IDs, instructions where needed, and exact response command, passing `--resolve-key` so the worker's open decision record closes at answer time.
+Send the same worker one exact decision naming the decision key, step, action, fix or ignore for each escalated finding ID, instructions where needed, and exact response command, passing `--resolve-key` so the worker's open decision record closes at answer time.
 Require the matching `resolved` event, forbid `--yes`, and require the worker to process every synchronous return until completion or a genuinely new escalation.
 Resume fleet supervision immediately after the decision lands.
 
 Judge validation by the currently attributed run step through `bin/fm-crew-state.sh`, not by shell liveness or the last status event.
-Running, fixing, or CI states remain working; parked approval or fix-review states require the worker to follow the active gate help; passed or checks-passed is done; failed or cancelled is failed exactly as `bin/fm-crew-state.sh` prints it - only that state line reclassifies an orphaned ci monitor after green checks as held-for-merge done, or a terminal failed record with the daemon unreachable as unknown, never the raw run record.
+Use the helper's state line as the verdict and its header as the mapping owner; follow the active gate help for parked approval or fix-review states.
 A worker hand-editing, committing, aborting, or restarting during an active validation run duplicates pipeline ownership outside the supersession sequence above; steer it back to the gate response flow.
 The worker reports the PR when CI first becomes green rather than waiting for merge monitoring to finish.
 
