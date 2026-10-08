@@ -1,0 +1,2 @@
+[2026-10-07T18:56:35+0000] wedge alarm: courier notifier timed out after 1s (limit 1s)
+[2026-10-07T18:56:35+0000] wedge alarm: courier notification failed (exit 124); marker retained; publication metadata: 

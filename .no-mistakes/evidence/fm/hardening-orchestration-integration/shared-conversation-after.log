@@ -1,0 +1,2 @@
+PASS: shared CLI keeps staged modes/group/effective ACLs across atomic writes and fresh processes
+ok - conversation contract: durable capture, session routing, reply and playback recovery

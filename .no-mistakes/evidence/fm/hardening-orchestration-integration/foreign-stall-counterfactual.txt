@@ -1,0 +1,18 @@
+ok - foreign secondmate queue alerts once per no-progress episode without age-only or cascade noise
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/state/.secondmate-wake-progress-mate
+1010	100-9
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-first.out
+checkpoint: no actionable wake within 4s
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-next.out
+checkpoint: no actionable wake within 4s
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-progress.out
+check: rearm-resurface
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-refrozen.out
+check: secondmate wake-loop stalled: mate=mate row=9 idle=2s
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-stalled.out
+check: secondmate wake-loop stalled: mate=mate row=8 idle=2s
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-first.err
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-next.err
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-progress.err
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-refrozen.err
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.NAHyje/secondmate-foreign-stall/watch-stalled.err

@@ -1,0 +1,3 @@
+PASS: staged wake modes/group/effective ACLs survive restart, recovery, stale locks and queue replacement
+PASS: write+traverse needs no state listing; normal wake and unrelated locks remain private
+ok - shared wake access preserves recovery generations and private defaults

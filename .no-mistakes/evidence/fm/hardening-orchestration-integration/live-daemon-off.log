@@ -1,0 +1,3 @@
+[2026-10-08T00:07:26+0000] daemon starting (pid 3482850); target=validation:0; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=900s
+[2026-10-08T00:07:28+0000] inject deferred: supervisor pane busy (agent mid-turn)
+[2026-10-08T00:07:28+0000] ERROR: away-mode escalation undelivered 603s; inject could not confirm a submit (supervisor pane busy or wedged). Buffer + wake-queue preserved; alarm marker written.

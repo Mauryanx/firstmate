@@ -1,0 +1,32 @@
+before-fix: real caller and courier subprocesses with a synthetic receipt-scan stall
+test_active_alert_logs_identity_before_receipt_watchdog_expiry (watchdog_contract.Clients.test_active_alert_logs_identity_before_receipt_watchdog_expiry) ... FAIL
+
+======================================================================
+FAIL: test_active_alert_logs_identity_before_receipt_watchdog_expiry (watchdog_contract.Clients.test_active_alert_logs_identity_before_receipt_watchdog_expiry)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/tests/fm-zones-cases.py", line 427, in test_active_alert_logs_identity_before_receipt_watchdog_expiry
+    self.assertIn("courier delivery failed (exit 124)", log)
+    ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'courier delivery failed (exit 124)' not found in '[2026-10-07T18:56:35+0000] wedge alarm: courier notifier timed out after 1s (limit 1s)\n[2026-10-07T18:56:35+0000] wedge alarm: courier notification failed (exit 124); marker retained; publication metadata: \n'
+
+----------------------------------------------------------------------
+Ran 1 test in 1.076s
+
+FAILED (failures=1)
+[2026-10-07T18:56:35+0000] wedge alarm: courier notifier timed out after 1s (limit 1s)
+[2026-10-07T18:56:35+0000] wedge alarm: courier notification failed (exit 124); marker retained; publication metadata: 
+
+target: real caller and courier subprocesses with a synthetic receipt-scan stall
+test_active_alert_logs_identity_before_receipt_watchdog_expiry (watchdog_contract.Clients.test_active_alert_logs_identity_before_receipt_watchdog_expiry) ... ok
+
+----------------------------------------------------------------------
+Ran 1 test in 1.119s
+
+OK
+ok - receipt watchdog expiry after courier claim preserves logged ID/digest for recovery without resubmission
+[2026-10-07T18:56:35+0000] wedge alarm: courier notification published; recovery identity: {"digest":"6c541c509b6bba7845d836858b9d4038996a22eb5b1800a2f48983bd92cb77af","id":"notify-c9d6889d9188d61678c28911c9695970","idempotency_key":"courier-724b2e7ef3a73de9e1d7c7da18f53d77ee4762ba54ca60fe27259e2e12a211ca","result":"submitted"}
+[2026-10-07T18:56:36+0000] wedge alarm: courier-delivery notifier timed out after 1s (limit 1s)
+[2026-10-07T18:56:36+0000] wedge alarm: courier delivery failed (exit 124); marker retained; publication metadata: {"digest":"6c541c509b6bba7845d836858b9d4038996a22eb5b1800a2f48983bd92cb77af","id":"notify-c9d6889d9188d61678c28911c9695970","idempotency_key":"courier-724b2e7ef3a73de9e1d7c7da18f53d77ee4762ba54ca60fe27259e2e12a211ca","result":"submitted"}; receipt evidence: 
+
+Regression reproduced before fix; target recovers without a second proposal.

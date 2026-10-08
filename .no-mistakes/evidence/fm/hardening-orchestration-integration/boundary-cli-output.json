@@ -1,0 +1,61 @@
+[
+  {
+    "command": "fm-courier.py notify +12025550102",
+    "exit": 0,
+    "stdout": "{\"digest\":\"9fbf7a26880c08c485e2989cc3d222d924691c468d28ef435423d3ccc1083dce\",\"id\":\"notify-e731da70570f3e4edf3b21cad94f5d1b\",\"idempotency_key\":\"courier-8f1de458ce97e5c323441ff27891f7887242dbcc956df1c6eb25b60835115671\",\"result\":\"submitted\"}\n",
+    "stderr": ""
+  },
+  {
+    "public_proposal": {
+      "attachments": [],
+      "channel": "imessage",
+      "id": "notify-e731da70570f3e4edf3b21cad94f5d1b",
+      "purpose": "Firstmate active notification",
+      "text": "Example work is ready.",
+      "to": "+12025550102"
+    },
+    "mode": "0o640"
+  },
+  {
+    "command": "fm-courier.py delivery notify-e731da70570f3e4edf3b21cad94f5d1b 9fbf7a26880c08c485e2989cc3d222d924691c468d28ef435423d3ccc1083dce",
+    "exit": 4,
+    "stdout": "{\"delivered\":false,\"digest\":\"9fbf7a26880c08c485e2989cc3d222d924691c468d28ef435423d3ccc1083dce\",\"id\":\"notify-e731da70570f3e4edf3b21cad94f5d1b\",\"receipts\":[]}\n",
+    "stderr": ""
+  },
+  {
+    "fixture_contract": "Synthetic confirmed receipt; no provider or approval was exercised",
+    "receipt": {
+      "kind": "courier-result",
+      "id": "notify-e731da70570f3e4edf3b21cad94f5d1b",
+      "digest": "9fbf7a26880c08c485e2989cc3d222d924691c468d28ef435423d3ccc1083dce",
+      "result": "sent",
+      "approval_ref": null,
+      "idempotency_key": "courier-8f1de458ce97e5c323441ff27891f7887242dbcc956df1c6eb25b60835115671",
+      "message_id": "dummy-confirmed-provider-id"
+    }
+  },
+  {
+    "command": "fm-courier.py delivery notify-e731da70570f3e4edf3b21cad94f5d1b 9fbf7a26880c08c485e2989cc3d222d924691c468d28ef435423d3ccc1083dce",
+    "exit": 0,
+    "stdout": "{\"delivered\":true,\"digest\":\"9fbf7a26880c08c485e2989cc3d222d924691c468d28ef435423d3ccc1083dce\",\"id\":\"notify-e731da70570f3e4edf3b21cad94f5d1b\",\"receipts\":[{\"approval_ref\":null,\"digest\":\"9fbf7a26880c08c485e2989cc3d222d924691c468d28ef435423d3ccc1083dce\",\"id\":\"notify-e731da70570f3e4edf3b21cad94f5d1b\",\"idempotency_key\":\"courier-8f1de458ce97e5c323441ff27891f7887242dbcc956df1c6eb25b60835115671\",\"kind\":\"courier-result\",\"message_id\":\"dummy-confirmed-provider-id\",\"result\":\"sent\"}]}\n",
+    "stderr": ""
+  },
+  {
+    "command": "fm-courier.py delivery notify-e731da70570f3e4edf3b21cad94f5d1b 9fbf7a26880c08c485e2989cc3d222d924691c468d28ef435423d3ccc1083dce",
+    "exit": 1,
+    "stdout": "{\"delivered\":false,\"digest\":\"9fbf7a26880c08c485e2989cc3d222d924691c468d28ef435423d3ccc1083dce\",\"id\":\"notify-e731da70570f3e4edf3b21cad94f5d1b\",\"receipts\":null}\n",
+    "stderr": "courier refused notification receipts\n"
+  },
+  {
+    "command": "fm-brain-desk.py result example",
+    "exit": 0,
+    "stdout": "{\"facts\":[{\"citations\":[{\"page\":\"projects/example\",\"view_line\":4}],\"text\":\"Example Project has three maintainers.\"}]}\n",
+    "stderr": ""
+  },
+  {
+    "command": "fm-brain-desk.py result example",
+    "exit": 1,
+    "stdout": "",
+    "stderr": "brain desk refused request or result\n"
+  }
+]

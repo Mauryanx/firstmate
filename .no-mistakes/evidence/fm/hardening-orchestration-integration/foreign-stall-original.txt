@@ -1,0 +1,12 @@
+not ok - a foreign queue with no progress did not alert: check: rearm-resurface
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.RViGTe/secondmate-foreign-stall/state/.secondmate-wake-progress-mate
+1004	100-8
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.RViGTe/secondmate-foreign-stall/watch-first.out
+checkpoint: no actionable wake within 1s
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.RViGTe/secondmate-foreign-stall/watch-progress.out
+checkpoint: no actionable wake within 1s
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.RViGTe/secondmate-foreign-stall/watch-stalled.out
+check: rearm-resurface
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.RViGTe/secondmate-foreign-stall/watch-first.err
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.RViGTe/secondmate-foreign-stall/watch-progress.err
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/state/scratchpad-validation/fm-wake-tests.RViGTe/secondmate-foreign-stall/watch-stalled.err

@@ -1,0 +1,13 @@
+Validated worktree HEAD: 709210e746763513a9e7448145d4ce006f3aede0
+Unix zone identity: brainreader MISSING
+Unix zone identity: courier MISSING
+Installed endpoint: /usr/local/bin/fm-brainreader-shell MISSING
+Installed endpoint: /srv/brain/brainreader/requests MISSING
+Installed endpoint: /srv/brain/brainreader/out MISSING
+Installed endpoint: /srv/brain/courier/outbox MISSING
+Installed endpoint: /srv/brain/courier/inbox MISSING
+Local capability: setfacl /usr/bin/setfacl
+Local capability: getfacl /usr/bin/getfacl
+Local capability: tmux /usr/bin/tmux
+No final verified courier/notification-adapter release or pinned pre-VM evidence bundle was supplied inside this worktree or task evidence folder.
+No installed-zone acceptance, real agent, provider call, credential change, service activation or VM provisioning performed.

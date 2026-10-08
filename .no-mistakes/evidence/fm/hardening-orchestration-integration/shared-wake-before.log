@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "<stdin>", line 45, in <module>
+  File "<stdin>", line 36, in access
+AssertionError: (PosixPath('/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/.test-phase-tmp/fm-wake-tests.ZUJaJ2/shared-interface/state/.wake-queue.lock.owner.gTwWPS'), '0o40700')
+not ok - shared wake access

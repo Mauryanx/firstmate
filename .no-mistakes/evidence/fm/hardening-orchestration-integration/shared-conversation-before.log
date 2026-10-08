@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/.test-phase-tmp/before/tests/fm-inbox-conversation-cases.py", line 160, in <module>
+    shared_publication()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/.test-phase-tmp/before/tests/fm-inbox-conversation-cases.py", line 77, in shared_publication
+    permissions(journal, 0o660)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/.test-phase-tmp/before/tests/fm-inbox-conversation-cases.py", line 59, in permissions
+    assert stat.S_IMODE(path.stat().st_mode) == mode, (path, oct(path.stat().st_mode))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: (PosixPath('/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4BS67PR3X3JGEBBM5DHQAT4/.test-phase-tmp/fm-inbox-conversation.cF3CzO/shared-home/state/voice-conversation/journal.json'), '0o100600')
+not ok - conversation contract

@@ -1,0 +1,11 @@
+PASS: 9 inputs accounted for; 8 single dispatch claims, 1 stale bound input explicitly rejected; 6 replies retained
+PASS: capture/accept/publication/playback crash windows, duplicate races and wrong-session refusals
+PASS: the newest capture names the live call; a call nobody answered is superseded, a nameless one supersedes nothing
+PASS: a redial captured mid-pass is never superseded; the pass restarts and retires the dropped call
+PASS: live publication is owner-authored, digest-bound, and ordered; portions surface as waiting speech
+PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused
+PASS: an ElevenLabs-only home refuses an iMessage reply and records nothing new for a voice conversation
+PASS: a v2 policy carries a text destination; each conversation publishes only to the one it is bound to
+PASS: a destination withdrawn from the policy can no longer be published to
+PASS: shared CLI keeps staged modes/group/effective ACLs across atomic writes and fresh processes
+ok - conversation contract: durable capture, session routing, reply and playback recovery

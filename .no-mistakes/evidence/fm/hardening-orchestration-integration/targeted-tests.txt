@@ -1,0 +1,56 @@
+FM_TEST_BEGIN 2026-10-08T00:01:58Z tests/fm-wake-queue.test.sh family=watcher-wake-lock expected_gate_skip=none
+PASS: staged wake modes/group/effective ACLs survive restart, recovery, stale locks and queue replacement
+PASS: write+traverse needs no state listing; normal wake and unrelated locks remain private
+ok - shared wake access preserves recovery generations and private defaults
+ok - an abandoned same-process lock hold is reclaimed; a parent's live hold is not
+ok - without BASHPID a subshell cannot release or reclaim its parent lock and owns its own hold
+ok - bounded acquire hands ownership to the waiting caller after contention
+ok - presentation lock waits are bounded and retriable without weakening acknowledgement atomicity
+ok - malformed presentation locks report acquire failure instead of contention
+not ok - a foreign queue with no progress did not alert: check: rearm-resurface
+FM_TEST_END 2026-10-08T00:02:30Z tests/fm-wake-queue.test.sh exit=1 duration_ms=32416 gate_skip=false
+FM_TEST_BEGIN 2026-10-08T00:02:30Z tests/fm-zones.test.sh family=standalone expected_gate_skip=none
+.................s.
+----------------------------------------------------------------------
+Ran 19 tests in 21.189s
+
+OK (skipped=1)
+ok - actual active-alert caller publishes courier proposals, logs pending identity and failures, and retains alarm evidence
+ok - receipt watchdog expiry after courier claim preserves logged ID/digest for recovery without resubmission
+ok - unconfigured alerts, off directives, disabled courier and the discard seam never publish notifications
+ok - invalid task/question and wrapper failure do not expose model output
+ok - brain launcher uses fixed argv and 0640 prompt; result validates facts
+ok - brain rejects raw reports, instructions, links, duplicate keys and unsafe citations
+ok - brain persisted results refuse symlinks, writable authority and wrong owner
+ok - concurrent producers atomically publish one complete request without overwrite
+ok - courier receipts match ID/digest, preserve snapshots and refuse wrong permissions/owner
+ok - courier refuses caller approval assertions, unreviewed channels and unsafe files
+ok - courier rejects modified receipt hashes and symlink receipts
+ok - courier publishes durable 0640 snapshots, exact digests and stable retry keys
+ok - opt-in off does no I/O and enabled missing endpoints refuse
+ok - notifications publish through courier; only exact sent receipts confirm delivery and polling never resubmits
+ok - invalid notifications refuse; receipt failure preserves publication identity for safe polling recovery
+ok - poll proposal digests preserve offered order and confirmed provider/poll receipts remain compatible
+ok - unconfirmed, incomplete or malformed provider/poll authority refuses before delivery confirmation
+ok - symlink ancestors and nonregular inputs refuse without privilege calls or writes
+FM_TEST_END 2026-10-08T00:02:52Z tests/fm-zones.test.sh exit=0 duration_ms=21579 gate_skip=false
+FM_TEST_BEGIN 2026-10-08T00:02:52Z tests/fm-inbox-conversation.test.sh family=unclassified expected_gate_skip=none
+PASS: 9 inputs accounted for; 8 single dispatch claims, 1 stale bound input explicitly rejected; 6 replies retained
+PASS: capture/accept/publication/playback crash windows, duplicate races and wrong-session refusals
+PASS: the newest capture names the live call; a call nobody answered is superseded, a nameless one supersedes nothing
+PASS: a redial captured mid-pass is never superseded; the pass restarts and retires the dropped call
+PASS: live publication is owner-authored, digest-bound, and ordered; portions surface as waiting speech
+PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused
+PASS: an ElevenLabs-only home refuses an iMessage reply and records nothing new for a voice conversation
+PASS: a v2 policy carries a text destination; each conversation publishes only to the one it is bound to
+PASS: a destination withdrawn from the policy can no longer be published to
+PASS: shared CLI keeps staged modes/group/effective ACLs across atomic writes and fresh processes
+ok - conversation contract: durable capture, session routing, reply and playback recovery
+FM_TEST_END 2026-10-08T00:05:18Z tests/fm-inbox-conversation.test.sh exit=0 duration_ms=146564 gate_skip=false
+FM_TEST_SUMMARY total=3 failed=1 skipped_gate=0 duration_ms=201540
+FM_TEST_SUMMARY_FAMILY family=standalone count=1 duration_ms=21579 failed=0
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=146564 failed=0
+FM_TEST_SUMMARY_FAMILY family=watcher-wake-lock count=1 duration_ms=32416 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-inbox-conversation.test.sh duration_ms=146564
+FM_TEST_SLOWEST rank=2 script=tests/fm-wake-queue.test.sh duration_ms=32416
+FM_TEST_SLOWEST rank=3 script=tests/fm-zones.test.sh duration_ms=21579

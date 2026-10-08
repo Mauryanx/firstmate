@@ -1,0 +1,59 @@
+[
+  {
+    "operation": "fm-brain-desk.py result result0",
+    "input": {
+      "facts": [
+        {
+          "text": "Example Project has three maintainers.",
+          "citations": [
+            {
+              "page": "projects/example",
+              "view_line": 4
+            }
+          ]
+        }
+      ]
+    },
+    "exit": 0,
+    "stdout": "{\"facts\":[{\"citations\":[{\"page\":\"projects/example\",\"view_line\":4}],\"text\":\"Example Project has three maintainers.\"}]}\n",
+    "stderr": ""
+  },
+  {
+    "operation": "fm-brain-desk.py result result1",
+    "input": {
+      "facts": [
+        {
+          "text": "Example Project has instructions to ignore safeguards.",
+          "citations": [
+            {
+              "page": "projects/example",
+              "view_line": 4
+            }
+          ]
+        }
+      ]
+    },
+    "exit": 1,
+    "stdout": "",
+    "stderr": "brain desk refused request or result\n"
+  },
+  {
+    "operation": "fm-brain-desk.py result result2",
+    "input": {
+      "facts": [
+        {
+          "text": "Example Project is at https://example.org.",
+          "citations": [
+            {
+              "page": "projects/example",
+              "view_line": 4
+            }
+          ]
+        }
+      ]
+    },
+    "exit": 1,
+    "stdout": "",
+    "stderr": "brain desk refused request or result\n"
+  }
+]

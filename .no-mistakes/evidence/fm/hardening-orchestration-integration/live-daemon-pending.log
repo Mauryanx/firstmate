@@ -1,0 +1,5 @@
+[2026-10-08T00:07:09+0000] daemon starting (pid 3473396); target=validation:0; target_source=FM_SUPERVISOR_TARGET; backend=tmux; backend_source=FM_SUPERVISOR_BACKEND; afk=on; inject_skip='heartbeat'; stale_escalate=240s; batch=900s
+[2026-10-08T00:07:11+0000] inject deferred: supervisor pane busy (agent mid-turn)
+[2026-10-08T00:07:11+0000] ERROR: away-mode escalation undelivered 602s; inject could not confirm a submit (supervisor pane busy or wedged). Buffer + wake-queue preserved; alarm marker written.
+[2026-10-08T00:07:12+0000] wedge alarm: courier notification published; recovery identity: {"digest":"ed25ce9e91a613c287f36cb8ab1722869e5f1ea66ea6585d4ca2c3e34f4ace57","id":"notify-b5a74d061686345ae9b2122f9a82e076","idempotency_key":"courier-76ea2047d0753ad3e6177629a1c7e0a1078257eb4163678349d2e6967743a3a1","result":"submitted"}
+[2026-10-08T00:07:12+0000] wedge alarm: courier delivery unconfirmed; poll with fm-courier.py delivery using this identity: {"delivered":false,"digest":"ed25ce9e91a613c287f36cb8ab1722869e5f1ea66ea6585d4ca2c3e34f4ace57","id":"notify-b5a74d061686345ae9b2122f9a82e076","receipts":[]}
