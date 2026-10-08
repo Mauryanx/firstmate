@@ -20,40 +20,6 @@ Untracked files and directories whose names begin with `scratchpad` are also git
 The producing PR and Relay helpers own the fields they append, `bin/fm-classify-lib.sh` owns status-event vocabulary, and `bin/fm-crew-state.sh` owns current-state reconciliation.
 Wake, watcher, away-mode, and Relay-specific state mechanics remain with their named scripts and reference sections rather than being duplicated into one exhaustive state tree here.
 
-## Optional brain-desk and courier integration
-
-[`bin/fm-brain-desk.py`](../bin/fm-brain-desk.py) connects Firstmate to the installed bounded desk; its help owns invocation, endpoint settings, input bounds and result validation.
-It is separate from ordinary ship/scout workers: `fm-spawn.sh`, `fm-send.sh` and `fm-control.sh` retain their existing launch, steer, interrupt and resume behavior.
-The historical privileged wrapper name provides a tool-less desk, never an interactive brainreader shell or a caller-selected executable.
-Desk facts are accepted only through the validated facts/citations protocol; raw reports, links and instructions refuse before reaching stdout.
-Keep journal reads on the curated view with `BRAIN_JOURNAL_VIEW=/srv/brain/view`, and operational control on the installed allowlisted `brainctl`; unavailable view data never licenses a raw-store fallback.
-
-[`bin/fm-courier.py`](../bin/fm-courier.py) publishes untrusted delivery proposals, adapts Firstmate notifications and reads immutable courier receipts; its help owns invocation, file publication, matching and delivery exit semantics.
-It has no provider client, approval-input path or send credential reader.
-Proposal submission is not delivery: only courier's recipient/channel policy, leak checks and authenticated exact-message code consumption can authorize a non-owner send.
-Receipt snapshots are returned together for the exact ID/digest because the upstream protocol supplies no ordering field; they are not a latest-status event stream.
-The Firstmate-owned active-alert caller uses the explicit `courier` channel described in [wedge-alarm.md](wedge-alarm.md); ordinary task steering remains with `fm-send.sh`.
-The existing phone/text notification transport is firstmate-voice's `deploy/fm-notify` and `bridge/imessage/notify.py`, with conversation delivery in its poller.
-That adapter's single wire owner is `firstmate-voice/docs/courier-notify-interface.txt` at revision `41ea2049433c5353b97bb50cd1739cb66fdcfd01`, SHA256 `36f5cc52d55d56f4da14fa9d6ec3d24938581db72dd32f29076fe7aca0bec0eb`.
-Its `FM_NOTIFY_COURIER=1` opt-in preserves the existing owner-only `fm-notify` CLI, native polls, reactions and unconfigured errors; it is separate from this repository's low-level `FM_COURIER_ENABLED` proposal client.
-This producer accepts that wire's poll options and validates its added confirmed provider/poll receipt fields; courier retains owner-only native-poll authorization and exact-message approval for ordinary team proposals.
-Fresh correlated vote requests and consumption remain with the owned notification adapter wire, rather than a second Firstmate vote protocol.
-Cross-project acceptance remains incomplete until main tests the actual adapter against the final verified courier revision with dummy data, including poll retry, fresh vote consumption, approval, edit, denial, ambiguous-send and caller errors.
-Older courier fixtures and a contract revision alone do not close that dependency, and this worktree does not modify the sibling project.
-This change performs no adapter deployment, credential migration or real sends.
-
-Both clients are disabled by default and refuse unavailable configured endpoints without a legacy or raw-access fallback.
-Their help documents environment settings for explicitly prepared installations and local fixtures; production must retain the designated brainreader/courier result identities and zone-owned read-only result paths.
-Alternate paths or result identities are fixture/operator settings, not proof of OS isolation.
-Client defaults use the physical zone directories because the installer creates symlink aliases and these file clients reject symlink traversal; the fixed installed brainreader wrapper addresses the same request/result files through its installer-owned alias.
-Root must separately install the reviewed zones, group membership, ACLs and privilege rules before enabling either client.
-This preparation neither installs services nor changes credentials, live configuration, worker environments or disk-unlock restart behavior.
-Portable acceptance is `bin/fm-test-run.sh tests/fm-zones.test.sh`; its header documents optional generic courier parity with a reviewed release using dummy loopback providers.
-That optional parity does not prove the actual notification adapter, native poll retry or fresh vote consumption against its final verified revision.
-Real OS isolation and real delivery remain unverified until the separately approved VM acceptance and supervised cutover are performed.
-
-## Session startup
-
 `bin/fm-session-start.sh`'s header is the single owner of session-start ordering, composed commands, digest contents, and the digest's startup mechanism.
 `bin/fm-startup-network.sh`'s header owns the deferred startup stage that keeps every external-network call and the potentially slow inactive-outcome scan off that digest's blocking path, including its state files and the safety argument for running them later.
 `docs/sessionstart-nudge.md` owns the native session-open adapter tiers that run or nudge the digest command, and the source routing between them.
@@ -224,7 +190,7 @@ When away-mode injection wedges past `FM_MAX_DEFER_SECS`, the sub-supervisor rai
 Beyond the durable `state/.subsuper-inject-wedged` marker and the tmux status-line flash, it attempts a configured backend-independent active alert that can reach the captain even when every pane and its backend status-line is unreadable.
 `config/wedge-alarm` (local, gitignored) lists channel directives, one per non-empty, non-comment line; every listed non-`off` channel fires, best-effort.
 `FM_WEDGE_ALARM_CHANNEL` overrides the file with a single directive.
-See [wedge-alarm.md](wedge-alarm.md#channels) for channel directives, including the disabled-by-default courier adapter.
+Directives are `off` (a position-independent kill switch that disables every active alert), `auto`/`default`, `osascript` (macOS Notification Center banner), `herdr` (herdr UI notification), and `command:<cmd>` (run `<cmd>` via `sh -c`, summary on `$1` and stdin).
 An absent file means `auto`, i.e. default-on on macOS: the alarm exists precisely so a wedged away-mode primary is never silent, and it fires at most once per max-defer window after a genuine wedge.
 A missing or failing channel logs and falls through to the next, never crashing the daemon.
 See [`wedge-alarm.md`](wedge-alarm.md) for the current channel reference, [`verification/supervision.md`](verification/supervision.md#wedge-alarm-channels) for active evidence, and [`examples/wedge-alarm`](examples/wedge-alarm) for a copyable config.
@@ -556,6 +522,7 @@ The resolver sends the key to `curl` only as a header read from a file descripto
 The resolver fixes the endpoint at `https://api.typesafe.ai`, model at `jev-latest`, confidence floor at 0.6, and request timeout at 5 seconds; `TYPESAFE_API_KEY` is its only resolver-specific environment setting.
 The live rule-match evidence is recorded in [`verification/dispatch-resolve.md`](verification/dispatch-resolve.md).
 
+<<<<<<< HEAD
 ## GitHub checks authentication
 
 An optional GitHub App can read check runs when the normal GitHub login cannot, while merges and Git pushes retain the normal user credentials.
@@ -579,6 +546,13 @@ The helper uses `curl`, `jq`, and `openssl`, explicitly requests only read permi
 The no-mistakes CI monitor uses its own GitHub login by default.
 Opting into this App for CI requires a no-mistakes build with the `github_ci_reader` hook (v1.91.0 plus the hook); set its global `github_ci_reader` to this helper using the token invocation documented in the helper's header.
 [`tests/fm-gh-checks-read.test.sh`](../tests/fm-gh-checks-read.test.sh) exercises authentication, single-mint expiry refusal, paginated contexts, current-run reporting, head-change refusal, and secret handling.
+=======
+## Brain-room client (FM_BRAIN_DESK_ENABLED)
+
+[`bin/fm-brain-desk.py`](../bin/fm-brain-desk.py) is Firstmate's client for the installed brain rooms: desk questions, the morning-brief `brainctl` verbs, and the journal-input export; its help owns invocation, endpoints, bounds and result validation.
+It is off unless `FM_BRAIN_DESK_ENABLED=1`, so callers keep their direct brain path until the rooms are activated, and an enabled but unavailable room refuses rather than falling back to raw brain access.
+Phone and text notifications, including their optional courier route, belong to firstmate-voice's `fm-notify`; the wedge alarm reaches it through a `command:` directive ([wedge-alarm.md](wedge-alarm.md#channels)).
+>>>>>>> fe4f05c (docs: point the configuration reference at the brain-room client and fm-notify)
 
 ## Toolchain
 
@@ -1225,9 +1199,9 @@ FM_SUPERVISOR_TARGET=              # optional supervisor pane target override; t
 FM_INJECT_SKIP=heartbeat           # |-prefixes force-self-handled bypassing classification; empty disables
 FM_ESCALATE_BATCH_SECS=90          # buffer window for batched escalation digests; 0 = flush immediately
 FM_MAX_DEFER_SECS=300              # max buffered escalation age before retry plus wedge alarm; 0 disables
-FM_WEDGE_ALARM_CHANNEL=            # channel override; directives and defaults: docs/wedge-alarm.md "Channels"
-FM_WEDGE_ALARM_EXEC=              # notifier seam; invocation and safe defaults: docs/wedge-alarm.md "Test safety"
-FM_WEDGE_ALARM_TIMEOUT_SECS=10    # notifier watchdog; per-stage bounds: docs/wedge-alarm.md "Channels"
+FM_WEDGE_ALARM_CHANNEL=            # override config/wedge-alarm with one active-alert directive for the wedge alarm; off|auto|osascript|herdr|command:<cmd>; absent = auto (macOS -> an OS notification)
+FM_WEDGE_ALARM_EXEC=              # notifier seam: route every channel (osascript, herdr, command:) through this command as `<cmd> <channel> <summary>`; "discard" fires nothing; unset in production; the daemon defaults it to "discard" when sourced so no test posts a real notification (docs/wedge-alarm.md)
+FM_WEDGE_ALARM_TIMEOUT_SECS=10    # maximum seconds for each osascript, herdr, override, or command: notifier before its watchdog terminates it and continues to the next channel; invalid or zero values use 10
 FM_INJECT_FAIL_SLEEP=30            # seconds to back off when the supervisor pane is unavailable
 FM_INJECT_CONFIRM_RETRIES=3        # daemon Enter-retry attempts after typing a digest once
 FM_INJECT_CONFIRM_SLEEP=0.5        # seconds between daemon submit checks
