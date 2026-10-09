@@ -1,0 +1,7 @@
+FM_TEST_BEGIN 2026-10-09T15:02:02Z tests/fm-pi-branch-responsiveness-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+pi 1.0.4 keystroke echo, worst observed: floor 79.1 ms, extension idle 62.3 ms, extension delivering 75.0 ms
+ok - supervision outcome delivery keeps the real Pi 1.0.4 TUI echoing keystrokes at its unloaded floor
+FM_TEST_END 2026-10-09T15:02:22Z tests/fm-pi-branch-responsiveness-live-e2e.test.sh exit=0 duration_ms=19936 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=20138
+FM_TEST_SUMMARY_FAMILY family=live-harness-optin count=1 duration_ms=19936 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pi-branch-responsiveness-live-e2e.test.sh duration_ms=19936

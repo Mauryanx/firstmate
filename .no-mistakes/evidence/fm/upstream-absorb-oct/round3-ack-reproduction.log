@@ -1,0 +1,26 @@
+$ fm-inbox.sh note --json --request-id sequential-ack Handle this once.
+{"schema":"fm-inbox-note.v1","outcome":"created","id":"1791564310-qcXu1u","request_id":"sequential-ack","saved":true,"announced":true,"acknowledged":false,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/ack-repro-0eekvzlb/state/inbox/1791564310-qcXu1u.note"}
+
+$ fm-inbox.sh drain --ack 1791564310-qcXu1u
+acked 1791564310-qcXu1u
+
+$ fm-inbox.sh note --json --request-id sequential-ack Handle this once.
+{"schema":"fm-inbox-note.v1","outcome":"replay","id":"1791564310-qcXu1u","request_id":"sequential-ack","saved":true,"announced":true,"acknowledged":false,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/ack-repro-0eekvzlb/state/inbox/handled/1791564310-qcXu1u.note"}
+
+$ fm-inbox.sh note --request-id sequential-ack Handle this once.
+replay 1791564310-qcXu1u
+  Handle this once.
+  firstmate will pick this up at its next check.
+
+$ fm-inbox.sh announce --json 1791564310-qcXu1u
+{"schema":"fm-inbox-note.v1","outcome":"replay","id":"1791564310-qcXu1u","request_id":null,"saved":true,"announced":true,"acknowledged":false,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/ack-repro-0eekvzlb/state/inbox/handled/1791564310-qcXu1u.note"}
+
+$ fm-inbox.sh receipts --all-pending --all-handled
+{"schema":"fm-inbox-receipts.v1","home":".test-phase-tmp/ack-repro-0eekvzlb","generated":"2026-10-09T16:45:10Z","pending":[],"handled":[{"id":"1791564310-qcXu1u","at":"2026-10-09T16:45:10Z","source":"text","request_id":"sequential-ack","body":"Handle this once.","acknowledged":true,"announced":true,"reply":null}],"replies":[],"reply_cursor":"","omitted":[]}
+
+$ fm-inbox.sh note --json --request-id sequential-ack Handle this once.
+{"schema":"fm-inbox-note.v1","outcome":"replay","id":"1791564310-qcXu1u","request_id":"sequential-ack","saved":true,"announced":false,"acknowledged":true,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/ack-repro-0eekvzlb/state/inbox/handled/1791564310-qcXu1u.note"}
+
+Counterfactual: removing only the fixture announcement marker changes the replay to acknowledged=true. The handled note and request ID are unchanged.
+
+FAIL: sequential replay reports acknowledged=false and promises another pickup, although receipts show acknowledged=true and no pending note. No concurrent callers or publication race were used.

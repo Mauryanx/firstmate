@@ -1,0 +1,7 @@
+FM_TEST_BEGIN 2026-10-09T13:45:51Z tests/fm-supervision-host.test.sh family=afk expected_gate_skip=none
+ok - host: away voice-only, mixed, and newly arriving conversation turns reach main without an engine turn
+ok - host: already-drained away wakes stay quiet at both offer boundaries, while corrupted queues reach main
+FM_TEST_END 2026-10-09T13:47:19Z tests/fm-supervision-host.test.sh exit=0 duration_ms=88316 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=88498
+FM_TEST_SUMMARY_FAMILY family=afk count=1 duration_ms=88316 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-supervision-host.test.sh duration_ms=88316

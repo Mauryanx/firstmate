@@ -1,0 +1,33 @@
+FM_TEST_BEGIN 2026-10-09T14:07:03Z tests/fm-supervision-host-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+skip: live: opt-in; set FM_SUPERVISION_HOST_LIVE_E2E=1 to run
+fm-test-run: gate skip: tests/fm-supervision-host-live-e2e.test.sh: live: opt-in; set FM_SUPERVISION_HOST_LIVE_E2E=1 to run
+FM_TEST_END 2026-10-09T14:07:03Z tests/fm-supervision-host-live-e2e.test.sh exit=0 duration_ms=171 gate_skip=true
+FM_TEST_BEGIN 2026-10-09T14:07:03Z tests/fm-supervision-host-attended-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+skip: live: opt-in; set FM_SUPERVISION_HOST_ATTENDED_LIVE_E2E=1 to run
+fm-test-run: gate skip: tests/fm-supervision-host-attended-live-e2e.test.sh: live: opt-in; set FM_SUPERVISION_HOST_ATTENDED_LIVE_E2E=1 to run
+FM_TEST_END 2026-10-09T14:07:03Z tests/fm-supervision-host-attended-live-e2e.test.sh exit=0 duration_ms=187 gate_skip=true
+FM_TEST_BEGIN 2026-10-09T14:07:03Z tests/fm-pi-branch-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+skip: live: opt-in; set FM_PI_BRANCH_LIVE_E2E=1 to run
+fm-test-run: gate skip: tests/fm-pi-branch-live-e2e.test.sh: live: opt-in; set FM_PI_BRANCH_LIVE_E2E=1 to run
+FM_TEST_END 2026-10-09T14:07:04Z tests/fm-pi-branch-live-e2e.test.sh exit=0 duration_ms=185 gate_skip=true
+FM_TEST_BEGIN 2026-10-09T14:07:04Z tests/fm-calm-claude-mod-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+skip: live: opt-in; set FM_CLAUDE_CALM_LIVE_E2E=1 to run
+fm-test-run: gate skip: tests/fm-calm-claude-mod-live-e2e.test.sh: live: opt-in; set FM_CLAUDE_CALM_LIVE_E2E=1 to run
+FM_TEST_END 2026-10-09T14:07:04Z tests/fm-calm-claude-mod-live-e2e.test.sh exit=0 duration_ms=185 gate_skip=true
+FM_TEST_BEGIN 2026-10-09T14:07:04Z tests/fm-calm-pi-queue-retention-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+ok - Pi 1.0.4 exposes every queue-retention member Calm preflights before hiding queued Firstmate rows
+FM_TEST_END 2026-10-09T14:07:08Z tests/fm-calm-pi-queue-retention-live-e2e.test.sh exit=0 duration_ms=3580 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T14:07:08Z tests/fm-worker-account-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+ok - claude 2.1.280 (Claude Code): the pin check accepts a signed-in root and refuses an empty one despite an ambient API key
+ok - pi 1.0.4: the pin check reads auth check and the model listing, and refuses what only an ambient credential signs in
+skip-runner: pi-signed is not installed, so its pin check was not exercised
+# worker account live guard checked: claude pi
+FM_TEST_END 2026-10-09T14:07:21Z tests/fm-worker-account-live-e2e.test.sh exit=0 duration_ms=13063 gate_skip=false
+FM_TEST_SUMMARY total=6 failed=0 skipped_gate=4 duration_ms=18287
+FM_TEST_SUMMARY_FAMILY family=live-harness-optin count=6 duration_ms=17371 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-worker-account-live-e2e.test.sh duration_ms=13063
+FM_TEST_SLOWEST rank=2 script=tests/fm-calm-pi-queue-retention-live-e2e.test.sh duration_ms=3580
+FM_TEST_SLOWEST rank=3 script=tests/fm-supervision-host-attended-live-e2e.test.sh duration_ms=187
+FM_TEST_SLOWEST rank=4 script=tests/fm-calm-claude-mod-live-e2e.test.sh duration_ms=185
+FM_TEST_SLOWEST rank=5 script=tests/fm-pi-branch-live-e2e.test.sh duration_ms=185
+FM_TEST_SLOWEST rank=6 script=tests/fm-supervision-host-live-e2e.test.sh duration_ms=171

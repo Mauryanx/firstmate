@@ -1,0 +1,27 @@
+$ fm-procevent.sh register lavish episode-src -- /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/episode-repro-2jqshxez/source.sh
+registered: episode-src (lavish)
+
+
+exit=0
+$ fm-procevent.sh reconcile
+reconciled: published=0 started=0 stopped=0 uncertain=0 failed=1
+
+
+exit=1
+$ fm-procevent.sh reconcile
+reconciled: published=0 started=0 stopped=0 uncertain=0 failed=1
+
+
+exit=1
+$ fm-procevent.sh reconcile
+reconciled: published=0 started=1 stopped=0 uncertain=0 failed=0
+
+
+exit=0
+PASS: repaired registered source confirms within the two-second window
+$ fm-procevent.sh sweep-home
+retired: episode-src
+swept: attempted=1
+
+
+exit=0

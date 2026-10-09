@@ -1,0 +1,20 @@
+$ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-branch-outcome.sh append --task demo --verdict routine --summary merged the docs fix
+1
+
+
+exit=0
+$ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/closed-output-repro-gim1bwsy/claude -c "$0" >&- 2>/dev/null /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-wake-drain.sh
+
+
+exit=0
+State after closed output: .branch-outcomes-cursor
+1
+
+State after closed output: .branch-outcomes-tail.jsonl
+{"seq":1,"epoch":1791553526,"task":"demo","wake":"","verdict":"routine","summary":"merged the docs fix","silent":false,"statusEndpoint":0,"statusIdent":"-"}
+
+$ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/closed-output-repro-gim1bwsy/claude -c "$0" 2>&1 /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-wake-drain.sh
+
+
+exit=0
+RESULT: FAIL: closed output consumed the unread outcome; next drain prints nothing

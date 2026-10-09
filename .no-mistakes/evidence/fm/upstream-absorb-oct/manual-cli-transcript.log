@@ -1,0 +1,64 @@
+$ fm-inbox.sh conversation lab-init
+{"lab":true,"network":false}
+exit=0
+$ fm-afk-contract.sh enter --words Keep supervision running; leave decisions for my return.
+Away posture recorded at 2026-10-09T13:43:55Z: hold-for-return only. No phone channel is configured; anything that needs you waits for your return. Your away instructions are recorded verbatim; the away session will carry them out where it can, and anything it is unsure of, or that needs you, waits for your return. Destructive, irreversible, and security-sensitive actions are never pre-authorizable, whatever the words say. Expected return: not given. Spend cap: 4 concurrent workers.
+Away posture (recorded):
+  entered: 2026-10-09T13:43:55Z
+  expected return: not given
+  spend cap: 4 concurrent workers
+  reach: hold-for-return only. No phone channel is configured; anything that needs you waits for your return.
+  your words (verbatim):
+    Keep supervision running; leave decisions for my return.
+exit=0
+$ fm-branch-dispatch.mjs scope --afk
+status=empty
+corrupted=0
+rows=
+tasks=
+unscoped=0
+exit=0
+$ fm-inbox.sh conversation capture
+{"request_id":"cli-request","state":"saved"}
+exit=0
+$ fm-branch-dispatch.mjs offer --afk < conversation-wake
+eligible=0
+status=unsafe
+corrupted=0
+rows=
+tasks=
+unscoped=0
+$ fm-inbox.sh conversation accept
+error: voice conversation ownership refused - the supervision branch never performs this action; report the outcome and leave it to main (role partition: docs/pi-supervision-branch.md)
+exit=6
+$ fm-inbox.sh conversation accept
+{"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Are you there?","conversation_id":"cli-call","correction_of":null,"created_at":"2026-10-09T00:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"cli-request","revision":1,"turn_id":"cli-turn"},"playback_context":[]}
+exit=0
+$ fm-inbox.sh conversation publish
+{"published":true,"response_id":"cli-response"}
+exit=0
+$ fm-afk-contract.sh archive
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-cli-7lk3d1cr/home/state/afk-contracts/1791553435.afk-contract
+exit=0
+$ fm-brief.sh cli-no-mistakes demo --mode no-mistakes --branch-prefix fix/
+scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-cli-7lk3d1cr/home/data/cli-no-mistakes/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+Generated public contract:
+1. First action: create your branch: `git checkout -b fix/cli-no-mistakes --`
+Delivery contract: mode=no-mistakes
+$ fm-brief.sh cli-direct-pr demo --mode direct-PR --branch-prefix fix/
+scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-cli-7lk3d1cr/home/data/cli-direct-pr/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+Generated public contract:
+1. First action: create your branch: `git checkout -b fix/cli-direct-pr --`
+Delivery contract: mode=direct-PR
+$ fm-brief.sh cli-local-only demo --mode local-only --branch-prefix fix/
+scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-cli-7lk3d1cr/home/data/cli-local-only/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+Generated public contract:
+1. First action: create your branch: `git checkout -b fix/cli-local-only --`
+Delivery contract: mode=local-only
+$ fm-brief.sh cli-missing-mode demo
+error: ship briefs require --mode <no-mistakes|direct-PR|local-only>; resolve it at intake from the captain's instruction and the project's registered posture in data/projects.md
+exit=1
+PASS: empty away scope, voice main-only dispatch and reply, all three delivery brief modes, branch prefix, and missing-mode refusal

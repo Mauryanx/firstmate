@@ -1,0 +1,8 @@
+ok - fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set
+ok - fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set empty
+ok - fm-gate-refuse-lib: refuses from a gate worktree via git-common-dir (marker unset)
+ok - fm-gate-refuse-lib: no-op for a normal session (neither signal, set -eu clean)
+ok - fm-gate-refuse-lib: marked lab home permitted in a gate; unmarked home or an override stay refused
+ok - fm-lab-home: create mints marked stock homes only on fresh empty dirs; anything else is refused
+ok - fm-lab-home: a primary starts on a private short tmux socket from a long lab path and teardown removes it
+not ok - spawn: a normal session must still spawn: expected exit 0, got 1

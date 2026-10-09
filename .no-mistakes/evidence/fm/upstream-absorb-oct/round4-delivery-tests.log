@@ -1,0 +1,117 @@
+FM_TEST_BEGIN 2026-10-09T16:59:48Z tests/fm-afk-contract.test.sh family=afk expected_gate_skip=none
+ok - the read-back renders the words verbatim beside the expected return, spend cap, and reach line
+ok - words preserve their final newline shape in storage and read-back
+ok - one enter call writes a version 2 record, announces hold-for-return only, reads it back without asking for a go, and every read subcommand reflects it
+ok - the retired propose, confirm, and --proposal inputs are refused by name and write nothing
+ok - enter removes a proposal an older version left behind and records only the new words
+ok - a same-turn entry records never-set words verbatim, adds no authority field, and restates the never-set
+ok - a plain entry records no mandate in one step, and a refresh leaves the standing record untouched
+ok - new words archive the old words and keep the session start
+ok - a failed replacement keeps the standing posture live
+ok - a failed final replacement publication rolls back its superseded archive
+ok - validation and archive refuse damaged words blocks
+ok - a words line that lost its record prefix fails validate, read, read-back, and archive instead of truncating the mandate
+ok - archive keys the record by its entry time, empties the posture, and is idempotent
+ok - malformed inputs and foreign record versions are refused rather than guessed
+ok - retired clause fields, --grant, and the clause and grant subcommands are refused by name
+ok - a version 1 record validates, reads its words and scalars with the clause and grant sections ignored, refreshes untouched, and archives
+ok - new words over a live version 1 record archive it and write version 2 with the same session start
+ok - enter and archive refuse while the record is locked, and proceed once it clears
+ok - a quiet record announces, refreshes, and reads back as a present captain holding nothing, while an away record keeps hold-for-return
+ok - an away entry over quiet mode records away, and a quiet entry never masks a standing away record
+FM_TEST_END 2026-10-09T17:00:24Z tests/fm-afk-contract.test.sh exit=0 duration_ms=35706 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T17:00:24Z tests/fm-afk-return.test.sh family=afk expected_gate_skip=none
+ok - return catch-up owns live blocker remediation, reports itself to Bearings as content, preserves evidence once, and clears idempotently
+ok - tmux and Herdr blockers require the same explicit durable reclassification before ordinary work
+ok - needs-decision remains reportable without masquerading as a firstmate-actionable blocker
+ok - AFK return re-drains published wakes until handling acknowledges
+ok - away-mode re-entry fails closed while the prior return catch-up is pending
+ok - /quiet off's return path behaves identically for a quiet-content flag as for a legacy away-content one
+ok - check retries recorded terminal teardown and keeps catch-up gated until success
+ok - an unreadable superseded mandate stays required until its record validates
+ok - the retained contract epoch requires its final archive on every check
+ok - the return brief renders health, the words with the session account, waiting, could-not-fix, handled, and cost from durable records, and the gate shrinks to what the away session could not fix
+ok - the return brief lists landed work whose worker is still up, from the durable merge marker only, without gating on it and never offering a secondmate for teardown
+ok - the return brief points at the drain for branch outcomes on a host home and leaves the read cursor to it, and a Pi home's brief is unchanged
+ok - the all-silent return keeps the outcome stored without promising a drain presentation
+ok - a drain that cannot record its branch-outcome presentation keeps the return's catch-up gated until a check records it
+ok - a refreshed posture keeps its original window, superseded mandate, and earlier outcomes
+ok - a malformed posture record stays live and gates return catch-up
+ok - an epochless malformed record remains required until restored valid
+ok - an unreadable outcome store gates catch-up until a successful reread
+ok - an unavailable held listing gates catch-up until a successful reread
+ok - an unreadable status stays private and gates until a successful reread
+ok - a status-file-less leftover record gates return; a readable status on that same record is the proven path that passes
+ok - a leftover record with a readable status file lets return catch-up clear
+ok - the read-only guard treats the away-posture record as active away mode without the legacy flag
+ok - the return brief leads with supervisor health and names every detected gap
+ok - the return brief does not report an already-acked watcher-down marker as an open gap
+ok - the return brief reports a wake mid-handling at return as information, and only an open downtime episode as a gap
+ok - the return brief's failures section names an engine latch inside the away window with its time, error count, and cooldown state
+ok - a lost second trip append does not attach the current pause to a recovered episode
+ok - a recovered row preceding the stale retry time does not invent a second trip
+ok - a later failed probe does not change the trip-row error count
+ok - the return brief excludes prior-session latch rows
+ok - the return brief retains in-window trips and failed turns across a main restart
+ok - a return with only the legacy away flag still renders the brief and measures the window from the flag
+FM_TEST_END 2026-10-09T17:03:40Z tests/fm-afk-return.test.sh exit=0 duration_ms=195746 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T17:03:40Z tests/fm-brief.test.sh family=pure-contract-unit expected_gate_skip=none
+ok - fm-brief: scaffolds leave the worker role scope to the launch boundary and keep the secondmate contract
+ok - fm-brief.sh: bash -n succeeds
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-brief.KS1Iy7/heredoc-in-substitution.sh:2
+ok - fm-brief.sh: no heredoc is nested inside a command substitution (Bash 3.2 parse-safe)
+ok - fm-brief.sh: --help renders the complete header
+ok - fm-brief.sh: no-mistakes/direct-PR/local-only briefs generate cleanly
+ok - fm-brief.sh: ship --mode is required and closed-set validated
+ok - fm-brief.sh: the explicit ship mode wins over the registered posture
+ok - fm-brief.sh: --yolo and scout/secondmate --mode are refused, never silently dropped
+ok - fm-brief.sh: faster paths use configured authority without stacked review
+ok - fm-brief.sh: no-mistakes DOD keeps its apostrophe prose and bans --yes outright
+ok - fm-brief.sh: no-mistakes DOD detects a green PR from the drive call, not a status poll
+ok - fm-brief.sh: PR-based done requires a non-draft PR; a deliberate draft declares a wait
+ok - fm-brief.sh: no-mistakes ask-user findings use one event plus a verbatim snapshot
+ok - fm-brief.sh: ship project-memory wording bounds edits to corrections of wrong information
+ok - fm-brief.sh: --herdr-lab emits the complete hard safety contract
+ok - fm-brief.sh: --herdr-lab uses its quoted Firstmate-owned helper path
+ok - fm-brief.sh: ship and scout scaffolds make omitted Herdr intent fail-visible
+ok - fm-brief.sh: the documented {TASK} and {FIRSTMATE_SPEC} fills cannot corrupt the Herdr safety gate
+ok - fm-brief.sh: Herdr lab contract covers scouts and rejects secondmate misuse
+ok - fm-brief.sh: --no-projects scaffolds a project-less charter and guards misuse
+ok - fm-brief.sh: marked requests avoid generic acknowledgements and preserve material reporting
+ok - fm-brief.sh: relative directory inputs ignore CDPATH, render stable absolute charter paths, or fail loudly
+ok - fm-brief.sh: custom pause verb renders in every scaffold
+ok - fm-brief.sh: ship and scout scaffolds declare a validation-round pause once, then hold it
+ok - fm-brief.sh: investigation and visual-review completions load the shared decision policy
+ok - fm-brief: scout and secondmate code paths still scaffold well-formed briefs
+ok - fm-brief.sh: scout Lavish hosting follows the bootstrap lavish-axi floor
+ok - fm-brief: workers end the turn on a decision, wait in one bounded shell command, and never poll
+ok - fm-brief: without config/wait-no-turns the brief and drive text stay as they were
+ok - fm-brief.sh: the home brief include lands last on ship and scout, verbatim, and fails closed
+ok - fm-brief.sh: --base-branch records the base, targets the PR at it, and is refused where no PR carries it
+ok - fm-brief.sh: --branch-prefix omitted defaults every ship mode to fm/<task-id>
+ok - fm-brief.sh: a --branch-prefix override renders identically across every generated section
+ok - fm-brief.sh: an empty --branch-prefix override resolves to a bare <task-id> branch
+ok - fm-brief.sh: --branch-prefix is refused on scout and secondmate scaffolds
+ok - fm-brief.sh: --branch-prefix value is validated against embedded spaces and a leading dash
+not ok - a ref-format-valid metacharacter prefix should scaffold safely
+FM_TEST_END 2026-10-09T17:04:33Z tests/fm-brief.test.sh exit=1 duration_ms=53780 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T17:04:34Z tests/fm-gate-refuse.test.sh family=session-bootstrap expected_gate_skip=none
+ok - fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set
+ok - fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set empty
+ok - fm-gate-refuse-lib: refuses from a gate worktree via git-common-dir (marker unset)
+ok - fm-gate-refuse-lib: no-op for a normal session (neither signal, set -eu clean)
+ok - fm-gate-refuse-lib: marked lab home permitted in a gate; unmarked home or an override stay refused
+ok - fm-lab-home: create mints marked stock homes only on fresh empty dirs; anything else is refused
+ok - fm-lab-home: a primary starts on a private short tmux socket from a long lab path and teardown removes it
+ok - fm-spawn: refuses on marker and gate-worktree backstop; a normal crew spawn is unaffected
+ok - fm-send: refuses on marker and gate-worktree backstop; a normal steer uses the inbox
+ok - fm-teardown: refuses on marker and gate-worktree backstop; a normal teardown is unaffected
+FM_TEST_END 2026-10-09T17:05:24Z tests/fm-gate-refuse.test.sh exit=0 duration_ms=50545 gate_skip=false
+FM_TEST_SUMMARY total=4 failed=1 skipped_gate=0 duration_ms=336225
+FM_TEST_SUMMARY_FAMILY family=afk count=2 duration_ms=231452 failed=0
+FM_TEST_SUMMARY_FAMILY family=pure-contract-unit count=1 duration_ms=53780 failed=1
+FM_TEST_SUMMARY_FAMILY family=session-bootstrap count=1 duration_ms=50545 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-afk-return.test.sh duration_ms=195746
+FM_TEST_SLOWEST rank=2 script=tests/fm-brief.test.sh duration_ms=53780
+FM_TEST_SLOWEST rank=3 script=tests/fm-gate-refuse.test.sh duration_ms=50545
+FM_TEST_SLOWEST rank=4 script=tests/fm-afk-contract.test.sh duration_ms=35706

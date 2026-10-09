@@ -1,0 +1,18 @@
+FM_TEST_BEGIN 2026-10-09T17:01:26Z .test-phase-tmp/round4-codex-account.test.sh family=unclassified expected_gate_skip=none
+ok - codex --codex-home prefixes the launch with CODEX_HOME and records codex_home= in meta
+ok - codex --codex-home canonicalizes aliases before launch and metadata
+ok - codex without --codex-home writes no CODEX_HOME prefix and no codex_home= line
+ok - codex --codex-home refuses an account directory with no auth.json instead of falling back
+ok - codex --codex-home refuses an account whose auth.json is empty
+ok - codex --codex-home refuses a missing account directory
+ok - codex --codex-home refuses a relative path
+ok - codex --codex-home refuses a bare tilde
+ok - codex --codex-home refuses control bytes before metadata publication
+ok - codex --codex-home refuses an empty value
+ok - --codex-home is refused on a non-codex harness
+ok - --codex-home is refused on a --secondmate launch
+ok - batch dispatch forwards a shared --codex-home to every pair
+FM_TEST_END 2026-10-09T17:02:01Z .test-phase-tmp/round4-codex-account.test.sh exit=0 duration_ms=34568 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=34761
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=34568 failed=0
+FM_TEST_SLOWEST rank=1 script=.test-phase-tmp/round4-codex-account.test.sh duration_ms=34568

@@ -1,0 +1,16 @@
+$ predecessor fm-inbox.sh note --json --request-id before-fix Handle once.
+{"schema":"fm-inbox-note.v1","outcome":"created","id":"1791565642-eCfnCp","request_id":"before-fix","saved":true,"announced":true,"acknowledged":false,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-before-d005nrj2/state/inbox/1791565642-eCfnCp.note"}
+
+$ predecessor fm-inbox.sh drain --ack 1791565642-eCfnCp
+acked 1791565642-eCfnCp
+
+$ predecessor fm-inbox.sh note --json --request-id before-fix Handle once.
+{"schema":"fm-inbox-note.v1","outcome":"replay","id":"1791565642-eCfnCp","request_id":"before-fix","saved":true,"announced":true,"acknowledged":false,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-before-d005nrj2/state/inbox/handled/1791565642-eCfnCp.note"}
+
+$ predecessor fm-inbox.sh announce --json 1791565642-eCfnCp
+{"schema":"fm-inbox-note.v1","outcome":"replay","id":"1791565642-eCfnCp","request_id":null,"saved":true,"announced":true,"acknowledged":false,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-before-d005nrj2/state/inbox/handled/1791565642-eCfnCp.note"}
+
+$ predecessor fm-inbox.sh receipts --all-pending --all-handled
+{"schema":"fm-inbox-receipts.v1","home":".test-phase-tmp/round4-before-d005nrj2","generated":"2026-10-09T17:07:23Z","pending":[],"handled":[{"id":"1791565642-eCfnCp","at":"2026-10-09T17:07:22Z","source":"text","request_id":"before-fix","body":"Handle once.","acknowledged":true,"announced":true,"reply":null}],"replies":[],"reply_cursor":"","omitted":[]}
+
+REPRODUCED on predecessor 22c2f591: normally announced, handled notes falsely report acknowledged=false on replay and announce. The target returns true in round4-manual-cli.log.

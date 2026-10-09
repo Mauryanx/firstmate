@@ -1,0 +1,115 @@
+FM_TEST_BEGIN 2026-10-09T16:58:43Z tests/fm-wake-drain-voice-first.test.sh family=watcher-wake-lock expected_gate_skip=none
+FM_TEST_BEGIN 2026-10-09T16:58:43Z tests/fm-wake-drain-voice-hold.test.sh family=watcher-wake-lock expected_gate_skip=none
+ok - an acknowledgement holds a voice row whose request is still saved and retires the ordinary row beside it
+ok - a held voice row is presented again by the next drain
+ok - the hold ends once the request is accepted and the ordinary acknowledgement retires the row
+FM_TEST_END 2026-10-09T16:58:52Z tests/fm-wake-drain-voice-hold.test.sh exit=0 duration_ms=8608 gate_skip=false
+ok - a voice note queued after an ordinary wake is still presented first under VOICE
+ok - a voice note queued first stays first and the rows behind it keep their order
+ok - a typed inbox note is an ordinary wake and prints no VOICE heading
+FM_TEST_END 2026-10-09T16:58:56Z tests/fm-wake-drain-voice-first.test.sh exit=0 duration_ms=12510 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T16:58:56Z tests/fm-dispatch-resolve.test.sh family=standalone expected_gate_skip=none
+ok - absent key is off: one stderr line, exit 0, no network call
+ok - TYPESAFE_API_KEY= in .env activates the tool; environment and config overrides work
+ok - clear: one rule Choice request, key on the fd header only, spendPriority argmax over every candidate
+ok - never-send list withholds the request on a match or a bad list, and never prints the value
+ok - rules snapshots and shell quoting preserve the profile protocol
+ok - no-rule fallback, Agy, Gemini, and documented configurations resolve
+ok - the Codex account axis survives typed resolution: identity, per-account quota, and carry-through
+ok - per-account Codex reads cover only reachable homes and survive a stalled account
+ok - reachable per-account reads share one aggregate bound and keep per-account evidence
+ok - ambiguous: confidence below the fixed floor hands the decision back
+ok - per-rule confidence floors fall to the most probable runner-up that clears its own floor
+ok - only the brief's task sections and scout tag reach the model, with a whole-brief fallback
+ok - escalate: a rule declared approval: captain never yields a profile
+ok - rule floor: known shortfall falls through while unavailable evidence escalates
+ok - declared provider and profile floor evidence are applied in code
+ok - nonnumeric spendPriority evidence is never ranked
+ok - partial and missing quota evidence remain eligible but unranked
+ok - provider-wide and exact quota rows combine into one limiting candidate
+ok - default: no rule matched resolves among the default profiles
+ok - tie: equal spendPriority never breaks by array order
+ok - no rankable candidate: the tool escalates instead of guessing
+ok - native Codex binds to codex-home before default, independently of Pi accounts and row order
+ok - Pi native adapters bind to codex-home with existing fallbacks and schema 5 compatibility
+ok - schema 6: each candidate binds to its account row; schema 5 is unchanged
+ok - quota evidence comes from one quota-axi --json read, and its failure is an error outcome
+ok - API, transport, and response failures are error outcomes with exit 0
+ok - configuration errors exit 2 before any network call
+# all fm-dispatch-resolve tests passed
+FM_TEST_END 2026-10-09T16:59:46Z tests/fm-dispatch-resolve.test.sh exit=0 duration_ms=49476 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T16:59:46Z tests/fm-worker-account.test.sh family=backend-dispatch expected_gate_skip=none
+ok - an absent pin leaves Claude and Pi launches exactly as they were
+ok - a Claude pin selects its root and sheds the credentials that would outrank it
+ok - a Claude pin refuses a signed-out root even when the invoking process has a usable login and API key
+ok - an ordinary Claude pin selects the default login and drops an ambient root
+ok - malformed, relative, CR-terminated, empty, extra-line, missing-root, and non-file pins refuse before launch
+ok - a Pi pin selects its root and passes the declared provider
+ok - a Pi pin refuses unqualified, missing, undeclared, signed-out, and raw launches
+ok - extension providers and a Pi without auth check fall back to an exact model-listing match
+ok - a Claude pin leaves codex and Pi launches unchanged
+ok - a raw Claude launch command receives the home's pin
+ok - a pinned home refuses a raw Claude command that overrides the account
+ok - an unpinned home keeps a raw Claude account override
+not ok - a local secondmate spawn under the launching home's pin should succeed: error: secondmate home cannot be inside the firstmate repo: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-worker-account.4ByaQ0/secondmate/secondmate-home: expected exit 0, got 1
+FM_TEST_END 2026-10-09T17:01:16Z tests/fm-worker-account.test.sh exit=1 duration_ms=90360 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T17:01:16Z tests/fm-fleet-ledger.test.sh family=unclassified expected_gate_skip=none
+ok - flag on: dispatch, polled status lines, the local merge after its task's pending lines, and cleanup are recorded in order
+ok - flag on: a PR merge is recorded once, after the task's pending status lines
+ok - flag on: registering a PR records task.pr_ready with its full URL after the task's pending status lines, and the merge-time re-record adds nothing
+ok - flag on: a worker's status command records its line at once, and the watcher backstop does not record it again
+ok - flag on, state override outside the home: the worker's status command records its line at once
+ok - flag on, relative config override: a worker running elsewhere still records its line at once
+ok - append failing: the worker's status command exits nonzero and records nothing
+ok - ledger failing: the worker's status line still lands exactly, quietly, and the backstop records it later
+ok - flag off: the worker's status command is a plain append and leaves no ledger file, offset, or lock
+ok - flag off: the whole lifecycle leaves no ledger file, offset, or lock
+FM_TEST_END 2026-10-09T17:02:16Z tests/fm-fleet-ledger.test.sh exit=0 duration_ms=59539 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T17:02:16Z tests/fm-git-strip-ai-trailers.test.sh family=backend-dispatch expected_gate_skip=none
+ok - a Cursor --trailer commit object has no AI co-author and keeps the captain identity
+ok - a human Co-authored-by trailer survives next to a stripped Cursor trailer
+ok - a human co-author at a vendor domain survives; only the exact bot address is stripped
+ok - a hook manager resolving the pane hooks dir fails instead of displacing the strip
+ok - a relaunch reinstall replaces the read-only strip dir and still strips
+ok - install chains the previous commit-msg hook after stripping
+ok - a relative project core.hooksPath resolves against the worktree and still runs
+ok - an inherited GIT_CONFIG hooksPath does not become the chained previous hooks
+ok - a project hook that appears after install still runs for the rest of the task
+ok - a pane GIT_CONFIG hooksPath still chains the repository git is actually in
+ok - an empty project core.hooksPath runs no repository hook and still strips the trailer
+ok - an unresolvable project core.hooksPath still refuses the commit
+ok - a valueless project core.hooksPath still refuses the commit
+ok - the repository's pre-push runs and can refuse under every hooksPath override channel
+ok - a git -c hooksPath override still strips the trailer and chains the project's hooks
+ok - commit-msg file mode strips the trailer and keeps the subject
+# all fm-git-strip-ai-trailers tests passed
+FM_TEST_END 2026-10-09T17:02:28Z tests/fm-git-strip-ai-trailers.test.sh exit=0 duration_ms=12029 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T17:02:28Z tests/fm-inbox-conversation.test.sh family=unclassified expected_gate_skip=none
+PASS: 9 inputs accounted for; 8 single dispatch claims, 1 stale bound input explicitly rejected; 6 replies retained
+PASS: capture/accept/publication/playback crash windows, duplicate races and wrong-session refusals
+PASS: the newest capture names the live call; a call nobody answered is superseded, a nameless one supersedes nothing
+PASS: a redial captured mid-pass is never superseded; the pass restarts and retires the dropped call
+PASS: live publication is owner-authored, digest-bound, and ordered; portions surface as waiting speech
+PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused
+PASS: an ElevenLabs-only home refuses an iMessage reply and records nothing new for a voice conversation
+PASS: a v2 policy carries a text destination; each conversation publishes only to the one it is bound to
+PASS: a destination withdrawn from the policy can no longer be published to
+ok - conversation contract: durable capture, session routing, reply and playback recovery
+FM_TEST_END 2026-10-09T17:04:48Z tests/fm-inbox-conversation.test.sh exit=0 duration_ms=140136 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T17:04:48Z tests/fm-project-capacity.test.sh family=backend-dispatch expected_gate_skip=none
+not ok - an undeclared project refused a spawn: warning: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-project-capacity.8rS6Th/undeclared/home/data/task-c/launch-brief.md records no ship branch; defaulting to legacy branch fm/task-c
+error: task task-c cannot be dispatched because its backlog data directory is inaccessible: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-project-capacity.8rS6Th/undeclared/home/data (automatic backlog transitions require tasks-axi 0.2.6 or newer with the required update and mv features): expected exit 0, got 1
+FM_TEST_END 2026-10-09T17:04:53Z tests/fm-project-capacity.test.sh exit=1 duration_ms=4734 gate_skip=false
+FM_TEST_SUMMARY total=8 failed=2 skipped_gate=0 duration_ms=370472
+FM_TEST_SUMMARY_FAMILY family=backend-dispatch count=3 duration_ms=107123 failed=2
+FM_TEST_SUMMARY_FAMILY family=standalone count=1 duration_ms=49476 failed=0
+FM_TEST_SUMMARY_FAMILY family=unclassified count=2 duration_ms=199675 failed=0
+FM_TEST_SUMMARY_FAMILY family=watcher-wake-lock count=2 duration_ms=21118 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-inbox-conversation.test.sh duration_ms=140136
+FM_TEST_SLOWEST rank=2 script=tests/fm-worker-account.test.sh duration_ms=90360
+FM_TEST_SLOWEST rank=3 script=tests/fm-fleet-ledger.test.sh duration_ms=59539
+FM_TEST_SLOWEST rank=4 script=tests/fm-dispatch-resolve.test.sh duration_ms=49476
+FM_TEST_SLOWEST rank=5 script=tests/fm-wake-drain-voice-first.test.sh duration_ms=12510
+FM_TEST_SLOWEST rank=6 script=tests/fm-git-strip-ai-trailers.test.sh duration_ms=12029
+FM_TEST_SLOWEST rank=7 script=tests/fm-wake-drain-voice-hold.test.sh duration_ms=8608
+FM_TEST_SLOWEST rank=8 script=tests/fm-project-capacity.test.sh duration_ms=4734

@@ -1,0 +1,113 @@
+$ fm-project-mode.sh demo
+direct-PR off
+[exit 0]
+
+$ fm-project-mode.sh --branch-prefix demo
+fix/
+[exit 0]
+
+$ fm-project-mode.sh review
+direct-PR off
+refused: +yolo is registered for review but yolo is inactive for forge=gerrit, so this reports yolo=off: a Gerrit Code-Review+2 is a positive attributed claim that a named human approved, and firstmate must not manufacture one (captain's decision 2026-09-15)
+[exit 0]
+
+$ fm-project-mode.sh --forge review
+gerrit
+[exit 0]
+
+$ fm-project-mode.sh invalid
+refused: invalid is registered local-only with forge=gerrit in /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round3-p3z357xe/home/data/projects.md; local-only publishes nothing, so a forge has no meaning there, and its landing would fast-forward local main with content the review server has never seen; register no-mistakes or direct-PR to publish through the forge, or drop the forge token to keep the project local
+[exit 3]
+
+$ fm-brief.sh round3-no-mistakes demo --mode no-mistakes --branch-prefix fix/
+scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round3-p3z357xe/home/data/round3-no-mistakes/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+[exit 0]
+
+$ fm-brief.sh round3-direct-pr demo --mode direct-PR --branch-prefix fix/
+scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round3-p3z357xe/home/data/round3-direct-pr/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+[exit 0]
+
+$ fm-brief.sh round3-local-only demo --mode local-only --branch-prefix fix/
+scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round3-p3z357xe/home/data/round3-local-only/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+[exit 0]
+
+$ fm-brief.sh missing-mode demo
+error: ship briefs require --mode <no-mistakes|direct-PR|local-only>; resolve it at intake from the captain's instruction and the project's registered posture in data/projects.md
+[exit 1]
+
+$ fm-afk-contract.sh enter --words Keep the export lane on low effort.
+Hold any merge for my return.
+ --spend 2
+Away posture recorded at 2026-10-09T15:33:19Z: hold-for-return only. No phone channel is configured; anything that needs you waits for your return. Your away instructions are recorded verbatim; the away session will carry them out where it can, and anything it is unsure of, or that needs you, waits for your return. Destructive, irreversible, and security-sensitive actions are never pre-authorizable, whatever the words say. Expected return: not given. Spend cap: 2 concurrent workers.
+Away posture (recorded):
+  entered: 2026-10-09T15:33:19Z
+  expected return: not given
+  spend cap: 2 concurrent workers
+  reach: hold-for-return only. No phone channel is configured; anything that needs you waits for your return.
+  your words (verbatim):
+    Keep the export lane on low effort.
+    Hold any merge for my return.
+[exit 0]
+
+$ fm-afk-contract.sh words
+Keep the export lane on low effort.
+Hold any merge for my return.
+[exit 0]
+
+$ fm-afk-contract.sh mode
+away
+[exit 0]
+
+$ fm-afk-contract.sh archive
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round3-p3z357xe/home/state/afk-contracts/1791559999.afk-contract
+[exit 0]
+
+$ fm-afk-contract.sh enter --words Watch quietly.
+Quiet mode recorded at 2026-10-09T15:33:20Z: you are present, so nothing waits for your return: every action you ask for, a local landing or a merge included, proceeds now under ordinary attended authority, and quiet mode changes only which updates reach this conversation. Only an explicit /quiet off ends it.
+Quiet mode (recorded):
+  entered: 2026-10-09T15:33:20Z
+  holds: none - you are present, so nothing waits for your return: every action you ask for, a local landing or a merge included, proceeds now under ordinary attended authority, and quiet mode changes only which updates reach this conversation.
+  your words (verbatim):
+    Watch quietly.
+[exit 0]
+
+$ fm-afk-contract.sh mode
+quiet
+[exit 0]
+
+$ fm-afk-contract.sh archive
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round3-p3z357xe/home/state/afk-contracts/1791560000.afk-contract
+[exit 0]
+
+$ fm-inbox.sh note --json --request-id round3-request Keep my instruction durable.
+{"schema":"fm-inbox-note.v1","outcome":"created","id":"1791560001-KDiiux","request_id":"round3-request","saved":true,"announced":true,"acknowledged":false,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round3-p3z357xe/home/state/inbox/1791560001-KDiiux.note"}
+[exit 0]
+
+$ fm-inbox.sh note --json --request-id round3-request Duplicate retries must not replace it.
+{"schema":"fm-inbox-note.v1","outcome":"replay","id":"1791560001-KDiiux","request_id":"round3-request","saved":true,"announced":true,"acknowledged":false,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round3-p3z357xe/home/state/inbox/1791560001-KDiiux.note"}
+[exit 0]
+
+$ fm-inbox.sh drain
+1791560001-KDiiux
+    Keep my instruction durable.
+
+Ack with: fm-inbox.sh drain --ack <id>...
+[exit 0]
+
+$ fm-inbox.sh drain --ack 1791560001-KDiiux
+acked 1791560001-KDiiux
+[exit 0]
+
+$ fm-inbox.sh note --json --request-id round3-request After acknowledgement.
+{"schema":"fm-inbox-note.v1","outcome":"replay","id":"1791560001-KDiiux","request_id":"round3-request","saved":true,"announced":true,"acknowledged":false,"path":"/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round3-p3z357xe/home/state/inbox/handled/1791560001-KDiiux.note"}
+[exit 0]
+
+$ fm-inbox.sh receipts --all-pending --all-handled --all-replies
+{"schema":"fm-inbox-receipts.v1","home":"manual-round3-p3z357xe/home","generated":"2026-10-09T15:33:22Z","pending":[],"handled":[{"id":"1791560001-KDiiux","at":"2026-10-09T15:33:21Z","source":"text","request_id":"round3-request","body":"Keep my instruction durable.","acknowledged":true,"announced":true,"reply":null}],"replies":[],"reply_cursor":"","omitted":[]}
+[exit 0]
+
+$ fm-inbox.sh ready
+{"schema":"fm-primary-ready.v1","home":"manual-round3-p3z357xe/home","observed_at":"2026-10-09T15:33:22Z","lock":{"state":"free","pid":null,"live_harness":false},"wake_consumer":{"state":"unknown","reason":"supervision-model-unknown-for-home","beacon_age_seconds":null},"posture":{"state":"present"},"can_receive":false}
+[exit 0]
+
+PASS: registered delivery mode, branch prefix, Gerrit yolo refusal, three generated briefs, required-mode refusal, verbatim away/quiet record lifecycle, idempotent note replay and acknowledgement.

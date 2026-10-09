@@ -1,0 +1,23 @@
+$ fm-procevent.sh register lavish round2-repair -- /bin/echo A repaired source captured this local result. (confirm window=30s)
+registered: round2-repair (lavish)
+exit=0
+$ fm-procevent.sh reconcile (confirm window=2s)
+reconciled: published=0 started=0 stopped=0 uncertain=0 failed=1
+exit=1
+$ fm-procevent.sh reconcile (confirm window=2s)
+reconciled: published=0 started=0 stopped=0 uncertain=0 failed=1
+exit=1
+$ fm-procevent.sh reconcile (confirm window=30s)
+reconciled: published=0 started=1 stopped=0 uncertain=0 failed=0
+exit=0
+Captured result: A repaired source captured this local result.
+Wake queue after repair:
+1791555771	1	check	procevent:round2-repair:launch-failed:2049-667769-1190632518	check: process-event source round2-repair is registered but its launch did not prove it took the source's claim within FM_PROCEVENT_LAUNCH_CONFIRM_SECONDS, so nothing is confirmed to be collecting from it; reconcile reports that as failed= and keeps launching it every supervision cycle. If it stays that way, check the source command and the adapter binary the registration names, and run an attached bin/fm-procevent.sh start round2-repair to reproduce a refusal on its stderr - the detached launch discards it, and a hand-run reconcile only counts it as failed=. A later cycle that finds the source owned ends this episode on its own, so a runner that was merely slow to claim needs nothing from you.
+1791555778	2	check	procevent:round2-repair:1	check: procevent lavish round2-repair 1
+$ fm-procevent.sh handled round2-repair 1 (confirm window=30s)
+handled: round2-repair 1
+exit=0
+$ fm-procevent.sh retire round2-repair (confirm window=30s)
+retired: round2-repair
+exit=0
+PASS: a bad registration announces one failure episode; repair confirms its launch and captures the child process output

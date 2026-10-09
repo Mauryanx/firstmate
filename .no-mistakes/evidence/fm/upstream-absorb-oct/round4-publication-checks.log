@@ -1,0 +1,24 @@
+FM_TEST_BEGIN 2026-10-09T17:01:07Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+ok - PR and teardown entrypoints reject invalid arguments before every side effect
+FM_TEST_END 2026-10-09T17:03:49Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=162065 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=162246
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=162065 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-check-security.test.sh duration_ms=162065
+FM_TEST_BEGIN 2026-10-09T17:03:49Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+ok - Gerrit arming accepts a published HEAD only by the change's current patch set tree
+FM_TEST_END 2026-10-09T17:03:56Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=6673 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=6854
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=6673 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-check-security.test.sh duration_ms=6673
+FM_TEST_BEGIN 2026-10-09T17:03:56Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+ok - fm-pr-check refuses to register a PR whose named head is only in the worker copy
+FM_TEST_END 2026-10-09T17:03:57Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=1233 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=1425
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=1233 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-check-security.test.sh duration_ms=1233
+FM_TEST_BEGIN 2026-10-09T17:03:57Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+ok - valid direct and merge flows record exact metadata and reject multiline head metadata
+FM_TEST_END 2026-10-09T17:05:24Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=86621 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=86848
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=86621 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-check-security.test.sh duration_ms=86621

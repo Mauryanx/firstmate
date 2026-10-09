@@ -1,0 +1,14 @@
+FM_TEST_BEGIN 2026-10-09T17:06:12Z .test-phase-tmp/round4-brief-behavior.test.sh family=unclassified expected_gate_skip=none
+ok - fm-brief.sh: no-mistakes/direct-PR/local-only briefs generate cleanly
+ok - fm-brief.sh: ship --mode is required and closed-set validated
+ok - fm-brief.sh: --branch-prefix omitted defaults every ship mode to fm/<task-id>
+ok - fm-brief.sh: a --branch-prefix override renders identically across every generated section
+ok - fm-brief.sh: an empty --branch-prefix override resolves to a bare <task-id> branch
+ok - fm-brief.sh: --branch-prefix is refused on scout and secondmate scaffolds
+ok - fm-brief.sh: --branch-prefix value is validated against embedded spaces and a leading dash
+Switched to a new branch '$(touch${IFS}BRANCH_PREFIX_MARKER)brief-branch-safe-g3'
+ok - fm-brief.sh: ref-format-valid shell metacharacters stay literal in generated branch commands
+FM_TEST_END 2026-10-09T17:06:18Z .test-phase-tmp/round4-brief-behavior.test.sh exit=0 duration_ms=5475 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=5711
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=5475 failed=0
+FM_TEST_SLOWEST rank=1 script=.test-phase-tmp/round4-brief-behavior.test.sh duration_ms=5475

@@ -1,0 +1,3460 @@
++ set -u
+++ dirname tests/fm-pr-check-security.test.sh
++ . tests/lib.sh
+++ '[' -n '' ']'
+++ FM_TEST_LIB_SOURCED=1
+++ umask 022
++++ dirname tests/lib.sh
+++ . tests/git-config-helpers.sh
++++ export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
++++ GIT_CONFIG_GLOBAL=/dev/null
++++ GIT_CONFIG_NOSYSTEM=1
+++ export FM_GATE_REFUSE_BYPASS=1
+++ FM_GATE_REFUSE_BYPASS=1
+++ export FM_TEST_SEAM=1
+++ FM_TEST_SEAM=1
+++ unset FM_TASK_ID
+++ unset TASKS_AXI_FILE TASKS_AXI_BACKEND
+++++ dirname tests/lib.sh
++++ cd tests/..
++++ pwd
+++ ROOT=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ
++++ fm_test_tmpdir
++++ local base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp physical
++++ base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ '[' -n /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp ']'
++++ case "$base" in
+++++ CDPATH=
+++++ cd -- /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++++ pwd -P
++++ physical=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ '[' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.git ']'
++++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++ FM_TEST_TMPDIR=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++ FM_TEST_CLEANUP_DIRS=()
++++ mktemp /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-cleanup.3788198.XXXXXX
+++ FM_TEST_CLEANUP_REGISTRY=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-cleanup.3788198.NtpggZ
++++ fm_test_pid_identity 3788198
++++ local pid=3788198
++++ FM_STATE_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ bash -c '. "$1"; fm_pid_identity "$2"' _ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-wake-lib.sh 3788198
+++ FM_TEST_OWNER_IDENTITY='linux-starttime=542561445 cmdline-hex=62617368002d780074657374732f666d2d70722d636865636b2d73656375726974792e746573742e736800'
++++ mktemp /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-procevent.3788198.XXXXXX
+++ FM_TEST_PROCEVENT_REGISTRY=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-procevent.3788198.yCDSyD
++++ mktemp /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-watcher.3788198.XXXXXX
+++ FM_TEST_WATCHER_REGISTRY=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-watcher.3788198.VitjAf
+++ FM_TEST_STUB_MAX_BLOCK_SECONDS=120
+++ export FM_TEST_STUB_MAX_BLOCK_SECONDS
+++ trap fm_test_cleanup EXIT
+++ trap 'fm_test_cleanup; exit 130' INT
+++ trap 'fm_test_cleanup; exit 143' TERM
+++ trap 'fm_test_cleanup; exit 129' HUP
+++ trap 'fm_test_cleanup; exit 131' QUIT
+++ FM_TEST_ORPHAN_MAX_AGE_SECONDS=3600
+++ '[' 0 '!=' 1 ']'
+++ fm_test_reap_orphans
+++ local marker dir mtime now owner_pid owner_identity current_identity
++++ date +%s
+++ now=1791554932
+++ for marker in "$FM_TEST_TMPDIR"/fm-*/.fm-test-fixture
+++ '[' -e '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-*/.fm-test-fixture' ']'
+++ continue
++ . /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-pr-lib.sh
+++ FM_PR_PROVIDER=
+++ FM_PR_URL=
+++ FM_PR_HOST=
+++ FM_PR_PATH=
+++ FM_PR_OWNER=
+++ FM_PR_REPO=
+++ FM_PR_NUMBER=
+++ FM_PR_DATA_PROVIDER=
+++ FM_PR_DATA_URL=
+++ FM_PR_DATA_HOST=
+++ FM_PR_DATA_PATH=
+++ FM_PR_DATA_NUMBER=
+++ FM_PR_META_PROVIDER=
+++ FM_PR_META_URL=
+++ FM_PR_META_HOST=
+++ FM_PR_META_PATH=
+++ FM_PR_META_NUMBER=
+++ FM_PR_REG_ID=
+++ FM_PR_REG_PROVIDER=
+++ FM_PR_REG_URL=
+++ FM_PR_REG_HOST=
+++ FM_PR_REG_PATH=
+++ FM_PR_REG_NUMBER=
+++ FM_PR_REG_DATA_HASH=
+++ FM_PR_REG_TEMPLATE_HASH=
+++ FM_PR_REG_DATA_IDENTITY=
+++ FM_PR_REG_CHECK_IDENTITY=
+++ FM_PR_POLL_DATA_TMP=
+++ FM_PR_POLL_CHECK_TMP=
+++ FM_PR_POLL_REG_TMP=
+++ FM_PR_POLL_DATA_DEST=
+++ FM_PR_POLL_CHECK_DEST=
+++ FM_PR_POLL_REG_DEST=
+++ FM_PR_POLL_EXPECT_ID=
+++ FM_PR_POLL_EXPECT_PROVIDER=
+++ FM_PR_POLL_EXPECT_URL=
+++ FM_PR_POLL_EXPECT_HOST=
+++ FM_PR_POLL_EXPECT_PATH=
+++ FM_PR_POLL_EXPECT_NUMBER=
+++ FM_PR_POLL_EXPECT_DATA_HASH=
+++ FM_PR_POLL_EXPECT_TEMPLATE_HASH=
+++ FM_PR_POLL_EXPECT_DATA_IDENTITY=
+++ FM_PR_POLL_EXPECT_CHECK_IDENTITY=
+++ FM_PR_POLL_TEMPLATE=
+++ FM_PR_POLL_STATE_DEVICE=
+++ FM_PR_POLL_SNAPSHOT_ID=
+++ FM_PR_POLL_SNAPSHOT_PROVIDER=
+++ FM_PR_POLL_SNAPSHOT_URL=
+++ FM_PR_POLL_SNAPSHOT_HOST=
+++ FM_PR_POLL_SNAPSHOT_PATH=
+++ FM_PR_POLL_SNAPSHOT_NUMBER=
+++ FM_PR_POLL_SNAPSHOT_DATA_HASH=
+++ FM_PR_POLL_SNAPSHOT_TEMPLATE_HASH=
+++ FM_PR_POLL_SNAPSHOT_DATA_IDENTITY=
+++ FM_PR_POLL_SNAPSHOT_CHECK_IDENTITY=
+++ FM_PR_POLL_SNAPSHOT_REG_HASH=
+++ FM_PR_POLL_SNAPSHOT_REG_IDENTITY=
+++ FM_PR_POLL_REARM_DATA_IDENTITY=
+++ FM_PR_POLL_REARM_CHECK_IDENTITY=
+++ FM_PR_RETIRE_ID=
+++ FM_PR_RETIRE_PROVIDER=
+++ FM_PR_RETIRE_URL=
+++ FM_PR_RETIRE_HOST=
+++ FM_PR_RETIRE_PATH=
+++ FM_PR_RETIRE_NUMBER=
+++ FM_PR_RETIRE_DATA_HASH=
+++ FM_PR_RETIRE_TEMPLATE_HASH=
+++ FM_PR_RETIRE_DATA_IDENTITY=
+++ FM_PR_RETIRE_CHECK_IDENTITY=
+++ FM_PR_RETIRE_REG_HASH=
+++ FM_PR_RETIRE_REG_IDENTITY=
+++ FM_PR_RETIRE_RECEIPT_HASH=
+++ FM_PR_RETIRE_RECEIPT_IDENTITY=
+++ FM_PR_RECORD_STATE=
+++ FM_PR_RECORD_MERGED=
+++ FM_PR_POLL_RETIREMENT_REJECTED=
++ . /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-check-lib.sh
+++ FM_CUSTOM_CHECK_HASH=
+++ FM_CUSTOM_CHECK_SNAPSHOT=
++ PR_CHECK=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-pr-check.sh
++ PR_MERGE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-pr-merge.sh
++ POLL=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-pr-poll.sh
++ WATCH=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-watch.sh
++ TEARDOWN=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-teardown.sh
++ REGISTER=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-check-register.sh
+++ fm_test_tmproot fm-pr-check-security
+++ local prefix=fm-pr-check-security root tmp_base
++++ fm_test_tmpdir
++++ local base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp physical
++++ base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ '[' -n /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp ']'
++++ case "$base" in
+++++ CDPATH=
+++++ cd -- /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++++ pwd -P
++++ physical=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ '[' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.git ']'
++++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++ tmp_base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++ tmp_base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ mktemp -d /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.XXXXXX
+++ root=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD
++++ cd -P -- /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD
++++ pwd -P
+++ root=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD
+++ printf '%s\n%s\n' 3788198 'linux-starttime=542561445 cmdline-hex=62617368002d780074657374732f666d2d70722d636865636b2d73656375726974792e746573742e736800'
+++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD
+++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD
++ TMP_ROOT=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD
++ fm_git_identity fmtest fmtest@example.invalid
++ export GIT_AUTHOR_NAME=fmtest GIT_AUTHOR_EMAIL=fmtest@example.invalid
++ GIT_AUTHOR_NAME=fmtest
++ GIT_AUTHOR_EMAIL=fmtest@example.invalid
++ export GIT_COMMITTER_NAME=fmtest GIT_COMMITTER_EMAIL=fmtest@example.invalid
++ GIT_COMMITTER_NAME=fmtest
++ GIT_COMMITTER_EMAIL=fmtest@example.invalid
++ BASE_PATH=/usr/bin:/bin:/usr/sbin:/sbin
+++ command -v cp
++ REAL_CP=/usr/bin/cp
+++ command -v mv
++ REAL_MV=/usr/bin/mv
+++ command -v stat
++ REAL_STAT=/usr/bin/stat
+++ command -v chmod
++ REAL_CHMOD=/usr/bin/chmod
+++ command -v jq
++ REAL_JQ=/usr/bin/jq
++ LINK_KIND=
++ LINK_TARGET=
++ LINK_CONTENT=
++ LINK_MODE=
++ INVALID_URLS=('https://gitlab.com/single/-/merge_requests/1' 'https://gitlab.com/g/p/-/merge_requests/0' 'https://gitlab.com/g/p/-/merge_requests/01' 'https://GitLab.com/g/p/-/merge_requests/1' 'https://gitlab.com:443/g/p/-/merge_requests/1' 'https://user@gitlab.com/g/p/-/merge_requests/1' 'https://gitlab.com/g/p/-/merge_requests/1/' 'https://gitlab.com/-/p/-/merge_requests/1' 'https://gitlab.com/g/p.git/-/merge_requests/1' 'https://gitlab.com/g/p.atom/-/merge_requests/1' 'https://gitlab.com/g/p/-/merge_requests/1?x=1' 'https://gitlab.com/g/p/-/merge_requests/1#note' 'https://gitlab.com/g/p/-/issues/1' 'https://gitlab.com//p/-/merge_requests/1' 'https://.gitlab.com/g/p/-/merge_requests/1' 'https://gitlab.com./g/p/-/merge_requests/1' 'http://gitlab.com/g/p/-/merge_requests/1' 'https://gerrit.example/c/proj/+/0' 'https://gerrit.example/c/proj/+/01' 'https://gerrit.example/c/proj/+/1/' 'https://gerrit.example/c/proj/+/1/2' 'https://gerrit.example/c/proj/+/1?x=1' 'https://gerrit.example/c/proj/+/1#c' 'https://gerrit.example/c/proj/+/1/+/2' 'https://gerrit.example/c//+/1' 'https://gerrit.example/c/proj//+/1' 'https://gerrit.example/c/proj.git/+/1' 'https://gerrit.example/c/-proj/+/1' 'https://gerrit.example/c/a/-b/+/1' 'https://gerrit.example/c/./+/1' 'https://gerrit.example/c/a/../+/1' 'https://gerrit.example/proj/+/1' 'https://gerrit.example/c/proj/1' 'https://gerrit.example/#/c/proj/+/1' 'https://GERRIT.example/c/proj/+/1' 'https://gerrit.example:8443/c/proj/+/1' 'https://user@gerrit.example/c/proj/+/1' 'https://.gerrit.example/c/proj/+/1' 'https://gerrit.example./c/proj/+/1' 'http://gerrit.example/c/proj/+/1' 'https://github.com/c/proj/+/1' 'https://gerrit.example/c/proj/+/1 ' 'https://github.com/o/r/pull/1/' ' https://github.com/o/r/pull/1' 'https://github.com/o/r/pull/1 ' 'https://github.com/o /r/pull/1' 'https://github.com/o/r/pull/1	' 'https://github.com/o/r/pull/1' 'https://github.com/o/r/pull/1
+next' 'https://github.com/o/r/pull/1
+next' 'https://github.com/o/r/pull/1' 'https://github.com/o/r/pull/1' 'https://github.com/o/r/pull/1' 'https://user@github.com/o/r/pull/1' 'https://user:pass@github.com/o/r/pull/1' 'https://github.com:443/o/r/pull/1' 'https://github.com/o%2Fr/pull/1' 'https://github.com/o/r%2Fz/pull/1' 'https://github.com/o/r/pull/1%3Fq' 'https://github.com/o/r/pull/1%23f' 'https://github.com/o/r/pull/1%24x' 'https://github.com/o/r/pull/1%28x%29' 'https://github.com/o/r/pull/1%60x' 'https://github.com/o/r/pull/1%0D' 'https://github.com/o/r/pull/1%0A' 'https://github.com/o/r/pull/1%252Fz' 'https://github.com//r/pull/1' 'https://github.com/o//pull/1' 'https://github.com/o/r//1' 'https://github.com/o/r/1' 'https://github.com/o/r/pull/' 'https://github.com/-owner/r/pull/1' 'https://github.com/owner-/r/pull/1' 'https://github.com/owner--name/r/pull/1' 'https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r/pull/1' 'https://github.com/o/./pull/1' 'https://github.com/o/../pull/1' 'https://github.com/o/r+z/pull/1' 'https://github.com/o/r/pull/+1' 'https://github.com/o/r/pull/0' 'https://github.com/o/r/pull/-1' 'https://github.com/o/r/pull/01' 'https://github.com/o/r/pull/0x1' 'https://github.com/o/r/pull/1e2' 'https://github.com/o/r/pull/1.0' 'https://github.com/o/r/issues/1' 'https://github.com/o/r/x/pull/1' 'https://github.com/o/r/pull/1/files' 'https://github.com/o/r/pull/1?q=x' 'https://github.com/o/r/pull/1#f' 'https://github.com.evil/o/r/pull/1' 'https://evilgithub.com/o/r/pull/1' 'https://gıthub.com/o/r/pull/1' 'https://xn--gthub-3va.com/o/r/pull/1' 'http://github.com/o/r/pull/1' 'ssh://github.com/o/r/pull/1' 'git://github.com/o/r/pull/1' 'file://github.com/o/r/pull/1' '//github.com/o/r/pull/1' 'HTTPS://github.com/o/r/pull/1' 'https://GitHub.com/o/r/pull/1' 'https://github.com/o$/r/pull/1' 'https://github.com/o(/r/pull/1' 'https://github.com/o)/r/pull/1' 'https://github.com/o`/r/pull/1' 'https://github.com/o/r`/pull/1' 'https://github.com/o/r/pull/1`' "https://github.com/o/'r'/pull/1" 'https://github.com/o/"r"/pull/1' 'https://github.com/o/'\''"r"'\''/pull/1' "https://github.com/o/r/pull/1'" 'https://github.com/o/r/pull/1"')
++ INVALID_IDS=('../escape' 'a/b' '.' '..' '.task' 'task a' 'task	a' 'task
+a' 'task*' "task'a" 'task"a' 'task;a' 'task$a')
++ UNSAFE_LIFECYCLE_IDS=('../escape' 'a/b' '.' '..' '.task' 'task a' 'task	a' 'task
+a' 'task*' "task'a" 'task"a' 'task;a' 'task$a')
++ '[' -n test_parser_matrix ']'
++ test_parser_matrix
++ local id row url owner repo number
++ IFS='|'
++ read -r url owner repo number
++ '[' -n https://github.com/a/b/pull/1 ']'
++ fm_pr_url_parse https://github.com/a/b/pull/1
++ local raw=https://github.com/a/b/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/a/b/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ [[ a != *--* ]]
++ '[' b '!=' . ']'
++ '[' b '!=' .. ']'
++ FM_PR_PROVIDER=github
++ FM_PR_URL=https://github.com/a/b/pull/1
++ FM_PR_HOST=github.com
++ FM_PR_PATH=a/b
++ FM_PR_OWNER=a
++ FM_PR_REPO=b
++ FM_PR_NUMBER=1
++ return 0
++ '[' https://github.com/a/b/pull/1 = https://github.com/a/b/pull/1 ']'
++ '[' a = a ']'
++ '[' b = b ']'
++ '[' 1 = 1 ']'
++ IFS='|'
++ read -r url owner repo number
++ '[' -n https://github.com/my-org/repo/pull/42 ']'
++ fm_pr_url_parse https://github.com/my-org/repo/pull/42
++ local raw=https://github.com/my-org/repo/pull/42 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/my-org/repo/pull/42 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ [[ my-org != *--* ]]
++ '[' repo '!=' . ']'
++ '[' repo '!=' .. ']'
++ FM_PR_PROVIDER=github
++ FM_PR_URL=https://github.com/my-org/repo/pull/42
++ FM_PR_HOST=github.com
++ FM_PR_PATH=my-org/repo
++ FM_PR_OWNER=my-org
++ FM_PR_REPO=repo
++ FM_PR_NUMBER=42
++ return 0
++ '[' https://github.com/my-org/repo/pull/42 = https://github.com/my-org/repo/pull/42 ']'
++ '[' my-org = my-org ']'
++ '[' repo = repo ']'
++ '[' 42 = 42 ']'
++ IFS='|'
++ read -r url owner repo number
++ '[' -n https://github.com/Owner/repo-name_with.parts/pull/123456 ']'
++ fm_pr_url_parse https://github.com/Owner/repo-name_with.parts/pull/123456
++ local raw=https://github.com/Owner/repo-name_with.parts/pull/123456 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/Owner/repo-name_with.parts/pull/123456 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ [[ Owner != *--* ]]
++ '[' repo-name_with.parts '!=' . ']'
++ '[' repo-name_with.parts '!=' .. ']'
++ FM_PR_PROVIDER=github
++ FM_PR_URL=https://github.com/Owner/repo-name_with.parts/pull/123456
++ FM_PR_HOST=github.com
++ FM_PR_PATH=Owner/repo-name_with.parts
++ FM_PR_OWNER=Owner
++ FM_PR_REPO=repo-name_with.parts
++ FM_PR_NUMBER=123456
++ return 0
++ '[' https://github.com/Owner/repo-name_with.parts/pull/123456 = https://github.com/Owner/repo-name_with.parts/pull/123456 ']'
++ '[' Owner = Owner ']'
++ '[' repo-name_with.parts = repo-name_with.parts ']'
++ '[' 123456 = 123456 ']'
++ IFS='|'
++ read -r url owner repo number
++ IFS='|'
++ read -r url host path number
++ '[' -n https://gitlab.com/group/project/-/merge_requests/1 ']'
++ fm_pr_url_parse https://gitlab.com/group/project/-/merge_requests/1
++ local raw=https://gitlab.com/group/project/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/group/project/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/group/project/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=gitlab.com
++ path=group/project
++ fm_pr_forge_host_valid gitlab.com
++ local host=gitlab.com label
++ local LC_ALL=C
++ local -a labels
++ '[' 10 -ge 1 ']'
++ '[' 10 -le 253 ']'
++ '[' gitlab.com '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 3 -ge 1 ']'
++ '[' 3 -le 63 ']'
++ case "$label" in
++ fm_pr_gitlab_path_valid group/project
++ local path=group/project segment
++ local LC_ALL=C
++ local -a segments
++ '[' 13 -ge 3 ']'
++ '[' 13 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 2 -ge 2 ']'
++ '[' 2 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 5 -ge 1 ']'
++ '[' 5 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 255 ']'
++ case "$segment" in
++ FM_PR_PROVIDER=gitlab
++ FM_PR_URL=https://gitlab.com/group/project/-/merge_requests/1
++ FM_PR_HOST=gitlab.com
++ FM_PR_PATH=group/project
++ FM_PR_NUMBER=1
++ return 0
++ '[' gitlab = gitlab ']'
++ '[' https://gitlab.com/group/project/-/merge_requests/1 = https://gitlab.com/group/project/-/merge_requests/1 ']'
++ '[' gitlab.com = gitlab.com ']'
++ '[' group/project = group/project ']'
++ '[' 1 = 1 ']'
++ '[' -z '' ']'
++ '[' -z '' ']'
++ IFS='|'
++ read -r url host path number
++ '[' -n https://gitlab.com/group/sub/deep/project/-/merge_requests/42 ']'
++ fm_pr_url_parse https://gitlab.com/group/sub/deep/project/-/merge_requests/42
++ local raw=https://gitlab.com/group/sub/deep/project/-/merge_requests/42 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/group/sub/deep/project/-/merge_requests/42 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/group/sub/deep/project/-/merge_requests/42 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=gitlab.com
++ path=group/sub/deep/project
++ fm_pr_forge_host_valid gitlab.com
++ local host=gitlab.com label
++ local LC_ALL=C
++ local -a labels
++ '[' 10 -ge 1 ']'
++ '[' 10 -le 253 ']'
++ '[' gitlab.com '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 3 -ge 1 ']'
++ '[' 3 -le 63 ']'
++ case "$label" in
++ fm_pr_gitlab_path_valid group/sub/deep/project
++ local path=group/sub/deep/project segment
++ local LC_ALL=C
++ local -a segments
++ '[' 22 -ge 3 ']'
++ '[' 22 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 4 -ge 2 ']'
++ '[' 4 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 5 -ge 1 ']'
++ '[' 5 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 3 -ge 1 ']'
++ '[' 3 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 4 -ge 1 ']'
++ '[' 4 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 255 ']'
++ case "$segment" in
++ FM_PR_PROVIDER=gitlab
++ FM_PR_URL=https://gitlab.com/group/sub/deep/project/-/merge_requests/42
++ FM_PR_HOST=gitlab.com
++ FM_PR_PATH=group/sub/deep/project
++ FM_PR_NUMBER=42
++ return 0
++ '[' gitlab = gitlab ']'
++ '[' https://gitlab.com/group/sub/deep/project/-/merge_requests/42 = https://gitlab.com/group/sub/deep/project/-/merge_requests/42 ']'
++ '[' gitlab.com = gitlab.com ']'
++ '[' group/sub/deep/project = group/sub/deep/project ']'
++ '[' 42 = 42 ']'
++ '[' -z '' ']'
++ '[' -z '' ']'
++ IFS='|'
++ read -r url host path number
++ '[' -n https://gitlab.example.co.uk/g/p/-/merge_requests/7 ']'
++ fm_pr_url_parse https://gitlab.example.co.uk/g/p/-/merge_requests/7
++ local raw=https://gitlab.example.co.uk/g/p/-/merge_requests/7 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.example.co.uk/g/p/-/merge_requests/7 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.example.co.uk/g/p/-/merge_requests/7 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=gitlab.example.co.uk
++ path=g/p
++ fm_pr_forge_host_valid gitlab.example.co.uk
++ local host=gitlab.example.co.uk label
++ local LC_ALL=C
++ local -a labels
++ '[' 20 -ge 1 ']'
++ '[' 20 -le 253 ']'
++ '[' gitlab.example.co.uk '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 2 -ge 1 ']'
++ '[' 2 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 2 -ge 1 ']'
++ '[' 2 -le 63 ']'
++ case "$label" in
++ fm_pr_gitlab_path_valid g/p
++ local path=g/p segment
++ local LC_ALL=C
++ local -a segments
++ '[' 3 -ge 3 ']'
++ '[' 3 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 2 -ge 2 ']'
++ '[' 2 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ FM_PR_PROVIDER=gitlab
++ FM_PR_URL=https://gitlab.example.co.uk/g/p/-/merge_requests/7
++ FM_PR_HOST=gitlab.example.co.uk
++ FM_PR_PATH=g/p
++ FM_PR_NUMBER=7
++ return 0
++ '[' gitlab = gitlab ']'
++ '[' https://gitlab.example.co.uk/g/p/-/merge_requests/7 = https://gitlab.example.co.uk/g/p/-/merge_requests/7 ']'
++ '[' gitlab.example.co.uk = gitlab.example.co.uk ']'
++ '[' g/p = g/p ']'
++ '[' 7 = 7 ']'
++ '[' -z '' ']'
++ '[' -z '' ']'
++ IFS='|'
++ read -r url host path number
++ '[' -n https://code.internal/team/tools/ci-runner/-/merge_requests/123456 ']'
++ fm_pr_url_parse https://code.internal/team/tools/ci-runner/-/merge_requests/123456
++ local raw=https://code.internal/team/tools/ci-runner/-/merge_requests/123456 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://code.internal/team/tools/ci-runner/-/merge_requests/123456 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://code.internal/team/tools/ci-runner/-/merge_requests/123456 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=code.internal
++ path=team/tools/ci-runner
++ fm_pr_forge_host_valid code.internal
++ local host=code.internal label
++ local LC_ALL=C
++ local -a labels
++ '[' 13 -ge 1 ']'
++ '[' 13 -le 253 ']'
++ '[' code.internal '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 4 -ge 1 ']'
++ '[' 4 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 8 -ge 1 ']'
++ '[' 8 -le 63 ']'
++ case "$label" in
++ fm_pr_gitlab_path_valid team/tools/ci-runner
++ local path=team/tools/ci-runner segment
++ local LC_ALL=C
++ local -a segments
++ '[' 20 -ge 3 ']'
++ '[' 20 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 3 -ge 2 ']'
++ '[' 3 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 4 -ge 1 ']'
++ '[' 4 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 5 -ge 1 ']'
++ '[' 5 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 9 -ge 1 ']'
++ '[' 9 -le 255 ']'
++ case "$segment" in
++ FM_PR_PROVIDER=gitlab
++ FM_PR_URL=https://code.internal/team/tools/ci-runner/-/merge_requests/123456
++ FM_PR_HOST=code.internal
++ FM_PR_PATH=team/tools/ci-runner
++ FM_PR_NUMBER=123456
++ return 0
++ '[' gitlab = gitlab ']'
++ '[' https://code.internal/team/tools/ci-runner/-/merge_requests/123456 = https://code.internal/team/tools/ci-runner/-/merge_requests/123456 ']'
++ '[' code.internal = code.internal ']'
++ '[' team/tools/ci-runner = team/tools/ci-runner ']'
++ '[' 123456 = 123456 ']'
++ '[' -z '' ']'
++ '[' -z '' ']'
++ IFS='|'
++ read -r url host path number
++ IFS='|'
++ read -r url host path number
++ '[' -n https://review.internal/c/group/apps/console/+/4201 ']'
++ fm_pr_url_parse https://review.internal/c/group/apps/console/+/4201
++ local raw=https://review.internal/c/group/apps/console/+/4201 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://review.internal/c/group/apps/console/+/4201 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://review.internal/c/group/apps/console/+/4201 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://review.internal/c/group/apps/console/+/4201 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=review.internal
++ path=group/apps/console
++ fm_pr_forge_host_valid review.internal
++ local host=review.internal label
++ local LC_ALL=C
++ local -a labels
++ '[' 15 -ge 1 ']'
++ '[' 15 -le 253 ']'
++ '[' review.internal '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 8 -ge 1 ']'
++ '[' 8 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid group/apps/console
++ local path=group/apps/console segment
++ local LC_ALL=C
++ local -a segments
++ '[' 18 -ge 1 ']'
++ '[' 18 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 3 -ge 1 ']'
++ '[' 3 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 5 -ge 1 ']'
++ '[' 5 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 4 -ge 1 ']'
++ '[' 4 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 255 ']'
++ case "$segment" in
++ FM_PR_PROVIDER=gerrit
++ FM_PR_URL=https://review.internal/c/group/apps/console/+/4201
++ FM_PR_HOST=review.internal
++ FM_PR_PATH=group/apps/console
++ FM_PR_NUMBER=4201
++ '[' gerrit = gerrit ']'
++ '[' https://review.internal/c/group/apps/console/+/4201 = https://review.internal/c/group/apps/console/+/4201 ']'
++ '[' review.internal = review.internal ']'
++ '[' group/apps/console = group/apps/console ']'
++ '[' 4201 = 4201 ']'
++ '[' -z '' ']'
++ '[' -z '' ']'
++ IFS='|'
++ read -r url host path number
++ '[' -n https://gerrit.example/c/proj/+/1 ']'
++ fm_pr_url_parse https://gerrit.example/c/proj/+/1
++ local raw=https://gerrit.example/c/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=gerrit.example
++ path=proj
++ fm_pr_forge_host_valid gerrit.example
++ local host=gerrit.example label
++ local LC_ALL=C
++ local -a labels
++ '[' 14 -ge 1 ']'
++ '[' 14 -le 253 ']'
++ '[' gerrit.example '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid proj
++ local path=proj segment
++ local LC_ALL=C
++ local -a segments
++ '[' 4 -ge 1 ']'
++ '[' 4 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 4 -ge 1 ']'
++ '[' 4 -le 255 ']'
++ case "$segment" in
++ FM_PR_PROVIDER=gerrit
++ FM_PR_URL=https://gerrit.example/c/proj/+/1
++ FM_PR_HOST=gerrit.example
++ FM_PR_PATH=proj
++ FM_PR_NUMBER=1
++ '[' gerrit = gerrit ']'
++ '[' https://gerrit.example/c/proj/+/1 = https://gerrit.example/c/proj/+/1 ']'
++ '[' gerrit.example = gerrit.example ']'
++ '[' proj = proj ']'
++ '[' 1 = 1 ']'
++ '[' -z '' ']'
++ '[' -z '' ']'
++ IFS='|'
++ read -r url host path number
++ '[' -n https://gerrit.example.co.uk/c/a/b/c/d/+/42 ']'
++ fm_pr_url_parse https://gerrit.example.co.uk/c/a/b/c/d/+/42
++ local raw=https://gerrit.example.co.uk/c/a/b/c/d/+/42 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example.co.uk/c/a/b/c/d/+/42 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example.co.uk/c/a/b/c/d/+/42 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example.co.uk/c/a/b/c/d/+/42 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=gerrit.example.co.uk
++ path=a/b/c/d
++ fm_pr_forge_host_valid gerrit.example.co.uk
++ local host=gerrit.example.co.uk label
++ local LC_ALL=C
++ local -a labels
++ '[' 20 -ge 1 ']'
++ '[' 20 -le 253 ']'
++ '[' gerrit.example.co.uk '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 2 -ge 1 ']'
++ '[' 2 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 2 -ge 1 ']'
++ '[' 2 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid a/b/c/d
++ local path=a/b/c/d segment
++ local LC_ALL=C
++ local -a segments
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 4 -ge 1 ']'
++ '[' 4 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ FM_PR_PROVIDER=gerrit
++ FM_PR_URL=https://gerrit.example.co.uk/c/a/b/c/d/+/42
++ FM_PR_HOST=gerrit.example.co.uk
++ FM_PR_PATH=a/b/c/d
++ FM_PR_NUMBER=42
++ '[' gerrit = gerrit ']'
++ '[' https://gerrit.example.co.uk/c/a/b/c/d/+/42 = https://gerrit.example.co.uk/c/a/b/c/d/+/42 ']'
++ '[' gerrit.example.co.uk = gerrit.example.co.uk ']'
++ '[' a/b/c/d = a/b/c/d ']'
++ '[' 42 = 42 ']'
++ '[' -z '' ']'
++ '[' -z '' ']'
++ IFS='|'
++ read -r url host path number
++ '[' -n https://review.internal/c/All-Projects/+/123456 ']'
++ fm_pr_url_parse https://review.internal/c/All-Projects/+/123456
++ local raw=https://review.internal/c/All-Projects/+/123456 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://review.internal/c/All-Projects/+/123456 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://review.internal/c/All-Projects/+/123456 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://review.internal/c/All-Projects/+/123456 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=review.internal
++ path=All-Projects
++ fm_pr_forge_host_valid review.internal
++ local host=review.internal label
++ local LC_ALL=C
++ local -a labels
++ '[' 15 -ge 1 ']'
++ '[' 15 -le 253 ']'
++ '[' review.internal '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 8 -ge 1 ']'
++ '[' 8 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid All-Projects
++ local path=All-Projects segment
++ local LC_ALL=C
++ local -a segments
++ '[' 12 -ge 1 ']'
++ '[' 12 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 12 -ge 1 ']'
++ '[' 12 -le 255 ']'
++ case "$segment" in
++ FM_PR_PROVIDER=gerrit
++ FM_PR_URL=https://review.internal/c/All-Projects/+/123456
++ FM_PR_HOST=review.internal
++ FM_PR_PATH=All-Projects
++ FM_PR_NUMBER=123456
++ '[' gerrit = gerrit ']'
++ '[' https://review.internal/c/All-Projects/+/123456 = https://review.internal/c/All-Projects/+/123456 ']'
++ '[' review.internal = review.internal ']'
++ '[' All-Projects = All-Projects ']'
++ '[' 123456 = 123456 ']'
++ '[' -z '' ']'
++ '[' -z '' ']'
++ IFS='|'
++ read -r url host path number
++ fm_pr_url_parse https://github.com/a/b/pull/1
++ local raw=https://github.com/a/b/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/a/b/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ [[ a != *--* ]]
++ '[' b '!=' . ']'
++ '[' b '!=' .. ']'
++ FM_PR_PROVIDER=github
++ FM_PR_URL=https://github.com/a/b/pull/1
++ FM_PR_HOST=github.com
++ FM_PR_PATH=a/b
++ FM_PR_OWNER=a
++ FM_PR_REPO=b
++ FM_PR_NUMBER=1
++ return 0
++ '[' github = github ']'
++ '[' github.com = github.com ']'
++ '[' a/b = a/b ']'
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com/single/-/merge_requests/1
++ local raw=https://gitlab.com/single/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/single/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/single/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=gitlab.com
++ path=single
++ fm_pr_forge_host_valid gitlab.com
++ local host=gitlab.com label
++ local LC_ALL=C
++ local -a labels
++ '[' 10 -ge 1 ']'
++ '[' 10 -le 253 ']'
++ '[' gitlab.com '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 3 -ge 1 ']'
++ '[' 3 -le 63 ']'
++ case "$label" in
++ fm_pr_gitlab_path_valid single
++ local path=single segment
++ local LC_ALL=C
++ local -a segments
++ '[' 6 -ge 3 ']'
++ '[' 6 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 1 -ge 2 ']'
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com/g/p/-/merge_requests/0
++ local raw=https://gitlab.com/g/p/-/merge_requests/0 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/0 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/0 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/0 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com/g/p/-/merge_requests/01
++ local raw=https://gitlab.com/g/p/-/merge_requests/01 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/01 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/01 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/01 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://GitLab.com/g/p/-/merge_requests/1
++ local raw=https://GitLab.com/g/p/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://GitLab.com/g/p/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://GitLab.com/g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://GitLab.com/g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com:443/g/p/-/merge_requests/1
++ local raw=https://gitlab.com:443/g/p/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com:443/g/p/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com:443/g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gitlab.com:443/g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://user@gitlab.com/g/p/-/merge_requests/1
++ local raw=https://user@gitlab.com/g/p/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://user@gitlab.com/g/p/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://user@gitlab.com/g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://user@gitlab.com/g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com/g/p/-/merge_requests/1/
++ local raw=https://gitlab.com/g/p/-/merge_requests/1/ pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/1/ =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/1/ =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/1/ =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com/-/p/-/merge_requests/1
++ local raw=https://gitlab.com/-/p/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/-/p/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/-/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=gitlab.com
++ path=-/p
++ fm_pr_forge_host_valid gitlab.com
++ local host=gitlab.com label
++ local LC_ALL=C
++ local -a labels
++ '[' 10 -ge 1 ']'
++ '[' 10 -le 253 ']'
++ '[' gitlab.com '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 3 -ge 1 ']'
++ '[' 3 -le 63 ']'
++ case "$label" in
++ fm_pr_gitlab_path_valid -/p
++ local path=-/p segment
++ local LC_ALL=C
++ local -a segments
++ '[' 3 -ge 3 ']'
++ '[' 3 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 2 -ge 2 ']'
++ '[' 2 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com/g/p.git/-/merge_requests/1
++ local raw=https://gitlab.com/g/p.git/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p.git/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p.git/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=gitlab.com
++ path=g/p.git
++ fm_pr_forge_host_valid gitlab.com
++ local host=gitlab.com label
++ local LC_ALL=C
++ local -a labels
++ '[' 10 -ge 1 ']'
++ '[' 10 -le 253 ']'
++ '[' gitlab.com '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 3 -ge 1 ']'
++ '[' 3 -le 63 ']'
++ case "$label" in
++ fm_pr_gitlab_path_valid g/p.git
++ local path=g/p.git segment
++ local LC_ALL=C
++ local -a segments
++ '[' 7 -ge 3 ']'
++ '[' 7 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 2 -ge 2 ']'
++ '[' 2 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 5 -ge 1 ']'
++ '[' 5 -le 255 ']'
++ case "$segment" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com/g/p.atom/-/merge_requests/1
++ local raw=https://gitlab.com/g/p.atom/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p.atom/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p.atom/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=gitlab.com
++ path=g/p.atom
++ fm_pr_forge_host_valid gitlab.com
++ local host=gitlab.com label
++ local LC_ALL=C
++ local -a labels
++ '[' 10 -ge 1 ']'
++ '[' 10 -le 253 ']'
++ '[' gitlab.com '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 3 -ge 1 ']'
++ '[' 3 -le 63 ']'
++ case "$label" in
++ fm_pr_gitlab_path_valid g/p.atom
++ local path=g/p.atom segment
++ local LC_ALL=C
++ local -a segments
++ '[' 8 -ge 3 ']'
++ '[' 8 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 2 -ge 2 ']'
++ '[' 2 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 255 ']'
++ case "$segment" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://gitlab.com/g/p/-/merge_requests/1?x=1'
++ local 'raw=https://gitlab.com/g/p/-/merge_requests/1?x=1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/1?x=1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/1?x=1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/1?x=1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com/g/p/-/merge_requests/1#note
++ local raw=https://gitlab.com/g/p/-/merge_requests/1#note pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/1#note =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/1#note =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/merge_requests/1#note =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com/g/p/-/issues/1
++ local raw=https://gitlab.com/g/p/-/issues/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/issues/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/issues/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gitlab.com/g/p/-/issues/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com//p/-/merge_requests/1
++ local raw=https://gitlab.com//p/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com//p/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com//p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=gitlab.com
++ path=/p
++ fm_pr_forge_host_valid gitlab.com
++ local host=gitlab.com label
++ local LC_ALL=C
++ local -a labels
++ '[' 10 -ge 1 ']'
++ '[' 10 -le 253 ']'
++ '[' gitlab.com '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 3 -ge 1 ']'
++ '[' 3 -le 63 ']'
++ case "$label" in
++ fm_pr_gitlab_path_valid /p
++ local path=/p segment
++ local LC_ALL=C
++ local -a segments
++ '[' 2 -ge 3 ']'
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://.gitlab.com/g/p/-/merge_requests/1
++ local raw=https://.gitlab.com/g/p/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://.gitlab.com/g/p/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://.gitlab.com/g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=.gitlab.com
++ path=g/p
++ fm_pr_forge_host_valid .gitlab.com
++ local host=.gitlab.com label
++ local LC_ALL=C
++ local -a labels
++ '[' 11 -ge 1 ']'
++ '[' 11 -le 253 ']'
++ '[' .gitlab.com '!=' github.com ']'
++ case "$host" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gitlab.com./g/p/-/merge_requests/1
++ local raw=https://gitlab.com./g/p/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gitlab.com./g/p/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gitlab.com./g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ host=gitlab.com.
++ path=g/p
++ fm_pr_forge_host_valid gitlab.com.
++ local host=gitlab.com. label
++ local LC_ALL=C
++ local -a labels
++ '[' 11 -ge 1 ']'
++ '[' 11 -le 253 ']'
++ '[' gitlab.com. '!=' github.com ']'
++ case "$host" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse http://gitlab.com/g/p/-/merge_requests/1
++ local raw=http://gitlab.com/g/p/-/merge_requests/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ http://gitlab.com/g/p/-/merge_requests/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ http://gitlab.com/g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ http://gitlab.com/g/p/-/merge_requests/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/proj/+/0
++ local raw=https://gerrit.example/c/proj/+/0 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/0 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/0 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/0 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/proj/+/01
++ local raw=https://gerrit.example/c/proj/+/01 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/01 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/01 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/01 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/proj/+/1/
++ local raw=https://gerrit.example/c/proj/+/1/ pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1/ =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1/ =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1/ =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/proj/+/1/2
++ local raw=https://gerrit.example/c/proj/+/1/2 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1/2 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1/2 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1/2 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://gerrit.example/c/proj/+/1?x=1'
++ local 'raw=https://gerrit.example/c/proj/+/1?x=1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1?x=1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1?x=1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1?x=1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/proj/+/1#c
++ local raw=https://gerrit.example/c/proj/+/1#c pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1#c =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1#c =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1#c =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/proj/+/1/+/2
++ local raw=https://gerrit.example/c/proj/+/1/+/2 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1/+/2 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1/+/2 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1/+/2 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c//+/1
++ local raw=https://gerrit.example/c//+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c//+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c//+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c//+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/proj//+/1
++ local raw=https://gerrit.example/c/proj//+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj//+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj//+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj//+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=gerrit.example
++ path=proj/
++ fm_pr_forge_host_valid gerrit.example
++ local host=gerrit.example label
++ local LC_ALL=C
++ local -a labels
++ '[' 14 -ge 1 ']'
++ '[' 14 -le 253 ']'
++ '[' gerrit.example '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid proj/
++ local path=proj/ segment
++ local LC_ALL=C
++ local -a segments
++ '[' 5 -ge 1 ']'
++ '[' 5 -le 1024 ']'
++ case "$path" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/proj.git/+/1
++ local raw=https://gerrit.example/c/proj.git/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj.git/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj.git/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj.git/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=gerrit.example
++ path=proj.git
++ fm_pr_forge_host_valid gerrit.example
++ local host=gerrit.example label
++ local LC_ALL=C
++ local -a labels
++ '[' 14 -ge 1 ']'
++ '[' 14 -le 253 ']'
++ '[' gerrit.example '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid proj.git
++ local path=proj.git segment
++ local LC_ALL=C
++ local -a segments
++ '[' 8 -ge 1 ']'
++ '[' 8 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 8 -ge 1 ']'
++ '[' 8 -le 255 ']'
++ case "$segment" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/-proj/+/1
++ local raw=https://gerrit.example/c/-proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/-proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/-proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/-proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=gerrit.example
++ path=-proj
++ fm_pr_forge_host_valid gerrit.example
++ local host=gerrit.example label
++ local LC_ALL=C
++ local -a labels
++ '[' 14 -ge 1 ']'
++ '[' 14 -le 253 ']'
++ '[' gerrit.example '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid -proj
++ local path=-proj segment
++ local LC_ALL=C
++ local -a segments
++ '[' 5 -ge 1 ']'
++ '[' 5 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 5 -ge 1 ']'
++ '[' 5 -le 255 ']'
++ case "$segment" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/a/-b/+/1
++ local raw=https://gerrit.example/c/a/-b/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/a/-b/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/a/-b/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/a/-b/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=gerrit.example
++ path=a/-b
++ fm_pr_forge_host_valid gerrit.example
++ local host=gerrit.example label
++ local LC_ALL=C
++ local -a labels
++ '[' 14 -ge 1 ']'
++ '[' 14 -le 253 ']'
++ '[' gerrit.example '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid a/-b
++ local path=a/-b segment
++ local LC_ALL=C
++ local -a segments
++ '[' 4 -ge 1 ']'
++ '[' 4 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 2 -ge 1 ']'
++ '[' 2 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 2 -ge 1 ']'
++ '[' 2 -le 255 ']'
++ case "$segment" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/./+/1
++ local raw=https://gerrit.example/c/./+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/./+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/./+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/./+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=gerrit.example
++ path=.
++ fm_pr_forge_host_valid gerrit.example
++ local host=gerrit.example label
++ local LC_ALL=C
++ local -a labels
++ '[' 14 -ge 1 ']'
++ '[' 14 -le 253 ']'
++ '[' gerrit.example '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid .
++ local path=. segment
++ local LC_ALL=C
++ local -a segments
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/a/../+/1
++ local raw=https://gerrit.example/c/a/../+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/a/../+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/a/../+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/a/../+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=gerrit.example
++ path=a/..
++ fm_pr_forge_host_valid gerrit.example
++ local host=gerrit.example label
++ local LC_ALL=C
++ local -a labels
++ '[' 14 -ge 1 ']'
++ '[' 14 -le 253 ']'
++ '[' gerrit.example '!=' github.com ']'
++ case "$host" in
++ IFS=.
++ read -ra labels
++ for label in "${labels[@]}"
++ '[' 6 -ge 1 ']'
++ '[' 6 -le 63 ']'
++ case "$label" in
++ for label in "${labels[@]}"
++ '[' 7 -ge 1 ']'
++ '[' 7 -le 63 ']'
++ case "$label" in
++ fm_pr_gerrit_path_valid a/..
++ local path=a/.. segment
++ local LC_ALL=C
++ local -a segments
++ '[' 4 -ge 1 ']'
++ '[' 4 -le 1024 ']'
++ case "$path" in
++ IFS=/
++ read -ra segments
++ '[' 2 -ge 1 ']'
++ '[' 2 -le 20 ']'
++ for segment in "${segments[@]}"
++ '[' 1 -ge 1 ']'
++ '[' 1 -le 255 ']'
++ case "$segment" in
++ for segment in "${segments[@]}"
++ '[' 2 -ge 1 ']'
++ '[' 2 -le 255 ']'
++ case "$segment" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/proj/+/1
++ local raw=https://gerrit.example/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/c/proj/1
++ local raw=https://gerrit.example/c/proj/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example/#/c/proj/+/1
++ local raw=https://gerrit.example/#/c/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/#/c/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/#/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/#/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://GERRIT.example/c/proj/+/1
++ local raw=https://GERRIT.example/c/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://GERRIT.example/c/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://GERRIT.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://GERRIT.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example:8443/c/proj/+/1
++ local raw=https://gerrit.example:8443/c/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example:8443/c/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example:8443/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example:8443/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://user@gerrit.example/c/proj/+/1
++ local raw=https://user@gerrit.example/c/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://user@gerrit.example/c/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://user@gerrit.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://user@gerrit.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://.gerrit.example/c/proj/+/1
++ local raw=https://.gerrit.example/c/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://.gerrit.example/c/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://.gerrit.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://.gerrit.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=.gerrit.example
++ path=proj
++ fm_pr_forge_host_valid .gerrit.example
++ local host=.gerrit.example label
++ local LC_ALL=C
++ local -a labels
++ '[' 15 -ge 1 ']'
++ '[' 15 -le 253 ']'
++ '[' .gerrit.example '!=' github.com ']'
++ case "$host" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gerrit.example./c/proj/+/1
++ local raw=https://gerrit.example./c/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example./c/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example./c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example./c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=gerrit.example.
++ path=proj
++ fm_pr_forge_host_valid gerrit.example.
++ local host=gerrit.example. label
++ local LC_ALL=C
++ local -a labels
++ '[' 15 -ge 1 ']'
++ '[' 15 -le 253 ']'
++ '[' gerrit.example. '!=' github.com ']'
++ case "$host" in
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse http://gerrit.example/c/proj/+/1
++ local raw=http://gerrit.example/c/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ http://gerrit.example/c/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ http://gerrit.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ http://gerrit.example/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/c/proj/+/1
++ local raw=https://github.com/c/proj/+/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/c/proj/+/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/c/proj/+/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ host=github.com
++ path=proj
++ fm_pr_forge_host_valid github.com
++ local host=github.com label
++ local LC_ALL=C
++ local -a labels
++ '[' 10 -ge 1 ']'
++ '[' 10 -le 253 ']'
++ '[' github.com '!=' github.com ']'
++ return 1
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://gerrit.example/c/proj/+/1 '
++ local 'raw=https://gerrit.example/c/proj/+/1 ' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1  =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1  =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gerrit.example/c/proj/+/1  =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1/
++ local raw=https://github.com/o/r/pull/1/ pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1/ =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1/ =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1/ =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse ' https://github.com/o/r/pull/1'
++ local 'raw= https://github.com/o/r/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[  https://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[  https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[  https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o/r/pull/1 '
++ local 'raw=https://github.com/o/r/pull/1 ' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1  =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1  =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1  =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o /r/pull/1'
++ local 'raw=https://github.com/o /r/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o /r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o /r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o /r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse $'https://github.com/o/r/pull/1\t'
++ local $'raw=https://github.com/o/r/pull/1\t' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1	 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1	 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1	 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse $'https://github.com/o/r/pull/1\r'
++ local $'raw=https://github.com/o/r/pull/1\r' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse $'https://github.com/o/r/pull/1\nnext'
++ local $'raw=https://github.com/o/r/pull/1\nnext' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1
+next =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1
+next =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1
+next =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse $'https://github.com/o/r/pull/1\r\nnext'
++ local $'raw=https://github.com/o/r/pull/1\r\nnext' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1
+next =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1
+next =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1
+next =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse $'https://github.com/o/r/pull/1\001'
++ local $'raw=https://github.com/o/r/pull/1\001' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse $'https://github.com/o/r/pull/1\E'
++ local $'raw=https://github.com/o/r/pull/1\E' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse $'https://github.com/o/r/pull/1\177'
++ local $'raw=https://github.com/o/r/pull/1\177' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://user@github.com/o/r/pull/1
++ local raw=https://user@github.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://user@github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://user@github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://user@github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://user:pass@github.com/o/r/pull/1
++ local raw=https://user:pass@github.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://user:pass@github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://user:pass@github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://user:pass@github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com:443/o/r/pull/1
++ local raw=https://github.com:443/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com:443/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com:443/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com:443/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o%2Fr/pull/1
++ local raw=https://github.com/o%2Fr/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o%2Fr/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o%2Fr/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o%2Fr/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r%2Fz/pull/1
++ local raw=https://github.com/o/r%2Fz/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r%2Fz/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r%2Fz/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r%2Fz/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1%3Fq
++ local raw=https://github.com/o/r/pull/1%3Fq pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%3Fq =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%3Fq =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%3Fq =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1%23f
++ local raw=https://github.com/o/r/pull/1%23f pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%23f =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%23f =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%23f =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1%24x
++ local raw=https://github.com/o/r/pull/1%24x pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%24x =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%24x =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%24x =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1%28x%29
++ local raw=https://github.com/o/r/pull/1%28x%29 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%28x%29 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%28x%29 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%28x%29 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1%60x
++ local raw=https://github.com/o/r/pull/1%60x pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%60x =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%60x =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%60x =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1%0D
++ local raw=https://github.com/o/r/pull/1%0D pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%0D =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%0D =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%0D =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1%0A
++ local raw=https://github.com/o/r/pull/1%0A pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%0A =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%0A =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%0A =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1%252Fz
++ local raw=https://github.com/o/r/pull/1%252Fz pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%252Fz =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%252Fz =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1%252Fz =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com//r/pull/1
++ local raw=https://github.com//r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com//r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com//r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com//r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o//pull/1
++ local raw=https://github.com/o//pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o//pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o//pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o//pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r//1
++ local raw=https://github.com/o/r//1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r//1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r//1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r//1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/1
++ local raw=https://github.com/o/r/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/
++ local raw=https://github.com/o/r/pull/ pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/ =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/ =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/ =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/-owner/r/pull/1
++ local raw=https://github.com/-owner/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/-owner/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/-owner/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/-owner/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/owner-/r/pull/1
++ local raw=https://github.com/owner-/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/owner-/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/owner-/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/owner-/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/owner--name/r/pull/1
++ local raw=https://github.com/owner--name/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/owner--name/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ [[ owner--name != *--* ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r/pull/1
++ local raw=https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/./pull/1
++ local raw=https://github.com/o/./pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/./pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ [[ o != *--* ]]
++ '[' . '!=' . ']'
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/../pull/1
++ local raw=https://github.com/o/../pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/../pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ [[ o != *--* ]]
++ '[' .. '!=' . ']'
++ '[' .. '!=' .. ']'
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r+z/pull/1
++ local raw=https://github.com/o/r+z/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r+z/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r+z/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r+z/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/+1
++ local raw=https://github.com/o/r/pull/+1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/+1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/+1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/+1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/0
++ local raw=https://github.com/o/r/pull/0 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/0 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/0 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/0 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/-1
++ local raw=https://github.com/o/r/pull/-1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/-1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/-1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/-1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/01
++ local raw=https://github.com/o/r/pull/01 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/01 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/01 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/01 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/0x1
++ local raw=https://github.com/o/r/pull/0x1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/0x1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/0x1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/0x1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1e2
++ local raw=https://github.com/o/r/pull/1e2 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1e2 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1e2 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1e2 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1.0
++ local raw=https://github.com/o/r/pull/1.0 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1.0 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1.0 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1.0 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/issues/1
++ local raw=https://github.com/o/r/issues/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/issues/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/issues/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/issues/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/x/pull/1
++ local raw=https://github.com/o/r/x/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/x/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/x/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/x/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1/files
++ local raw=https://github.com/o/r/pull/1/files pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1/files =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1/files =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1/files =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o/r/pull/1?q=x'
++ local 'raw=https://github.com/o/r/pull/1?q=x' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1?q=x =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1?q=x =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1?q=x =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com/o/r/pull/1#f
++ local raw=https://github.com/o/r/pull/1#f pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1#f =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1#f =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1#f =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://github.com.evil/o/r/pull/1
++ local raw=https://github.com.evil/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com.evil/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com.evil/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com.evil/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://evilgithub.com/o/r/pull/1
++ local raw=https://evilgithub.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://evilgithub.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://evilgithub.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://evilgithub.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://gıthub.com/o/r/pull/1
++ local raw=https://gıthub.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://gıthub.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://gıthub.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://gıthub.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://xn--gthub-3va.com/o/r/pull/1
++ local raw=https://xn--gthub-3va.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://xn--gthub-3va.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://xn--gthub-3va.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://xn--gthub-3va.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse http://github.com/o/r/pull/1
++ local raw=http://github.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ http://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ http://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ http://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse ssh://github.com/o/r/pull/1
++ local raw=ssh://github.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ ssh://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ ssh://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ ssh://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse git://github.com/o/r/pull/1
++ local raw=git://github.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ git://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ git://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ git://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse file://github.com/o/r/pull/1
++ local raw=file://github.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ file://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ file://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ file://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse //github.com/o/r/pull/1
++ local raw=//github.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ //github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ //github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ //github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse HTTPS://github.com/o/r/pull/1
++ local raw=HTTPS://github.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ HTTPS://github.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ HTTPS://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ HTTPS://github.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse https://GitHub.com/o/r/pull/1
++ local raw=https://GitHub.com/o/r/pull/1 pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://GitHub.com/o/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://GitHub.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://GitHub.com/o/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o$/r/pull/1'
++ local 'raw=https://github.com/o$/r/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o$/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o$/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o$/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o(/r/pull/1'
++ local 'raw=https://github.com/o(/r/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o(/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o(/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o(/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o)/r/pull/1'
++ local 'raw=https://github.com/o)/r/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o)/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o)/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o)/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o`/r/pull/1'
++ local 'raw=https://github.com/o`/r/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o`/r/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o`/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o`/r/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o/r`/pull/1'
++ local 'raw=https://github.com/o/r`/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r`/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r`/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r`/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o/r/pull/1`'
++ local 'raw=https://github.com/o/r/pull/1`' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1` =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1` =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1` =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o/'\''r'\''/pull/1'
++ local 'raw=https://github.com/o/'\''r'\''/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/'r'/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/'r'/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/'r'/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o/"r"/pull/1'
++ local 'raw=https://github.com/o/"r"/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/"r"/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/"r"/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/"r"/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o/'\''"r"'\''/pull/1'
++ local 'raw=https://github.com/o/'\''"r"'\''/pull/1' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/'"r"'/pull/1 =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/'"r"'/pull/1 =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/'"r"'/pull/1 =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o/r/pull/1'\'''
++ local 'raw=https://github.com/o/r/pull/1'\''' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1' =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1' =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1' =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for row in "${INVALID_URLS[@]}"
++ fm_pr_url_parse 'https://github.com/o/r/pull/1"'
++ local 'raw=https://github.com/o/r/pull/1"' pattern host path
++ local LC_ALL=C
++ FM_PR_PROVIDER=
++ FM_PR_URL=
++ FM_PR_HOST=
++ FM_PR_PATH=
++ FM_PR_OWNER=
++ FM_PR_REPO=
++ FM_PR_NUMBER=
++ pattern='^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1" =~ ^https://github\.com/([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]{0,37}[A-Za-z0-9])/([A-Za-z0-9._-]{1,100})/pull/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1" =~ ^https://([a-z0-9.-]{1,253})/([A-Za-z0-9._/-]+)/-/merge_requests/([1-9][0-9]*)$ ]]
++ pattern='^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$'
++ [[ https://github.com/o/r/pull/1" =~ ^https://([a-z0-9.-]{1,253})/c/([A-Za-z0-9._/-]+)/\+/([1-9][0-9]*)$ ]]
++ return 1
++ for id in -task task- task--a Task-a task_a task.a
++ fm_pr_task_id_valid -task
++ local id=-task
++ fm_task_id_path_safe -task
++ local id=-task
++ local LC_ALL=C
++ case "$id" in
++ for id in -task task- task--a Task-a task_a task.a
++ fm_pr_task_id_valid task-
++ local id=task-
++ fm_task_id_path_safe task-
++ local id=task-
++ local LC_ALL=C
++ case "$id" in
++ for id in -task task- task--a Task-a task_a task.a
++ fm_pr_task_id_valid task--a
++ local id=task--a
++ fm_task_id_path_safe task--a
++ local id=task--a
++ local LC_ALL=C
++ case "$id" in
++ for id in -task task- task--a Task-a task_a task.a
++ fm_pr_task_id_valid Task-a
++ local id=Task-a
++ fm_task_id_path_safe Task-a
++ local id=Task-a
++ local LC_ALL=C
++ case "$id" in
++ for id in -task task- task--a Task-a task_a task.a
++ fm_pr_task_id_valid task_a
++ local id=task_a
++ fm_task_id_path_safe task_a
++ local id=task_a
++ local LC_ALL=C
++ case "$id" in
++ for id in -task task- task--a Task-a task_a task.a
++ fm_pr_task_id_valid task.a
++ local id=task.a
++ fm_task_id_path_safe task.a
++ local id=task.a
++ local LC_ALL=C
++ case "$id" in
++ fm_task_id_creation_valid _noncanonical
++ local id=_noncanonical
++ fm_pr_task_id_valid _noncanonical
++ local id=_noncanonical
++ fm_task_id_path_safe _noncanonical
++ local id=_noncanonical
++ local LC_ALL=C
++ case "$id" in
++ '[' 13 -le 64 ']'
++ id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ fm_pr_task_id_valid aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ local id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ fm_task_id_path_safe aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ local id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ local LC_ALL=C
++ case "$id" in
++ fm_task_id_creation_valid aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ local id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ fm_pr_task_id_valid aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ local id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ fm_task_id_path_safe aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ local id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
++ local LC_ALL=C
++ case "$id" in
++ '[' 65 -le 64 ']'
++ pass 'raw-byte parser accepts canonical URLs and rejects the complete adversarial matrix'
++ printf 'ok - %s\n' 'raw-byte parser accepts canonical URLs and rejects the complete adversarial matrix'
+ok - raw-byte parser accepts canonical URLs and rejects the complete adversarial matrix
++ exit 0
++ fm_test_cleanup
++ local d
++ fm_test_reap_watchers
++ local state lock_home $'seen=\n'
++ '[' -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-watcher.3788198.VitjAf ']'
++ IFS=
++ read -r state
++ rm -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-watcher.3788198.VitjAf
++ fm_test_reap_procevent_homes
++ local home claim_root $'seen=\n'
++ '[' -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-procevent.3788198.yCDSyD ']'
++ IFS=$'\t'
++ read -r home claim_root
++ rm -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-procevent.3788198.yCDSyD
++ for d in "${FM_TEST_CLEANUP_DIRS[@]:-}"
++ '[' -n '' ']'
++ '[' -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-cleanup.3788198.NtpggZ ']'
++ IFS=
++ read -r d
++ '[' -n /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD ']'
++ fm_test_remove_tree /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD
++ local dir=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD
++ '[' -d /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD ']'
++ '[' '!' -L /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD ']'
++ find /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD -type d -exec chmod u+rwx '{}' +
++ rm -rf /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.5WcWtD
++ IFS=
++ read -r d
++ rm -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-cleanup.3788198.NtpggZ

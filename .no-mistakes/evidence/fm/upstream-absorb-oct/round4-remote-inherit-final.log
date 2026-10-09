@@ -1,0 +1,39 @@
+FM_TEST_BEGIN 2026-10-09T17:45:33Z tests/fm-remote-inherit-focused.test.sh family=unclassified expected_gate_skip=none
+ok - overlapping remote home provisioning serializes through publication and rollback
+ok - competing cleanup of the public home cannot reach a live provisioning clone
+ok - a home that appears mid-provision makes the provision die without touching it
+ok - remote seed rollback preserves serialized competing routes
+ok - unknown readiness preserves its route and brief for reconciliation
+ok - remote seeding checks, repairs, and re-checks readiness, then stops on a remaining gap
+ok - remote seeding proceeds once the repair closes every gap
+ok - remote seeding provisions a supplied origin without touching the primary project tree
+ok - remote provisioning re-validates a supplied origin at the receiving host
+ok - seeding carries bitbucket, self-hosted, and scp-like origins through to the remote clone
+ok - remote seed registers the route and provisions the whole home and project clone on that host
+ok - remote inheritance rejects incomplete and superseded payload generations
+ok - mixed local and remote routes validate without migration
+ok - remote spawn launches on the remote-local backend and records a host-qualified route
+ok - legacy and mismatched remote endpoints fail closed before backend access
+ok - non-herdr remote endpoints are refused without changing either route
+not ok - remote spawn never reached its blocked inheritance write
+DIAGNOSTIC spawn-concurrent.out
+WARNING: watcher still down (same stale episode; last beat: 180s ago, grace 300s) - full banner already printed this episode.
+DIAGNOSTIC remote-herdr.log
+pane run w1:p3 export GOTMPDIR=/tmp/fm-ios/gotmp --session fm-remote
+status --json --session fm-remote
+pane run w1:p3 export COMPACT_ADVISER_DISABLE=1 --session fm-remote
+status --json --session fm-remote
+pane send-text w1:p3 . '/tmp/fm-ios+fc2de64f2a21fe2d6079d81ab44ebb8764933ee5a113b68bdaa4cf9dbf951299/launch.s1791568079.3914728.4589.sh' --session fm-remote
+status --json --session fm-remote
+pane send-keys w1:p3 enter --session fm-remote
+pane get w1:p3 --session fm-remote
+agent get w1:p3 --session fm-remote
+pane process-info --pane w1:p3 --session fm-remote
+status --json --session fm-remote
+agent get w1:p3 --session fm-remote
+DIAGNOSTIC ssh.count
+98
+FM_TEST_END 2026-10-09T17:51:49Z tests/fm-remote-inherit-focused.test.sh exit=1 duration_ms=376928 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=1 skipped_gate=0 duration_ms=377130
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=376928 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-remote-inherit-focused.test.sh duration_ms=376928

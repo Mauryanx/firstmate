@@ -1,0 +1,23 @@
+FM_TEST_BEGIN 2026-10-09T17:06:45Z tests/fm-host-mirror.test.sh family=afk expected_gate_skip=none
+ok - mirror: the Claude and Cursor registrations each write the captain's prompt and main's reply
+ok - mirror: writers stay silent and write nothing on a home that opted out or has no state
+ok - only Claude and Cursor, the primaries with proven writers, have a verified dialog mirror
+ok - mirror: a home opted out by config/supervision-host-off is untouched by every tracked mirror registration
+ok - mirror: without config/supervision-host the Claude registrations write the mirror and Cursor's stay inert
+ok - mirror: operational input, a harness-started turn, a foreign host's payload, other events, and a session without the lock are never mirrored
+ok - mirror: a captain prompt and a main reply keep their internal whitespace and newlines verbatim
+ok - mirror: a repeated entry is recorded once, and a long entry keeps its head and tail within the cap
+ok - mirror: a later different reply under the same id is recorded, while an identical repeat is recorded once
+ok - mirror: an entry id already recorded by an earlier main session does not drop a later session's dialog
+ok - mirror: a failed append leaves the mirror valid, prints nothing, and later dialog still lands
+ok - mirror: the captain's dialog lands only in an owner-only mirror, even when the file already existed readable by others
+ok - mirror: captain prompts and main replies reach the mirror without ever entering a process argument list
+ok - mirror: the feed resumes from its committed cursor, re-anchors on a new conversation or session, and is bounded
+ok - mirror: the feed's bound includes the note naming how many earlier entries it left out
+ok - mirror: a later lock holder with a recycled pid is a new main session
+ok - mirror: the feed refuses a mirror with a zero, fractional, or non-rising sequence, or an unterminated final record
+ok - mirror: a recreated mirror continues past the committed and staged cursors, so a resumed conversation still gets new dialog
+FM_TEST_END 2026-10-09T17:07:33Z tests/fm-host-mirror.test.sh exit=0 duration_ms=48466 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=48649
+FM_TEST_SUMMARY_FAMILY family=afk count=1 duration_ms=48466 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-host-mirror.test.sh duration_ms=48466

@@ -1,0 +1,45 @@
+FM_TEST_BEGIN 2026-10-09T17:00:31Z tests/fm-supervision-host-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+skip: live: opt-in; set FM_SUPERVISION_HOST_LIVE_E2E=1 to run
+fm-test-run: gate skip: tests/fm-supervision-host-live-e2e.test.sh: live: opt-in; set FM_SUPERVISION_HOST_LIVE_E2E=1 to run
+FM_TEST_END 2026-10-09T17:00:31Z tests/fm-supervision-host-live-e2e.test.sh exit=0 duration_ms=510 gate_skip=true
+FM_TEST_BEGIN 2026-10-09T17:00:31Z tests/fm-supervision-host-attended-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+skip: live: opt-in; set FM_SUPERVISION_HOST_ATTENDED_LIVE_E2E=1 to run
+fm-test-run: gate skip: tests/fm-supervision-host-attended-live-e2e.test.sh: live: opt-in; set FM_SUPERVISION_HOST_ATTENDED_LIVE_E2E=1 to run
+FM_TEST_END 2026-10-09T17:00:32Z tests/fm-supervision-host-attended-live-e2e.test.sh exit=0 duration_ms=532 gate_skip=true
+FM_TEST_BEGIN 2026-10-09T17:00:32Z tests/fm-host-mirror-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+skip: live: opt-in; set FM_HOST_MIRROR_LIVE_E2E=1 to run
+fm-test-run: gate skip: tests/fm-host-mirror-live-e2e.test.sh: live: opt-in; set FM_HOST_MIRROR_LIVE_E2E=1 to run
+FM_TEST_END 2026-10-09T17:00:32Z tests/fm-host-mirror-live-e2e.test.sh exit=0 duration_ms=549 gate_skip=true
+FM_TEST_BEGIN 2026-10-09T17:00:32Z tests/fm-quota-array-dispatch-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+skip: live: opt-in; set FM_QUOTA_ARRAY_DISPATCH_LIVE_E2E=1 to run
+fm-test-run: gate skip: tests/fm-quota-array-dispatch-live-e2e.test.sh: live: opt-in; set FM_QUOTA_ARRAY_DISPATCH_LIVE_E2E=1 to run
+FM_TEST_END 2026-10-09T17:00:33Z tests/fm-quota-array-dispatch-live-e2e.test.sh exit=0 duration_ms=541 gate_skip=true
+FM_TEST_BEGIN 2026-10-09T17:00:33Z tests/fm-devin-signals-live-e2e.test.sh family=live-harness-optin expected_gate_skip=live-capability
+skip: live: opt-in; set FM_DEVIN_SIGNALS_LIVE=1 to run
+fm-test-run: gate skip: tests/fm-devin-signals-live-e2e.test.sh: live: opt-in; set FM_DEVIN_SIGNALS_LIVE=1 to run
+FM_TEST_END 2026-10-09T17:00:34Z tests/fm-devin-signals-live-e2e.test.sh exit=0 duration_ms=546 gate_skip=true
+FM_TEST_BEGIN 2026-10-09T17:00:34Z tests/fm-afk-inject-e2e.test.sh family=afk expected_gate_skip=none
+ok - Scenario A: partial input defers injection; digest arrives clean after idle
+ok - Scenario B: swallowed Enter produces exactly one clean digest
+ok - Scenario C: a normal captain status injects exactly one clean single-line sentinel digest
+ok - Scenario D: a claude primary receives one plain doorbell whose record the away-mode return check reads as internal
+all e2e injection tests passed
+FM_TEST_END 2026-10-09T17:01:22Z tests/fm-afk-inject-e2e.test.sh exit=0 duration_ms=48614 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T17:01:22Z tests/fm-remote-secondmate-lifecycle-e2e.test.sh family=secondmate expected_gate_skip=none
+tar: ./.test-phase-tmp/fm-remote-secondmate-e2e.U0wzSt/remote-root/.pi/extensions/lib/fm-calm-working-ship-sprite.ts: Cannot open: Permission denied
+tar: ./.test-phase-tmp/fm-remote-secondmate-e2e.U0wzSt/remote-root/.pi/extensions/lib/fm-calm-preservation.ts: Cannot open: Permission denied
+tar: ./.test-phase-tmp/fm-remote-secondmate-e2e.U0wzSt/remote-root/.agents/skills/firstmate-calm: Cannot open: Permission denied
+tar: ./.test-phase-tmp/fm-remote-secondmate-e2e.U0wzSt/remote-root/.claude/skills: Cannot open: Permission denied
+Terminated                 ( cd "$ROOT" || exit; tar --exclude=.git --exclude=.no-mistakes --exclude=data --exclude=state --exclude=config -cf - . ) | ( cd "$REMOTE_ROOT" && tar -xf - )
+FM_TEST_END 2026-10-09T17:02:26Z tests/fm-remote-secondmate-lifecycle-e2e.test.sh exit=143 duration_ms=63637 gate_skip=false
+FM_TEST_SUMMARY total=7 failed=1 skipped_gate=5 duration_ms=115757
+FM_TEST_SUMMARY_FAMILY family=afk count=1 duration_ms=48614 failed=0
+FM_TEST_SUMMARY_FAMILY family=live-harness-optin count=5 duration_ms=2678 failed=0
+FM_TEST_SUMMARY_FAMILY family=secondmate count=1 duration_ms=63637 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-remote-secondmate-lifecycle-e2e.test.sh duration_ms=63637
+FM_TEST_SLOWEST rank=2 script=tests/fm-afk-inject-e2e.test.sh duration_ms=48614
+FM_TEST_SLOWEST rank=3 script=tests/fm-host-mirror-live-e2e.test.sh duration_ms=549
+FM_TEST_SLOWEST rank=4 script=tests/fm-devin-signals-live-e2e.test.sh duration_ms=546
+FM_TEST_SLOWEST rank=5 script=tests/fm-quota-array-dispatch-live-e2e.test.sh duration_ms=541
+FM_TEST_SLOWEST rank=6 script=tests/fm-supervision-host-attended-live-e2e.test.sh duration_ms=532
+FM_TEST_SLOWEST rank=7 script=tests/fm-supervision-host-live-e2e.test.sh duration_ms=510

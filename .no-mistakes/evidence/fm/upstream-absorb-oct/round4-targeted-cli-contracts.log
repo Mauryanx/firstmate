@@ -1,0 +1,194 @@
+SOURCE: round4-codex-account-final.log
+FM_TEST_BEGIN 2026-10-09T17:01:26Z .test-phase-tmp/round4-codex-account.test.sh family=unclassified expected_gate_skip=none
+ok - codex --codex-home prefixes the launch with CODEX_HOME and records codex_home= in meta
+ok - codex --codex-home canonicalizes aliases before launch and metadata
+ok - codex without --codex-home writes no CODEX_HOME prefix and no codex_home= line
+ok - codex --codex-home refuses an account directory with no auth.json instead of falling back
+ok - codex --codex-home refuses an account whose auth.json is empty
+ok - codex --codex-home refuses a missing account directory
+ok - codex --codex-home refuses a relative path
+ok - codex --codex-home refuses a bare tilde
+ok - codex --codex-home refuses control bytes before metadata publication
+ok - codex --codex-home refuses an empty value
+ok - --codex-home is refused on a non-codex harness
+ok - --codex-home is refused on a --secondmate launch
+ok - batch dispatch forwards a shared --codex-home to every pair
+FM_TEST_END 2026-10-09T17:02:01Z .test-phase-tmp/round4-codex-account.test.sh exit=0 duration_ms=34568 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=34761
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=34568 failed=0
+FM_TEST_SLOWEST rank=1 script=.test-phase-tmp/round4-codex-account.test.sh duration_ms=34568
+
+SOURCE: round4-isolated-home-tests.log
+FM_TEST_BEGIN 2026-10-09T17:02:45Z .test-phase-tmp/round4-source/tests/fm-worker-account.test.sh family=backend-dispatch expected_gate_skip=none
+ok - an absent pin leaves Claude and Pi launches exactly as they were
+ok - a Claude pin selects its root and sheds the credentials that would outrank it
+ok - a Claude pin refuses a signed-out root even when the invoking process has a usable login and API key
+ok - an ordinary Claude pin selects the default login and drops an ambient root
+ok - malformed, relative, CR-terminated, empty, extra-line, missing-root, and non-file pins refuse before launch
+ok - a Pi pin selects its root and passes the declared provider
+ok - a Pi pin refuses unqualified, missing, undeclared, signed-out, and raw launches
+ok - extension providers and a Pi without auth check fall back to an exact model-listing match
+ok - a Claude pin leaves codex and Pi launches unchanged
+ok - a raw Claude launch command receives the home's pin
+ok - a pinned home refuses a raw Claude command that overrides the account
+ok - an unpinned home keeps a raw Claude account override
+ok - a local secondmate reads the launching home's pin and its own home's file is never inherited over
+# all fm-worker-account tests passed
+FM_TEST_END 2026-10-09T17:04:28Z .test-phase-tmp/round4-source/tests/fm-worker-account.test.sh exit=0 duration_ms=103384 gate_skip=false
+
+SOURCE: round4-capacity-compatible.log
+FM_TEST_BEGIN 2026-10-09T17:03:26Z .test-phase-tmp/round4-source/tests/fm-project-capacity.test.sh family=backend-dispatch expected_gate_skip=none
+ok - a project with no declared capacity keeps today's uncapped dispatch
+ok - a spawn is admitted while its project still has a free place
+ok - a spawn beyond capacity is deferred before any record, brief, endpoint, worktree, or backlog move exists
+ok - a project name with spaces is declared by taking the capacity from the last field
+ok - a project name beginning with # is declared, and a # comment stays a comment
+ok - a home reached through a symlink counts each of its workers once
+ok - a recorded PR handoff or a cleanup each frees exactly one place
+ok - a restart of a task id does not count that task's own record
+ok - only this project's ship and scout records hold places
+ok - every local home shares one declared capacity per project origin, and remote homes do not count
+ok - an unreadable state directory or task record refuses admission rather than undercounting
+ok - concurrent spawns can never both take the last place
+ok - a spawn that fails after admission leaves no record and holds no place
+ok - an unreadable declaration refuses every fresh spawn rather than guessing the limit
+ok - a batch reports a capacity deferral as deferred, not failed
+ok - an Orca spawn takes the shared project lock whenever a same-origin clone is capped and defers before creating anything
+FM_TEST_END 2026-10-09T17:06:20Z .test-phase-tmp/round4-source/tests/fm-project-capacity.test.sh exit=0 duration_ms=174015 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=174231
+FM_TEST_SUMMARY_FAMILY family=backend-dispatch count=1 duration_ms=174015 failed=0
+FM_TEST_SLOWEST rank=1 script=.test-phase-tmp/round4-source/tests/fm-project-capacity.test.sh duration_ms=174015
+
+SOURCE: round4-brief-final.log
+FM_TEST_BEGIN 2026-10-09T17:06:12Z .test-phase-tmp/round4-brief-behavior.test.sh family=unclassified expected_gate_skip=none
+ok - fm-brief.sh: no-mistakes/direct-PR/local-only briefs generate cleanly
+ok - fm-brief.sh: ship --mode is required and closed-set validated
+ok - fm-brief.sh: --branch-prefix omitted defaults every ship mode to fm/<task-id>
+ok - fm-brief.sh: a --branch-prefix override renders identically across every generated section
+ok - fm-brief.sh: an empty --branch-prefix override resolves to a bare <task-id> branch
+ok - fm-brief.sh: --branch-prefix is refused on scout and secondmate scaffolds
+ok - fm-brief.sh: --branch-prefix value is validated against embedded spaces and a leading dash
+Switched to a new branch '$(touch${IFS}BRANCH_PREFIX_MARKER)brief-branch-safe-g3'
+ok - fm-brief.sh: ref-format-valid shell metacharacters stay literal in generated branch commands
+FM_TEST_END 2026-10-09T17:06:18Z .test-phase-tmp/round4-brief-behavior.test.sh exit=0 duration_ms=5475 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=5711
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=5475 failed=0
+FM_TEST_SLOWEST rank=1 script=.test-phase-tmp/round4-brief-behavior.test.sh duration_ms=5475
+
+SOURCE: round4-host-mirror-final.log
+FM_TEST_BEGIN 2026-10-09T17:06:45Z tests/fm-host-mirror.test.sh family=afk expected_gate_skip=none
+ok - mirror: the Claude and Cursor registrations each write the captain's prompt and main's reply
+ok - mirror: writers stay silent and write nothing on a home that opted out or has no state
+ok - only Claude and Cursor, the primaries with proven writers, have a verified dialog mirror
+ok - mirror: a home opted out by config/supervision-host-off is untouched by every tracked mirror registration
+ok - mirror: without config/supervision-host the Claude registrations write the mirror and Cursor's stay inert
+ok - mirror: operational input, a harness-started turn, a foreign host's payload, other events, and a session without the lock are never mirrored
+ok - mirror: a captain prompt and a main reply keep their internal whitespace and newlines verbatim
+ok - mirror: a repeated entry is recorded once, and a long entry keeps its head and tail within the cap
+ok - mirror: a later different reply under the same id is recorded, while an identical repeat is recorded once
+ok - mirror: an entry id already recorded by an earlier main session does not drop a later session's dialog
+ok - mirror: a failed append leaves the mirror valid, prints nothing, and later dialog still lands
+ok - mirror: the captain's dialog lands only in an owner-only mirror, even when the file already existed readable by others
+ok - mirror: captain prompts and main replies reach the mirror without ever entering a process argument list
+ok - mirror: the feed resumes from its committed cursor, re-anchors on a new conversation or session, and is bounded
+ok - mirror: the feed's bound includes the note naming how many earlier entries it left out
+ok - mirror: a later lock holder with a recycled pid is a new main session
+ok - mirror: the feed refuses a mirror with a zero, fractional, or non-rising sequence, or an unterminated final record
+ok - mirror: a recreated mirror continues past the committed and staged cursors, so a resumed conversation still gets new dialog
+FM_TEST_END 2026-10-09T17:07:33Z tests/fm-host-mirror.test.sh exit=0 duration_ms=48466 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=48649
+FM_TEST_SUMMARY_FAMILY family=afk count=1 duration_ms=48466 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-host-mirror.test.sh duration_ms=48466
+
+SOURCE: round4-publication-checks.log
+FM_TEST_BEGIN 2026-10-09T17:01:07Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+ok - PR and teardown entrypoints reject invalid arguments before every side effect
+FM_TEST_END 2026-10-09T17:03:49Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=162065 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=162246
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=162065 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-check-security.test.sh duration_ms=162065
+FM_TEST_BEGIN 2026-10-09T17:03:49Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+ok - Gerrit arming accepts a published HEAD only by the change's current patch set tree
+FM_TEST_END 2026-10-09T17:03:56Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=6673 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=6854
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=6673 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-check-security.test.sh duration_ms=6673
+FM_TEST_BEGIN 2026-10-09T17:03:56Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+ok - fm-pr-check refuses to register a PR whose named head is only in the worker copy
+FM_TEST_END 2026-10-09T17:03:57Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=1233 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=1425
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=1233 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-check-security.test.sh duration_ms=1233
+FM_TEST_BEGIN 2026-10-09T17:03:57Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+ok - valid direct and merge flows record exact metadata and reject multiline head metadata
+FM_TEST_END 2026-10-09T17:05:24Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=86621 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=86848
+FM_TEST_SUMMARY_FAMILY family=pr-forge count=1 duration_ms=86621 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-pr-check-security.test.sh duration_ms=86621
+
+SOURCE: round4-cleanup-check.log
+FM_TEST_BEGIN 2026-10-09T17:49:58Z .test-phase-tmp/round4-cleanup-check.test.sh family=unclassified expected_gate_skip=none
+ok - failed-fixture cleanup stops a signal-resistant background writer and removes protected directories
+FM_TEST_END 2026-10-09T17:49:58Z .test-phase-tmp/round4-cleanup-check.test.sh exit=0 duration_ms=805 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=987
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=805 failed=0
+FM_TEST_SLOWEST rank=1 script=.test-phase-tmp/round4-cleanup-check.test.sh duration_ms=805
+
+SOURCE: round4-delivery-tests.log lines 1-57
+FM_TEST_BEGIN 2026-10-09T16:59:48Z tests/fm-afk-contract.test.sh family=afk expected_gate_skip=none
+ok - the read-back renders the words verbatim beside the expected return, spend cap, and reach line
+ok - words preserve their final newline shape in storage and read-back
+ok - one enter call writes a version 2 record, announces hold-for-return only, reads it back without asking for a go, and every read subcommand reflects it
+ok - the retired propose, confirm, and --proposal inputs are refused by name and write nothing
+ok - enter removes a proposal an older version left behind and records only the new words
+ok - a same-turn entry records never-set words verbatim, adds no authority field, and restates the never-set
+ok - a plain entry records no mandate in one step, and a refresh leaves the standing record untouched
+ok - new words archive the old words and keep the session start
+ok - a failed replacement keeps the standing posture live
+ok - a failed final replacement publication rolls back its superseded archive
+ok - validation and archive refuse damaged words blocks
+ok - a words line that lost its record prefix fails validate, read, read-back, and archive instead of truncating the mandate
+ok - archive keys the record by its entry time, empties the posture, and is idempotent
+ok - malformed inputs and foreign record versions are refused rather than guessed
+ok - retired clause fields, --grant, and the clause and grant subcommands are refused by name
+ok - a version 1 record validates, reads its words and scalars with the clause and grant sections ignored, refreshes untouched, and archives
+ok - new words over a live version 1 record archive it and write version 2 with the same session start
+ok - enter and archive refuse while the record is locked, and proceed once it clears
+ok - a quiet record announces, refreshes, and reads back as a present captain holding nothing, while an away record keeps hold-for-return
+ok - an away entry over quiet mode records away, and a quiet entry never masks a standing away record
+FM_TEST_END 2026-10-09T17:00:24Z tests/fm-afk-contract.test.sh exit=0 duration_ms=35706 gate_skip=false
+FM_TEST_BEGIN 2026-10-09T17:00:24Z tests/fm-afk-return.test.sh family=afk expected_gate_skip=none
+ok - return catch-up owns live blocker remediation, reports itself to Bearings as content, preserves evidence once, and clears idempotently
+ok - tmux and Herdr blockers require the same explicit durable reclassification before ordinary work
+ok - needs-decision remains reportable without masquerading as a firstmate-actionable blocker
+ok - AFK return re-drains published wakes until handling acknowledges
+ok - away-mode re-entry fails closed while the prior return catch-up is pending
+ok - /quiet off's return path behaves identically for a quiet-content flag as for a legacy away-content one
+ok - check retries recorded terminal teardown and keeps catch-up gated until success
+ok - an unreadable superseded mandate stays required until its record validates
+ok - the retained contract epoch requires its final archive on every check
+ok - the return brief renders health, the words with the session account, waiting, could-not-fix, handled, and cost from durable records, and the gate shrinks to what the away session could not fix
+ok - the return brief lists landed work whose worker is still up, from the durable merge marker only, without gating on it and never offering a secondmate for teardown
+ok - the return brief points at the drain for branch outcomes on a host home and leaves the read cursor to it, and a Pi home's brief is unchanged
+ok - the all-silent return keeps the outcome stored without promising a drain presentation
+ok - a drain that cannot record its branch-outcome presentation keeps the return's catch-up gated until a check records it
+ok - a refreshed posture keeps its original window, superseded mandate, and earlier outcomes
+ok - a malformed posture record stays live and gates return catch-up
+ok - an epochless malformed record remains required until restored valid
+ok - an unreadable outcome store gates catch-up until a successful reread
+ok - an unavailable held listing gates catch-up until a successful reread
+ok - an unreadable status stays private and gates until a successful reread
+ok - a status-file-less leftover record gates return; a readable status on that same record is the proven path that passes
+ok - a leftover record with a readable status file lets return catch-up clear
+ok - the read-only guard treats the away-posture record as active away mode without the legacy flag
+ok - the return brief leads with supervisor health and names every detected gap
+ok - the return brief does not report an already-acked watcher-down marker as an open gap
+ok - the return brief reports a wake mid-handling at return as information, and only an open downtime episode as a gap
+ok - the return brief's failures section names an engine latch inside the away window with its time, error count, and cooldown state
+ok - a lost second trip append does not attach the current pause to a recovered episode
+ok - a recovered row preceding the stale retry time does not invent a second trip
+ok - a later failed probe does not change the trip-row error count
+ok - the return brief excludes prior-session latch rows
+ok - the return brief retains in-window trips and failed turns across a main restart
+ok - a return with only the legacy away flag still renders the brief and measures the window from the flag
+FM_TEST_END 2026-10-09T17:03:40Z tests/fm-afk-return.test.sh exit=0 duration_ms=195746 gate_skip=false

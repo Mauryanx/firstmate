@@ -1,0 +1,601 @@
++ set -u
+++ dirname tests/fm-gate-refuse.test.sh
++ . tests/fixtures.sh
++++ dirname tests/fixtures.sh
+++ . tests/lib.sh
++++ '[' -n '' ']'
++++ FM_TEST_LIB_SOURCED=1
++++ umask 022
+++++ dirname tests/lib.sh
++++ . tests/git-config-helpers.sh
+++++ export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
+++++ GIT_CONFIG_GLOBAL=/dev/null
+++++ GIT_CONFIG_NOSYSTEM=1
++++ export FM_GATE_REFUSE_BYPASS=1
++++ FM_GATE_REFUSE_BYPASS=1
++++ export FM_TEST_SEAM=1
++++ FM_TEST_SEAM=1
++++ unset FM_TASK_ID
++++ unset TASKS_AXI_FILE TASKS_AXI_BACKEND
++++++ dirname tests/lib.sh
+++++ cd tests/..
+++++ pwd
++++ ROOT=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ
+++++ fm_test_tmpdir
+++++ local base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp physical
+++++ base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++++ '[' -n /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp ']'
+++++ case "$base" in
++++++ CDPATH=
++++++ cd -- /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++++ pwd -P
+++++ case "$base" in
+++++ physical=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++++ base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++++ '[' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.git ']'
+++++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ FM_TEST_TMPDIR=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ FM_TEST_CLEANUP_DIRS=()
+++++ mktemp /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-cleanup.2756077.XXXXXX
++++ FM_TEST_CLEANUP_REGISTRY=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-cleanup.2756077.zT7GWE
+++++ fm_test_pid_identity 2756077
+++++ local pid=2756077
+++++ FM_STATE_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++++ bash -c '. "$1"; fm_pid_identity "$2"' _ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-wake-lib.sh 2756077
++++ FM_TEST_OWNER_IDENTITY='linux-starttime=542374757 cmdline-hex=62617368002d780074657374732f666d2d676174652d7265667573652e746573742e736800'
+++++ mktemp /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-procevent.2756077.XXXXXX
++++ FM_TEST_PROCEVENT_REGISTRY=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-procevent.2756077.tNpjuY
+++++ mktemp /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-watcher.2756077.XXXXXX
++++ FM_TEST_WATCHER_REGISTRY=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-watcher.2756077.cY2GnS
++++ FM_TEST_STUB_MAX_BLOCK_SECONDS=120
++++ export FM_TEST_STUB_MAX_BLOCK_SECONDS
++++ trap fm_test_cleanup EXIT
++++ trap 'fm_test_cleanup; exit 130' INT
++++ trap 'fm_test_cleanup; exit 143' TERM
++++ trap 'fm_test_cleanup; exit 129' HUP
++++ trap 'fm_test_cleanup; exit 131' QUIT
++++ FM_TEST_ORPHAN_MAX_AGE_SECONDS=3600
++++ '[' 0 '!=' 1 ']'
++++ fm_test_reap_orphans
++++ local marker dir mtime now owner_pid owner_identity current_identity
+++++ date +%s
++++ now=1791553065
++++ for marker in "$FM_TEST_TMPDIR"/fm-*/.fm-test-fixture
++++ '[' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.pKuhfX/.fm-test-fixture ']'
+++++ sed -n 1p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.pKuhfX/.fm-test-fixture
++++ owner_pid=2698747
+++++ sed -n '2,$p' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-pr-check-security.pKuhfX/.fm-test-fixture
++++ owner_identity='linux-starttime=542367351 cmdline-hex=626173680074657374732f666d2d70722d636865636b2d73656375726974792e746573742e736800'
++++ case "$owner_pid" in
+++++ fm_test_pid_identity 2698747
+++++ local pid=2698747
+++++ FM_STATE_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++++ bash -c '. "$1"; fm_pid_identity "$2"' _ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-wake-lib.sh 2698747
++++ case "$owner_pid" in
++++ current_identity='linux-starttime=542367351 cmdline-hex=626173680074657374732f666d2d70722d636865636b2d73656375726974792e746573742e736800'
++++ '[' -n 'linux-starttime=542367351 cmdline-hex=626173680074657374732f666d2d70722d636865636b2d73656375726974792e746573742e736800' ']'
++++ '[' 'linux-starttime=542367351 cmdline-hex=626173680074657374732f666d2d70722d636865636b2d73656375726974792e746573742e736800' = 'linux-starttime=542367351 cmdline-hex=626173680074657374732f666d2d70722d636865636b2d73656375726974792e746573742e736800' ']'
++++ continue
+++ '[' -n '' ']'
+++ FM_TEST_FIXTURES_SOURCED=1
+++ export FM_TEST_NO_MISTAKES_VERSION=1.46.0
+++ FM_TEST_NO_MISTAKES_VERSION=1.46.0
+++ export 'FM_TEST_NO_MISTAKES_FAKE_VERSION=no-mistakes version v1.46.0 (fake)'
+++ FM_TEST_NO_MISTAKES_FAKE_VERSION='no-mistakes version v1.46.0 (fake)'
+++ export 'FM_TEST_NO_MISTAKES_FAKE_VERSION_TS=no-mistakes version v1.46.0 (fake) 2026-06-27T00:02:18Z'
+++ FM_TEST_NO_MISTAKES_FAKE_VERSION_TS='no-mistakes version v1.46.0 (fake) 2026-06-27T00:02:18Z'
+++ export FM_TEST_GH_AXI_VERSION=0.1.29
+++ FM_TEST_GH_AXI_VERSION=0.1.29
++ GATE_LIB=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-gate-refuse-lib.sh
++ LABHOME=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh
++ SPAWN=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-spawn.sh
++ SEND=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-send.sh
++ TEARDOWN=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-teardown.sh
+++ fm_test_tmproot fm-gate-refuse
+++ local prefix=fm-gate-refuse root tmp_base
++++ fm_test_tmpdir
++++ local base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp physical
++++ base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ '[' -n /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp ']'
++++ case "$base" in
+++++ CDPATH=
+++++ cd -- /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++++ pwd -P
++++ case "$base" in
++++ physical=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ '[' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.git ']'
++++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++ tmp_base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
+++ tmp_base=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp
++++ mktemp -d /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.XXXXXX
+++ root=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM
++++ cd -P -- /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM
++++ pwd -P
+++ root=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM
+++ printf '%s\n%s\n' 2756077 'linux-starttime=542374757 cmdline-hex=62617368002d780074657374732f666d2d676174652d7265667573652e746573742e736800'
+++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM
+++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM
++ TMP=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM
++ fm_git_identity fmtest fmtest@example.invalid
++ export GIT_AUTHOR_NAME=fmtest GIT_AUTHOR_EMAIL=fmtest@example.invalid
++ GIT_AUTHOR_NAME=fmtest
++ GIT_AUTHOR_EMAIL=fmtest@example.invalid
++ export GIT_COMMITTER_NAME=fmtest GIT_COMMITTER_EMAIL=fmtest@example.invalid
++ GIT_COMMITTER_NAME=fmtest
++ GIT_COMMITTER_EMAIL=fmtest@example.invalid
++ ENV_MSG='NO_MISTAKES_GATE set'
++ PATH_MSG='no-mistakes gate worktree'
+++ make_gate_worktree /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate
+++ local root=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate id=016d88035d58 run=01KXC3SD5NZYMERGDS68Z1C8ER seed
+++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos
+++ git init -q --bare /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/origin.git
++++ mktemp -d /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate-seed.XXXXXX
+++ seed=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate-seed.xhEc26
+++ git init -q -b main /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate-seed.xhEc26
+++ git -C /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate-seed.xhEc26 commit -q --allow-empty -m init
+++ git -C /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate-seed.xhEc26 push -q /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/origin.git HEAD:refs/heads/main
+++ rm -rf /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate-seed.xhEc26
+++ git clone -q --bare /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/origin.git /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git
+++ git -C /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git worktree add --detach /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/worktrees/016d88035d58/01KXC3SD5NZYMERGDS68Z1C8ER main
+++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/worktrees/016d88035d58/01KXC3SD5NZYMERGDS68Z1C8ER
++ GATE_WT=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/worktrees/016d88035d58/01KXC3SD5NZYMERGDS68Z1C8ER
+++ make_normal_repo /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
+++ local dir=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
+++ git init -q -b main /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
+++ git -C /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd commit -q --allow-empty -m init
+++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
++ NORMAL_CWD=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
++ test_helper_env_marker_refuses
++ local out rc
+++ run_guard_lib /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd set
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd marker=set
+++ cd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
+++ unset NO_MISTAKES_GATE FM_GATE_REFUSE_BYPASS
+++ case "$marker" in
+++ export NO_MISTAKES_GATE=1
+++ NO_MISTAKES_GATE=1
+++ set -eu
+++ . /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-gate-refuse-lib.sh
++++ FM_GATE_REFUSE_EXIT=3
++++ FM_GATE_LAB_MARKER=.fm-lab-home
++++ FM_GATE_LAB_TOKEN='fm-lab-home v1'
+++ fm_refuse_if_gate_agent
+++ fm_is_gate_agent .
+++ local anchor=. common
+++ '[' '' = 1 ']'
+++ '[' x = x ']'
+++ FM_GATE_REFUSE_REASON=env
+++ return 0
+++ fm_gate_lab_permitted
+++ local v
+++ fm_gate_lab_home ''
+++ local home=
+++ '[' -n '' ']'
+++ return 1
+++ return 1
+++ '[' env = env ']'
+++ echo 'error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)'
+++ exit 3
++ out='error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)'
++ rc=3
++ expect_code 3 3 'helper: env marker must exit 3'
++ local expected=3 actual=3 'label=helper: env marker must exit 3'
++ '[' 3 = 3 ']'
++ assert_contains 'error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)' 'NO_MISTAKES_GATE set' 'helper: env-marker refusal message'
++ case "$1" in
++ :
++ pass 'fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set'
++ printf 'ok - %s\n' 'fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set'
++ test_helper_empty_env_marker_refuses
++ local out rc
+++ run_guard_lib /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd empty
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd marker=empty
+++ cd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
+++ unset NO_MISTAKES_GATE FM_GATE_REFUSE_BYPASS
+++ case "$marker" in
+++ export NO_MISTAKES_GATE=
+++ NO_MISTAKES_GATE=
+++ set -eu
+++ . /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-gate-refuse-lib.sh
++++ FM_GATE_REFUSE_EXIT=3
++++ FM_GATE_LAB_MARKER=.fm-lab-home
++++ FM_GATE_LAB_TOKEN='fm-lab-home v1'
+++ fm_refuse_if_gate_agent
+++ fm_is_gate_agent .
+++ local anchor=. common
+++ '[' '' = 1 ']'
+++ '[' x = x ']'
+++ FM_GATE_REFUSE_REASON=env
+++ return 0
+++ fm_gate_lab_permitted
+++ local v
+++ fm_gate_lab_home ''
+++ local home=
+++ '[' -n '' ']'
+++ return 1
+++ return 1
+++ '[' env = env ']'
+++ echo 'error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)'
+++ exit 3
++ out='error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)'
++ rc=3
++ expect_code 3 3 'helper: empty env marker must exit 3'
++ local expected=3 actual=3 'label=helper: empty env marker must exit 3'
++ '[' 3 = 3 ']'
++ assert_contains 'error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)' 'NO_MISTAKES_GATE set' 'helper: empty env-marker refusal message'
++ case "$1" in
++ :
++ pass 'fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set empty'
++ printf 'ok - %s\n' 'fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set empty'
++ test_helper_path_backstop_refuses
++ local out rc
+++ run_guard_lib /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/worktrees/016d88035d58/01KXC3SD5NZYMERGDS68Z1C8ER
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/worktrees/016d88035d58/01KXC3SD5NZYMERGDS68Z1C8ER marker=unset
+++ cd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/worktrees/016d88035d58/01KXC3SD5NZYMERGDS68Z1C8ER
+++ unset NO_MISTAKES_GATE FM_GATE_REFUSE_BYPASS
+++ case "$marker" in
+++ set -eu
+++ . /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-gate-refuse-lib.sh
++++ FM_GATE_REFUSE_EXIT=3
++++ FM_GATE_LAB_MARKER=.fm-lab-home
++++ FM_GATE_LAB_TOKEN='fm-lab-home v1'
+++ fm_refuse_if_gate_agent
+++ fm_is_gate_agent .
+++ local anchor=. common
+++ '[' '' = 1 ']'
+++ '[' '' = x ']'
++++ cd .
+++++ git rev-parse --git-common-dir
++++ cd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git
++++ pwd -P
+++ common=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git
+++ case "$common" in
+++ FM_GATE_REFUSE_REASON=path
+++ FM_GATE_REFUSE_COMMON=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git
+++ return 0
+++ fm_gate_lab_permitted
+++ local v
+++ fm_gate_lab_home ''
+++ local home=
+++ '[' -n '' ']'
+++ return 1
+++ return 1
+++ '[' path = env ']'
+++ echo 'error: refusing fleet lifecycle from inside a no-mistakes gate worktree (/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git)'
+++ exit 3
++ out='error: refusing fleet lifecycle from inside a no-mistakes gate worktree (/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git)'
++ rc=3
++ expect_code 3 3 'helper: gate worktree must exit 3 even with the marker unset'
++ local expected=3 actual=3 'label=helper: gate worktree must exit 3 even with the marker unset'
++ '[' 3 = 3 ']'
++ assert_contains 'error: refusing fleet lifecycle from inside a no-mistakes gate worktree (/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git)' 'no-mistakes gate worktree' 'helper: path-backstop refusal message'
++ case "$1" in
++ :
++ assert_not_contains 'error: refusing fleet lifecycle from inside a no-mistakes gate worktree (/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git)' 'NO_MISTAKES_GATE set' 'helper: backstop must not be attributed to the env marker'
++ case "$1" in
++ :
++ pass 'fm-gate-refuse-lib: refuses from a gate worktree via git-common-dir (marker unset)'
++ printf 'ok - %s\n' 'fm-gate-refuse-lib: refuses from a gate worktree via git-common-dir (marker unset)'
++ test_helper_normal_is_noop
++ local out rc
+++ run_guard_lib /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd marker=unset
+++ cd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
+++ unset NO_MISTAKES_GATE FM_GATE_REFUSE_BYPASS
+++ case "$marker" in
+++ set -eu
+++ . /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-gate-refuse-lib.sh
++++ FM_GATE_REFUSE_EXIT=3
++++ FM_GATE_LAB_MARKER=.fm-lab-home
++++ FM_GATE_LAB_TOKEN='fm-lab-home v1'
+++ fm_refuse_if_gate_agent
+++ fm_is_gate_agent .
+++ local anchor=. common
+++ '[' '' = 1 ']'
+++ '[' '' = x ']'
++++ cd .
+++++ git rev-parse --git-common-dir
++++ cd .git
++++ pwd -P
+++ common=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd/.git
+++ case "$common" in
+++ return 1
+++ return 0
++ out=
++ rc=0
++ expect_code 0 0 'helper: a normal session (neither signal) must not refuse'
++ local expected=0 actual=0 'label=helper: a normal session (neither signal) must not refuse'
++ '[' 0 = 0 ']'
++ '[' -z '' ']'
++ pass 'fm-gate-refuse-lib: no-op for a normal session (neither signal, set -eu clean)'
++ printf 'ok - %s\n' 'fm-gate-refuse-lib: no-op for a normal session (neither signal, set -eu clean)'
++ test_helper_lab_home_admits
++ local lab plain out rc
+++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh create /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home
++ lab=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home
++ plain=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/plain-home
++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/plain-home
+++ run_guard_lib_home /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home NO_MISTAKES_GATE=1
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home
+++ shift 2
+++ env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS -u FM_ROOT_OVERRIDE -u FM_STATE_OVERRIDE -u FM_DATA_OVERRIDE -u FM_PROJECTS_OVERRIDE -u FM_CONFIG_OVERRIDE FM_HOME=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home NO_MISTAKES_GATE=1 bash -c 'cd "$1" || exit 111; set -eu; . "$2"; fm_refuse_if_gate_agent' _ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-gate-refuse-lib.sh
++ out='fm-gate-refuse: gate agent lifecycle permitted only against lab home /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home'
++ rc=0
++ expect_code 0 0 'helper: gate + marked lab home must be permitted'
++ local expected=0 actual=0 'label=helper: gate + marked lab home must be permitted'
++ '[' 0 = 0 ']'
++ assert_contains 'fm-gate-refuse: gate agent lifecycle permitted only against lab home /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home' 'lab home' 'helper: lab permit should name the lab home'
++ case "$1" in
++ :
+++ run_guard_lib_home /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/plain-home NO_MISTAKES_GATE=1
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/plain-home
+++ shift 2
+++ env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS -u FM_ROOT_OVERRIDE -u FM_STATE_OVERRIDE -u FM_DATA_OVERRIDE -u FM_PROJECTS_OVERRIDE -u FM_CONFIG_OVERRIDE FM_HOME=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/plain-home NO_MISTAKES_GATE=1 bash -c 'cd "$1" || exit 111; set -eu; . "$2"; fm_refuse_if_gate_agent' _ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-gate-refuse-lib.sh
++ out='error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)'
++ rc=3
++ expect_code 3 3 'helper: gate + unmarked home must still refuse'
++ local expected=3 actual=3 'label=helper: gate + unmarked home must still refuse'
++ '[' 3 = 3 ']'
++ assert_contains 'error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)' 'NO_MISTAKES_GATE set' 'helper: unmarked-home refusal message'
++ case "$1" in
++ :
+++ run_guard_lib_home /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home NO_MISTAKES_GATE=1 FM_STATE_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home/state
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home
+++ shift 2
+++ env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS -u FM_ROOT_OVERRIDE -u FM_STATE_OVERRIDE -u FM_DATA_OVERRIDE -u FM_PROJECTS_OVERRIDE -u FM_CONFIG_OVERRIDE FM_HOME=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home NO_MISTAKES_GATE=1 FM_STATE_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home/state bash -c 'cd "$1" || exit 111; set -eu; . "$2"; fm_refuse_if_gate_agent' _ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-gate-refuse-lib.sh
++ out='error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)'
++ rc=3
++ expect_code 3 3 'helper: lab home driven through FM_STATE_OVERRIDE must refuse'
++ local expected=3 actual=3 'label=helper: lab home driven through FM_STATE_OVERRIDE must refuse'
++ '[' 3 = 3 ']'
++ assert_contains 'error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)' 'NO_MISTAKES_GATE set' 'helper: override refusal message'
++ case "$1" in
++ :
+++ run_guard_lib_home /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home
+++ shift 2
+++ env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS -u FM_ROOT_OVERRIDE -u FM_STATE_OVERRIDE -u FM_DATA_OVERRIDE -u FM_PROJECTS_OVERRIDE -u FM_CONFIG_OVERRIDE FM_HOME=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-home bash -c 'cd "$1" || exit 111; set -eu; . "$2"; fm_refuse_if_gate_agent' _ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-gate-refuse-lib.sh
++ out=
++ rc=0
++ expect_code 0 0 'helper: lab home outside a gate must not refuse'
++ local expected=0 actual=0 'label=helper: lab home outside a gate must not refuse'
++ '[' 0 = 0 ']'
++ pass 'fm-gate-refuse-lib: marked lab home permitted in a gate; unmarked home or an override stay refused'
++ printf 'ok - %s\n' 'fm-gate-refuse-lib: marked lab home permitted in a gate; unmarked home or an override stay refused'
++ test_lab_home_helper
++ local lab populated unlistable newline out rc
+++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh create /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new
++ lab=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new
++ rc=0
++ expect_code 0 0 'lab-home: create must succeed on a fresh path'
++ local expected=0 actual=0 'label=lab-home: create must succeed on a fresh path'
++ '[' 0 = 0 ']'
++ assert_present /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new/.fm-lab-home 'lab-home: create must write the marker'
++ '[' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new/.fm-lab-home ']'
++ for d in state data config projects
++ '[' -d /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new/state ']'
++ for d in state data config projects
++ '[' -d /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new/data ']'
++ for d in state data config projects
++ '[' -d /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new/config ']'
++ for d in state data config projects
++ '[' -d /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new/projects ']'
+++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh create /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new
++ out='fm-lab-home: refusing '\''/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/lab-new'\'': a lab marker is only ever stamped on a fresh empty dir'
++ rc=1
++ '[' 1 -ne 0 ']'
++ populated=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/populated
++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/populated/state
++ echo x
+++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh create /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/populated
++ out='fm-lab-home: refusing '\''/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/populated'\'': a lab marker is only ever stamped on a fresh empty dir'
++ rc=1
++ '[' 1 -ne 0 ']'
++ assert_absent /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/populated/.fm-lab-home 'lab-home: refused create must not write the marker'
++ '[' '!' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/populated/.fm-lab-home ']'
++ unlistable=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/unlistable
++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/unlistable/state
++ chmod 300 /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/unlistable
+++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh create /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/unlistable
++ out='fm-lab-home: refusing '\''/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/unlistable'\'': a lab marker is only ever stamped on a fresh empty dir'
++ rc=1
++ chmod 700 /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/unlistable
++ '[' 1 -ne 0 ']'
++ assert_absent /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/unlistable/.fm-lab-home 'lab-home: unlistable create must not write the marker'
++ '[' '!' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/unlistable/.fm-lab-home ']'
++ newline=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/newline-entry
++ mkdir -p $'/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/newline-entry/\n'
+++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh create /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/newline-entry
++ out='fm-lab-home: refusing '\''/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/newline-entry'\'': a lab marker is only ever stamped on a fresh empty dir'
++ rc=1
++ '[' 1 -ne 0 ']'
++ assert_absent /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/newline-entry/.fm-lab-home 'lab-home: newline-entry create must not write the marker'
++ '[' '!' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/newline-entry/.fm-lab-home ']'
++ pass 'fm-lab-home: create mints marked stock homes only on fresh empty dirs; anything else is refused'
++ printf 'ok - %s\n' 'fm-lab-home: create mints marked stock homes only on fresh empty dirs; anything else is refused'
++ test_lab_home_private_tmux_socket_survives_deep_paths
++ local root=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep lab socket_dir ready socket_path depth=0
++ local real_tmux
+++ command -v tmux
++ real_tmux=/usr/bin/tmux
++ '[' 121 -le 150 ']'
++ root=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment
++ depth=1
++ '[' 144 -le 150 ']'
++ root=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment
++ depth=2
++ '[' 167 -le 150 ']'
++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment
++ lab=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home
+++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh create /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home
++ lab=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home
+++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh tmux-dir /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home
++ socket_dir=/tmp/fml.wLhgoN
+++ id -u
++ socket_path=/tmp/fml.wLhgoN/tmux-1100/fm-lab
++ ready=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home/state/primary-started
++ '[' 176 -gt 120 ']'
++ '[' 32 -lt 60 ']'
++ local mode owner
++ case "$(uname -s)" in
+++ uname -s
++ case "$(uname -s)" in
+++ stat -c %a /tmp/fml.wLhgoN
++ case "$(uname -s)" in
++ mode=700
+++ stat -c %u /tmp/fml.wLhgoN
++ owner=1100
++ '[' 700 = 700 ']'
+++ id -u
++ '[' 1100 = 1100 ']'
++ '[' wLhgoN '!=' /tmp/fml.wLhgoN ']'
++ trap cleanup_deep_lab EXIT
++ env TMUX_TMPDIR=/tmp/fml.wLhgoN /usr/bin/tmux -L fm-lab -f /dev/null new-session -d -s primary /bin/sh -c 'printf started > "$1"; exec sleep 60' sh /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home/state/primary-started
++ '[' -S /tmp/fml.wLhgoN/tmux-1100/fm-lab ']'
++ local attempts=0
++ '[' '!' -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home/state/primary-started ']'
++ '[' 0 -lt 20 ']'
++ sleep 0.05
++ attempts=1
++ '[' '!' -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home/state/primary-started ']'
++ '[' -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home/state/primary-started ']'
++ env TMUX_TMPDIR=/tmp/fml.wLhgoN /usr/bin/tmux -L fm-lab has-session -t primary
++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh teardown /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home
++ '[' -d /tmp/fml.wLhgoN ']'
++ env TMUX_TMPDIR=/tmp/fml.wLhgoN /usr/bin/tmux -L fm-lab kill-server
++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/failing-tmux-bin
++ printf '#!/bin/sh\necho "tmux: probe failed" >&2\nexit 1\n'
++ chmod +x /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/failing-tmux-bin/tmux
++ PATH=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/failing-tmux-bin:/home/firstmate/.local/codex-latest/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/firstmate/.codex-5/tmp/arg0/codex-arg0nPCyg5:/home/firstmate/.local/codex-latest/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/firstmate/.local/bin:/home/firstmate/go/bin:/home/firstmate/.cargo/bin:/home/firstmate/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin
++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh teardown /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home
++ '[' -d /tmp/fml.wLhgoN ']'
++ /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-lab-home.sh teardown /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/deep/long-directory-segment/long-directory-segment/lab-home
++ '[' '!' -e /tmp/fml.wLhgoN ']'
++ trap fm_test_cleanup EXIT
++ pass 'fm-lab-home: a primary starts on a private short tmux socket from a long lab path and teardown removes it'
++ printf 'ok - %s\n' 'fm-lab-home: a primary starts on a private short tmux socket from a long lab path and teardown removes it'
++ test_spawn_refuses_and_admits
++ local home proj fakebin wt out rc
++ home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home
++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/data
+++ make_normal_repo /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj
+++ local dir=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj
+++ git init -q -b main /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj
+++ git -C /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj commit -q --allow-empty -m init
+++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj
++ proj=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj
++ fm_git_add_origin /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-origin.git
++ local repo=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj remote=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-origin.git remote_abs
++ git clone --quiet --bare /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-origin.git
+++ cd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-origin.git
+++ pwd
++ remote_abs=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-origin.git
++ git -C /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj remote add origin file:///home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-origin.git
+++ make_spawn_fakebin /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake
+++ fm_test_make_spawn_fakebin /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake
+++ local dir=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake fakebin
+++ shift
++++ fm_fakebin /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake
++++ local dir=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake fakebin=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
++++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
++++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
+++ fakebin=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
+++ fm_test_fake_tmux_spawn /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
+++ local fakebin=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
+++ cat
+++ chmod +x /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin/tmux
+++ fm_fake_exit0 /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin treehouse
+++ local fakebin=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin tool
+++ shift
+++ for tool in "$@"
+++ cat
+++ chmod +x /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin/treehouse
+++ printf '%s\n' /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
++ fakebin=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
++ wt=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt
++ git -C /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj worktree add -q --detach /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt
+++ run_spawn /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home spawn-envmark /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin NO_MISTAKES_GATE=1
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home id=spawn-envmark proj=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj pane=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt fakebin=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
+++ shift 6
+++ fm_test_spawn_brief /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home spawn-envmark brief
+++ local home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home id=spawn-envmark intent=brief
+++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/data/spawn-envmark
+++ cat
+++ cd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
+++ env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS FM_ROOT_OVERRIDE= FM_HOME=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home FM_STATE_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/state FM_DATA_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/data FM_PROJECTS_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/projects FM_CONFIG_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/config FM_SPAWN_NO_GUARD=1 FM_FAKE_PANE_PATH=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt TMUX=fake,1,0 PATH=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin:/home/firstmate/.local/codex-latest/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/firstmate/.codex-5/tmp/arg0/codex-arg0nPCyg5:/home/firstmate/.local/codex-latest/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/firstmate/.local/bin:/home/firstmate/go/bin:/home/firstmate/.cargo/bin:/home/firstmate/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin NO_MISTAKES_GATE=1 /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-spawn.sh spawn-envmark /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj codex --mode no-mistakes --yolo off
++ out='error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)'
++ rc=3
++ expect_code 3 3 'spawn: NO_MISTAKES_GATE must refuse'
++ local expected=3 actual=3 'label=spawn: NO_MISTAKES_GATE must refuse'
++ '[' 3 = 3 ']'
++ assert_contains 'error: no-mistakes gate agent must not drive the fleet (NO_MISTAKES_GATE set)' 'NO_MISTAKES_GATE set' 'spawn: env-marker refusal message'
++ case "$1" in
++ :
++ assert_absent /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/state/spawn-envmark.meta 'spawn: refused env-marker launch must not record meta'
++ '[' '!' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/state/spawn-envmark.meta ']'
+++ run_spawn /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/worktrees/016d88035d58/01KXC3SD5NZYMERGDS68Z1C8ER /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home spawn-backstop /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/worktrees/016d88035d58/01KXC3SD5NZYMERGDS68Z1C8ER home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home id=spawn-backstop proj=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj pane=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt fakebin=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
+++ shift 6
+++ fm_test_spawn_brief /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home spawn-backstop brief
+++ local home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home id=spawn-backstop intent=brief
+++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/data/spawn-backstop
+++ cat
+++ cd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/worktrees/016d88035d58/01KXC3SD5NZYMERGDS68Z1C8ER
+++ env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS FM_ROOT_OVERRIDE= FM_HOME=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home FM_STATE_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/state FM_DATA_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/data FM_PROJECTS_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/projects FM_CONFIG_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/config FM_SPAWN_NO_GUARD=1 FM_FAKE_PANE_PATH=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt TMUX=fake,1,0 PATH=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin:/home/firstmate/.local/codex-latest/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/firstmate/.codex-5/tmp/arg0/codex-arg0nPCyg5:/home/firstmate/.local/codex-latest/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/firstmate/.local/bin:/home/firstmate/go/bin:/home/firstmate/.cargo/bin:/home/firstmate/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-spawn.sh spawn-backstop /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj codex --mode no-mistakes --yolo off
++ out='error: refusing fleet lifecycle from inside a no-mistakes gate worktree (/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git)'
++ rc=3
++ expect_code 3 3 'spawn: gate-worktree cwd must refuse with the marker unset'
++ local expected=3 actual=3 'label=spawn: gate-worktree cwd must refuse with the marker unset'
++ '[' 3 = 3 ']'
++ assert_contains 'error: refusing fleet lifecycle from inside a no-mistakes gate worktree (/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/gate/.no-mistakes/repos/016d88035d58.git)' 'no-mistakes gate worktree' 'spawn: path-backstop refusal message'
++ case "$1" in
++ :
++ assert_absent /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/state/spawn-backstop.meta 'spawn: refused backstop launch must not record meta'
++ '[' '!' -e /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/state/spawn-backstop.meta ']'
+++ run_spawn /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home spawn-ok /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
+++ local cwd=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home id=spawn-ok proj=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj pane=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt fakebin=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin
+++ shift 6
+++ fm_test_spawn_brief /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home spawn-ok brief
+++ local home=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home id=spawn-ok intent=brief
+++ mkdir -p /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/data/spawn-ok
+++ cat
+++ cd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/normal-cwd
+++ env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS FM_ROOT_OVERRIDE= FM_HOME=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home FM_STATE_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/state FM_DATA_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/data FM_PROJECTS_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/projects FM_CONFIG_OVERRIDE=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/config FM_SPAWN_NO_GUARD=1 FM_FAKE_PANE_PATH=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-wt TMUX=fake,1,0 PATH=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-fake/fakebin:/home/firstmate/.local/codex-latest/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/firstmate/.codex-5/tmp/arg0/codex-arg0nPCyg5:/home/firstmate/.local/codex-latest/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/codex-path:/home/firstmate/.local/bin:/home/firstmate/go/bin:/home/firstmate/.cargo/bin:/home/firstmate/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/local/sbin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-spawn.sh spawn-ok /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-proj codex --mode no-mistakes --yolo off
++ out=$'warning: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/data/spawn-ok/launch-brief.md records no ship branch; defaulting to legacy branch fm/spawn-ok\nwarning: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM/spawn-home/data/spawn-ok/launch-brief.md records no delivery contract line (scaffolded before ship briefs recorded one); launching on the explicit --mode no-mistakes - confirm its definition of done matches\nerror: task temp root /tmp/fm-spawn-ok already exists and is not a private directory owned by this user; refusing to stage the launch command there; inspect and remove it, then retry'
++ rc=1
++ expect_code 0 1 'spawn: a normal session must still spawn'
++ local expected=0 actual=1 'label=spawn: a normal session must still spawn'
++ '[' 1 = 0 ']'
++ fail 'spawn: a normal session must still spawn: expected exit 0, got 1'
++ printf 'not ok - %s\n' 'spawn: a normal session must still spawn: expected exit 0, got 1'
++ exit 1
++ fm_test_cleanup
++ local d
++ fm_test_reap_watchers
++ local state lock_home $'seen=\n'
++ '[' -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-watcher.2756077.cY2GnS ']'
++ IFS=
++ read -r state
++ rm -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-watcher.2756077.cY2GnS
++ fm_test_reap_procevent_homes
++ local home claim_root $'seen=\n'
++ '[' -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-procevent.2756077.tNpjuY ']'
++ IFS=$'\t'
++ read -r home claim_root
++ rm -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-procevent.2756077.tNpjuY
++ for d in "${FM_TEST_CLEANUP_DIRS[@]:-}"
++ '[' -n '' ']'
++ '[' -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-cleanup.2756077.zT7GWE ']'
++ IFS=
++ read -r d
++ '[' -n /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM ']'
++ fm_test_remove_tree /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM
++ local dir=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM
++ '[' -d /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM ']'
++ '[' '!' -L /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM ']'
++ find /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM -type d -exec chmod u+rwx '{}' +
++ rm -rf /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-gate-refuse.wYnYIM
++ IFS=
++ read -r d
++ rm -f /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/.fm-test-cleanup.2756077.zT7GWE

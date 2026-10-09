@@ -1,0 +1,11 @@
+Full targeted run, tests/fm-supervision-host.test.sh:
+not ok - away grok: the wake was not handled on the engine: watcher: started pid=1367199 (beacon fresh)
+1791557229	start	gen=host-1364084-1791557227	primary=grok
+FM_TEST_END 2026-10-09T14:48:07Z tests/fm-supervision-host.test.sh exit=1 duration_ms=1016388 gate_skip=false
+
+Isolated replay of the same case:
+FM_TEST_BEGIN 2026-10-09T14:50:11Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-supervision-primary-selected.test.sh family=unclassified expected_gate_skip=none
+ok - host: a primary with no verified dialog mirror keeps every attended close on main, and its away posture still runs
+FM_TEST_END 2026-10-09T14:50:57Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-supervision-primary-selected.test.sh exit=0 duration_ms=45596 gate_skip=false
+
+The full-run failure remains unexplained; the isolated pass does not establish reliability in the failing context.

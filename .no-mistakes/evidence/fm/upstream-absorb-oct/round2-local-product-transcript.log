@@ -1,0 +1,519 @@
+round2-product-tests.log:1: FM_TEST_BEGIN 2026-10-09T14:06:40Z tests/fm-forge-detect.test.sh family=pure-contract-unit expected_gate_skip=none
+round2-product-tests.log:2: ok - an origin on SSH port 29418 proposes forge=gerrit and names the evidence
+round2-product-tests.log:3: ok - a refs/for/ push refspec proposes forge=gerrit and names the evidence
+round2-product-tests.log:4: ok - a remote carrying neither Gerrit fact proposes forge=none
+round2-product-tests.log:5: ok - detection reads the clone's config and changes nothing
+round2-product-tests.log:6: ok - a directory that is not a git work tree is refused with exit 2
+round2-product-tests.log:8: FM_TEST_END 2026-10-09T14:06:40Z tests/fm-forge-detect.test.sh exit=0 duration_ms=575 gate_skip=false
+round2-product-tests.log:9: FM_TEST_BEGIN 2026-10-09T14:06:41Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+round2-product-tests.log:10: ok - raw-byte parser accepts canonical URLs and rejects the complete adversarial matrix
+round2-product-tests.log:11: ok - GitLab merge requests are followed on any instance and never wake falsely
+round2-product-tests.log:12: ok - the Gerrit watch wakes only on an explicit merged status and never on submittability
+round2-product-tests.log:13: ok - Gerrit arming records no patch set revision and the merge path refuses to submit
+round2-product-tests.log:14: ok - Gerrit arming accepts a published HEAD only by the change's current patch set tree
+round2-product-tests.log:15: ok - a no-mistakes Gerrit ready report requires the pipeline's fixes recovered into the published copy
+round2-product-tests.log:16: ok - validated merged polls notify once and retire before the next watcher cycle
+round2-product-tests.log:17: ok - a repeat identical merged poll for an already-notified task is absorbed, never queued as a main-blocking row
+round2-product-tests.log:18: ok - a failed upward merge report keeps its poll armed for repair and retry
+round2-product-tests.log:19: ok - staged self-merge and poll interleavings are never silent
+round2-product-tests.log:20: ok - queued merges retain their away authority after captain return
+round2-product-tests.log:21: ok - poll distinguishes attended authorization from external landing
+round2-product-tests.log:22: ok - accepted merge authority refuses rebound task metadata
+round2-product-tests.log:23: ok - accepted merge authority persists under the lifecycle lock
+round2-product-tests.log:24: ok - teardown cannot race merged-poll authority consumption
+round2-product-tests.log:25: ok - poll retirement preserves a replacement authority record
+round2-product-tests.log:26: ok - a merge detected by the poll is reported upward from a secondmate home exactly once
+round2-product-tests.log:27: ok - a different merged PR for the same task gets its own first notification
+round2-product-tests.log:28: ok - a merged poll on a persistent secondmate retires silently: no outcome, marker, or wake, and every lifecycle artifact preserved
+round2-product-tests.log:29: ok - queue, receipt, and every fixed-path removal crash point recover without loss or repeated execution
+round2-product-tests.log:30: ok - open/red, closed-unmerged, malformed, and forge errors remain armed until an exact merged transition
+round2-product-tests.log:31: ok - replacement, nonterminal, tampered, and custom results receive no deletion authority
+round2-product-tests.log:32: ok - queue failure and untrusted receipts preserve canonical poll evidence
+round2-product-tests.log:33: ok - GitHub and GitLab exact merged results share one retirement path
+round2-product-tests.log:34: ok - PR and teardown entrypoints reject invalid arguments before every side effect
+round2-product-tests.log:35: ok - arming refuses a draft pull request, naming it, and arms a ready or unreadable one
+round2-product-tests.log:36: ok - fm-pr-check refuses to record a PR or arm a merge watch on a secondmate record
+round2-product-tests.log:37: ok - fm-pr-check refuses to register a PR whose named head is only in the worker copy
+round2-product-tests.log:38: ok - fm-pr-check refuses a direct-PR registration while a later commit is only in the copy
+round2-product-tests.log:39: ok - valid direct and merge flows record exact metadata and reject multiline head metadata
+round2-product-tests.log:40: ok - rejected metacharacter bytes remain inert at generation and watcher time
+round2-product-tests.log:41: ok - static poll is silent except for one merged line and remains watcher-bounded
+round2-product-tests.log:42: ok - interrupted atomic preparation cleans private temporaries and publishes nothing
+round2-product-tests.log:43: ok - concurrent watchers observe only complete private poll publications
+round2-product-tests.log:44: ok - poll publication paths refuse symlinks and directories
+round2-product-tests.log:45: ok - live poll and custom-check artifacts require private single-link files
+round2-product-tests.log:46: ok - a poll armed before a volume renumber is re-recorded under the control lock and keeps detecting merges
+round2-product-tests.log:47: ok - a renumbered registration is never re-recorded around a tampered artifact: swapped-check altered-check swapped-sidecar altered-sidecar altered-template-hash wrong-mode hardlinked-check split-device foreign-device, or a pending retirement
+round2-product-tests.log:48: ok - direct re-arm publication waits without replacing an armed poll
+round2-product-tests.log:49: not ok - watcher did not reach its device re-record
+round2-product-tests.log:50: FM_TEST_END 2026-10-09T14:23:18Z tests/fm-pr-check-security.test.sh exit=1 duration_ms=997432 gate_skip=false
+round2-product-tests.log:51: FM_TEST_BEGIN 2026-10-09T14:23:18Z tests/fm-gate-refuse.test.sh family=session-bootstrap expected_gate_skip=none
+round2-product-tests.log:52: ok - fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set
+round2-product-tests.log:53: ok - fm-gate-refuse-lib: refuses when NO_MISTAKES_GATE is set empty
+round2-product-tests.log:54: ok - fm-gate-refuse-lib: refuses from a gate worktree via git-common-dir (marker unset)
+round2-product-tests.log:55: ok - fm-gate-refuse-lib: no-op for a normal session (neither signal, set -eu clean)
+round2-product-tests.log:56: ok - fm-gate-refuse-lib: marked lab home permitted in a gate; unmarked home or an override stay refused
+round2-product-tests.log:57: ok - fm-lab-home: create mints marked stock homes only on fresh empty dirs; anything else is refused
+round2-product-tests.log:58: ok - fm-lab-home: a primary starts on a private short tmux socket from a long lab path and teardown removes it
+round2-product-tests.log:59: ok - fm-spawn: refuses on marker and gate-worktree backstop; a normal crew spawn is unaffected
+round2-product-tests.log:60: ok - fm-send: refuses on marker and gate-worktree backstop; a normal steer uses the inbox
+round2-product-tests.log:61: ok - fm-teardown: refuses on marker and gate-worktree backstop; a normal teardown is unaffected
+round2-product-tests.log:62: FM_TEST_END 2026-10-09T14:23:58Z tests/fm-gate-refuse.test.sh exit=0 duration_ms=39431 gate_skip=false
+round2-product-tests.log:63: FM_TEST_BEGIN 2026-10-09T14:23:58Z tests/fm-procevent.test.sh family=standalone expected_gate_skip=none
+round2-product-tests.log:64: FM_TEST_BEGIN 2026-10-09T14:23:58Z tests/fm-dispatch-resolve.test.sh family=standalone expected_gate_skip=none
+round2-product-tests.log:65: ok - absent key is off: one stderr line, exit 0, no network call
+round2-product-tests.log:66: ok - TYPESAFE_API_KEY= in .env activates the tool; environment and config overrides work
+round2-product-tests.log:67: ok - clear: one rule Choice request, key on the fd header only, spendPriority argmax over every candidate
+round2-product-tests.log:68: ok - never-send list withholds the request on a match or a bad list, and never prints the value
+round2-product-tests.log:69: ok - rules snapshots and shell quoting preserve the profile protocol
+round2-product-tests.log:70: ok - no-rule fallback, Agy, Gemini, and documented configurations resolve
+round2-product-tests.log:71: ok - the Codex account axis survives typed resolution: identity, per-account quota, and carry-through
+round2-product-tests.log:72: ok - per-account Codex reads cover only reachable homes and survive a stalled account
+round2-product-tests.log:73: ok - reachable per-account reads share one aggregate bound and keep per-account evidence
+round2-product-tests.log:74: ok - ambiguous: confidence below the fixed floor hands the decision back
+round2-product-tests.log:75: ok - per-rule confidence floors fall to the most probable runner-up that clears its own floor
+round2-product-tests.log:76: ok - only the brief's task sections and scout tag reach the model, with a whole-brief fallback
+round2-product-tests.log:77: ok - escalate: a rule declared approval: captain never yields a profile
+round2-product-tests.log:78: ok - rule floor: known shortfall falls through while unavailable evidence escalates
+round2-product-tests.log:79: ok - declared provider and profile floor evidence are applied in code
+round2-product-tests.log:80: ok - nonnumeric spendPriority evidence is never ranked
+round2-product-tests.log:81: ok - partial and missing quota evidence remain eligible but unranked
+round2-product-tests.log:82: ok - provider-wide and exact quota rows combine into one limiting candidate
+round2-product-tests.log:83: ok - default: no rule matched resolves among the default profiles
+round2-product-tests.log:84: ok - tie: equal spendPriority never breaks by array order
+round2-product-tests.log:85: ok - no rankable candidate: the tool escalates instead of guessing
+round2-product-tests.log:86: ok - native Codex binds to codex-home before default, independently of Pi accounts and row order
+round2-product-tests.log:87: ok - Pi native adapters bind to codex-home with existing fallbacks and schema 5 compatibility
+round2-product-tests.log:88: ok - schema 6: each candidate binds to its account row; schema 5 is unchanged
+round2-product-tests.log:89: ok - quota evidence comes from one quota-axi --json read, and its failure is an error outcome
+round2-product-tests.log:90: ok - API, transport, and response failures are error outcomes with exit 0
+round2-product-tests.log:91: ok - configuration errors exit 2 before any network call
+round2-product-tests.log:93: FM_TEST_END 2026-10-09T14:24:49Z tests/fm-dispatch-resolve.test.sh exit=0 duration_ms=51678 gate_skip=false
+round2-product-tests.log:94: ok - no configured source means no generated state and no process
+round2-product-tests.log:95: ok - one blocking completion yields exactly one bounded normalized event
+round2-product-tests.log:96: ok - a home reached through a symlinked ancestor runs its sources normally
+round2-product-tests.log:98: ok - public start owns the process group recorded by its claim
+round2-product-tests.log:99: ok - public start never claims an inherited caller process group
+round2-product-tests.log:100: ok - an unhandled result survives restart and repeat drains, and only explicit acknowledgement stops its re-announcement
+round2-product-tests.log:101: ok - publication cannot race a handled acknowledgement
+round2-product-tests.log:102: ok - handled acknowledgement creation is private and fails safely
+round2-product-tests.log:103: ok - automatic application waits for durable publication and failed publication remains recoverable
+round2-product-tests.log:104: ok - a self-announcing adapter applies quietly and still publishes what it could not apply
+round2-product-tests.log:106: ok - an adapter-classified terminal result is captured once, announced, and retires its source automatically
+round2-product-tests.log:108: ok - a source stays armed unless its own adapter classifies the result terminal
+round2-product-tests.log:110: ok - terminal retirement preserves and releases a concurrently replaced registration
+round2-product-tests.log:111: ok - failed terminal retirement is fail-closed and idempotently recoverable
+round2-product-tests.log:112: ok - one Send & End yields exactly one captured result, automatic retirement, and no recurring poll
+round2-product-tests.log:113: ok - an empty board close is captured and recorded handled without ever waking the captain
+round2-product-tests.log:114: ok - worker board replies and recovered listeners derive their server from the board session
+round2-product-tests.log:115: ok - worker-owned Lavish rounds deliver to the worker, acknowledge on re-arm, and stop at session end
+round2-product-tests.log:116: ok - a capture interrupted before its result commit does not wedge its source
+round2-product-tests.log:117: ok - an orphaned capture is not acknowledged by a worker it never reached
+round2-product-tests.log:118: ok - a worker-owned board is only armed for an owner its feedback can reach
+round2-product-tests.log:119: ok - an acknowledged note is never resurrected and stops ringing across repeated reconciles
+round2-product-tests.log:120: ok - acknowledging a terminal round concludes that round only
+round2-product-tests.log:121: ok - an interrupted conclude leaves the ended board unpollable and finishes on retry
+round2-product-tests.log:122: ok - a re-arm that cannot acknowledge its round leaves the running generation alone
+round2-product-tests.log:123: ok - a worker-owned board is armed once and re-armed only to acknowledge an open round
+round2-product-tests.log:124: ok - a board close carrying the captain's real answer is still announced
+round2-product-tests.log:125: ok - the shipped poll governor bounds an instantly returning source
+round2-product-tests.log:126: ok - a transient Lavish poll interruption is retried quietly and never announced
+round2-product-tests.log:127: ok - a staged worker reply is handed to the board once across quiet poll retries
+round2-product-tests.log:128: ok - a listener whose staged reply is gone polls the board without one
+round2-product-tests.log:129: ok - a listener that refuses its own setup leaves the staged reply for the next one
+round2-product-tests.log:130: ok - a listener whose artifact vanished leaves the staged reply for the next one
+round2-product-tests.log:131: ok - an interruption that outlives the bounded retries is captured and announced
+round2-product-tests.log:132: ok - only the exact interruption is retried; an unrelated SERVER_ERROR still surfaces
+round2-product-tests.log:133: ok - only the literal two-line interruption enters the quiet retry policy
+round2-product-tests.log:134: ok - arm rejects malformed and out-of-range retry delays before registration
+round2-product-tests.log:135: ok - poll cleanup safely handles an apostrophe-containing TMPDIR
+round2-product-tests.log:136: ok - Lavish classification staging stays bounded while nonmatches stream
+round2-product-tests.log:137: ok - a drained-but-unhandled result survives a replacement session and is retired only by explicit handling, never twice
+round2-product-tests.log:138: ok - pending results preserve numeric order and distinct wake identity
+round2-product-tests.log:139: ok - one owner per canonical source across homes
+round2-product-tests.log:140: ok - retiring a never-completing source stops its runner and its blocked child
+round2-product-tests.log:141: ok - reconcile reaps a runner whose source registration is gone
+round2-product-tests.log:143: ok - stale-owner recovery removes abandoned output without displacing a live owner
+round2-product-tests.log:145: ok - cross-home stale recovery removes abandoned output from the old state directory
+round2-product-tests.log:148: ok - concurrent stale-claim replacement starts exactly one runner
+round2-product-tests.log:149: ok - an ambiguous leaderless group is preserved without replacement
+round2-product-tests.log:150: ok - a truly dead generation with no surviving group is still safely reclaimed
+round2-product-tests.log:151: ok - reconcile reclaims a dead generation whose state-root identity no longer matches
+round2-product-tests.log:152: ok - retire releases a dead generation's claim instead of refusing forever
+round2-product-tests.log:153: ok - a live generation is never reclaimed, drifted state root or not
+round2-product-tests.log:154: ok - a reused pid never makes its surviving process group reclaimable
+round2-product-tests.log:155: ok - start reclaims a reused-pid claim whose leftovers can still be tidied
+round2-product-tests.log:156: ok - a launch that cannot confirm is announced once per failure episode
+round2-product-tests.log:157: ok - a 64-char source id keeps the launch-failed key within the watcher's marker bound
+round2-product-tests.log:158: ok - reconcile reports a launch it could not confirm instead of counting it as a start
+round2-product-tests.log:159: ok - a launch that finished before confirmation looked is still reported as started
+round2-product-tests.log:160: ok - a zero-padded launch confirm window is honored as base 10
+round2-product-tests.log:161: ok - an unusable launch confirm window is refused by name instead of blamed on the sources
+round2-product-tests.log:162: ok - a dead generation whose leftovers cannot be tidied never keeps owning its source
+round2-product-tests.log:163: ok - claim replacement cannot produce a torn ownership snapshot
+round2-product-tests.log:164: ok - retirement and start share one serialized lifecycle boundary
+round2-product-tests.log:165: ok - detected PID reuse is refused before signalling
+round2-product-tests.log:166: FM_TEST_END 2026-10-09T14:31:10Z tests/fm-procevent.test.sh exit=1 duration_ms=432364 gate_skip=false
+round2-product-tests.log:167: FM_TEST_BEGIN 2026-10-09T14:31:10Z tests/fm-supervision-host.test.sh family=afk expected_gate_skip=none
+round2-product-tests.log:168: ok - host+hook: a successor closed before exit_to_main does not suppress the branch-outcome rewake
+round2-product-tests.log:169: ok - host+hook: a successor that closes during a held engine turn does not suppress the branch-outcome rewake
+round2-product-tests.log:170: ok - host+hook: a refused hand-back becomes a delivered failure notice
+round2-product-tests.log:171: ok - host+hook: a refused hand-back on an announced handling marker becomes a delivered failure notice
+round2-product-tests.log:172: ok - host: parked child-exit sampling uses ordinary half-second sleeps
+round2-product-tests.log:173: ok - report surface: only the branch actor's current turn may report, and only on the tasks its wake names
+round2-product-tests.log:174: ok - report surface: visible late outcomes queue a relay, while silent outcomes remain stored without a wake or note
+round2-product-tests.log:175: ok - dispatch entry: the host reads branch eligibility, the offer rule, and the wake prompt from the Pi branch's own owner
+round2-product-tests.log:176: ok - drain: BRANCH OUTCOMES runs on a Claude home by default and on another primary with the file, never with off, and never on Pi
+round2-product-tests.log:177: ok - drain: captain outcomes come first, and routine overflow collapses into a count one drain clears
+round2-product-tests.log:178: ok - drain: repeated captain outcomes collapse per task, and the byte cap presents only the run its acknowledgement covers
+round2-product-tests.log:179: ok - drain: a long away window costs one short drain, captain outcomes collapsed per task and routine overflow counted, and nothing from it is shown again
+round2-product-tests.log:180: ok - drain: the BRANCH OUTCOMES budgets count bytes, cutting multibyte summaries by whole characters in any locale
+round2-product-tests.log:181: ok - drain: branch outcomes stay unread when a projection of the store fails
+round2-product-tests.log:182: ok - drain: branch outcomes stay unread and the drain fails when jq is missing
+round2-product-tests.log:183: ok - drain: branch outcomes stay unread when the drain cannot print them
+round2-product-tests.log:184: ok - drain: a legacy backlog is presented with each outcome's age and a check-first instruction, never adopted
+round2-product-tests.log:185: ok - drain: a keyed decision survives acknowledgement through a newer outcome for its task
+round2-product-tests.log:186: ok - drain: an outcome carried across a switch off Pi comes back with its age, never adopted
+round2-product-tests.log:187: ok - drain: an outcome nothing has shown is presented until acknowledged, and a repeated acknowledgement changes nothing
+round2-product-tests.log:188: ok - drain: an outcome the host drain presented but main never acknowledged stays unprocessed across a switch to Pi
+round2-product-tests.log:189: ok - drain: an outcome the host drain presented but main never acknowledged survives an outcome index repair
+round2-product-tests.log:190: ok - host: an attended wake the branch may take is handled on the engine, and its routine outcome never wakes main
+round2-product-tests.log:191: ok - host: an attended captain outcome wakes main once and stays in its drain until main acknowledges it
+round2-product-tests.log:192: ok - host: a captain outcome recorded after the captain left waits for the return, then reaches main's drain
+round2-product-tests.log:193: ok - host: a quiet record without its daemon is a present captain, so outcomes and decisions reach main
+round2-product-tests.log:194: ok - host: an attended decision close stays main's exactly as the plain arm delivers it
+round2-product-tests.log:195: ok - host: an off written while the host is parked sends the next attended close to main, naming the opt-out
+round2-product-tests.log:196: ok - host: a main-only pass-through leaves the successor watcher running and the close undelivered for main
+round2-product-tests.log:197: ok - host: an attended close whose main session cannot be identified reaches main and runs no engine turn
+round2-product-tests.log:198: ok - host: a decision close accepted away whose turn starts attended still reaches main unchanged
+round2-product-tests.log:199: ok - host: an attended close whose task turns main-only before its turn still reaches main unchanged
+round2-product-tests.log:200: ok - host+hook: an attended main-only pass-through rewakes main and keeps its successor watcher
+round2-product-tests.log:201: ok - host+hook: a captain outcome beside a quiet record rewakes the present captain with no away note
+round2-product-tests.log:202: ok - host+hook: a Claude home without config/supervision-host runs the host at the default engine, and an off file restores the plain arm
+round2-product-tests.log:203: ok - host+hook: a close that turns main-only at its turn rewakes main and keeps its successor watcher
+round2-product-tests.log:204: ok - host+hook: the successor a close that turns main-only at its turn leaves for main survives the hook's process group teardown
+round2-product-tests.log:205: ok - host+hook: failed at-turn downtime write notifies main despite a healthy successor
+round2-product-tests.log:206: ok - host+hook: a successor close that lands during main's turn is delivered at the next turn end
+round2-product-tests.log:207: ok - host+hook: the successor a pass-through leaves for main survives the hook's process group teardown
+round2-product-tests.log:208: ok - host+hook: the next park takes over the cycle a main-only pass-through left, so one arm owns it
+round2-product-tests.log:209: ok - host+hook: a park stopped mid take-over leaves the take-over to the next park
+round2-product-tests.log:210: ok - host+hook: a successor that cannot be recorded is stopped, and main's next turn end arms a fresh cycle
+round2-product-tests.log:211: not ok - away grok: the wake was not handled on the engine: watcher: started pid=1367199 (beacon fresh)
+round2-product-tests.log:213: FM_TEST_END 2026-10-09T14:48:07Z tests/fm-supervision-host.test.sh exit=1 duration_ms=1016388 gate_skip=false
+round2-product-tests.log:214: FM_TEST_BEGIN 2026-10-09T14:48:07Z tests/fm-afk-contract.test.sh family=afk expected_gate_skip=none
+round2-product-tests.log:215: ok - the read-back renders the words verbatim beside the expected return, spend cap, and reach line
+round2-product-tests.log:216: ok - words preserve their final newline shape in storage and read-back
+round2-product-tests.log:217: ok - one enter call writes a version 2 record, announces hold-for-return only, reads it back without asking for a go, and every read subcommand reflects it
+round2-product-tests.log:218: ok - the retired propose, confirm, and --proposal inputs are refused by name and write nothing
+round2-product-tests.log:219: ok - enter removes a proposal an older version left behind and records only the new words
+round2-product-tests.log:220: ok - a same-turn entry records never-set words verbatim, adds no authority field, and restates the never-set
+round2-product-tests.log:221: ok - a plain entry records no mandate in one step, and a refresh leaves the standing record untouched
+round2-product-tests.log:222: ok - new words archive the old words and keep the session start
+round2-product-tests.log:223: ok - a failed replacement keeps the standing posture live
+round2-product-tests.log:224: ok - a failed final replacement publication rolls back its superseded archive
+round2-product-tests.log:225: ok - validation and archive refuse damaged words blocks
+round2-product-tests.log:226: ok - a words line that lost its record prefix fails validate, read, read-back, and archive instead of truncating the mandate
+round2-product-tests.log:227: ok - archive keys the record by its entry time, empties the posture, and is idempotent
+round2-product-tests.log:228: ok - malformed inputs and foreign record versions are refused rather than guessed
+round2-product-tests.log:229: ok - retired clause fields, --grant, and the clause and grant subcommands are refused by name
+round2-product-tests.log:230: ok - a version 1 record validates, reads its words and scalars with the clause and grant sections ignored, refreshes untouched, and archives
+round2-product-tests.log:231: ok - new words over a live version 1 record archive it and write version 2 with the same session start
+round2-product-tests.log:232: ok - enter and archive refuse while the record is locked, and proceed once it clears
+round2-product-tests.log:233: ok - a quiet record announces, refreshes, and reads back as a present captain holding nothing, while an away record keeps hold-for-return
+round2-product-tests.log:234: ok - an away entry over quiet mode records away, and a quiet entry never masks a standing away record
+round2-product-tests.log:235: FM_TEST_END 2026-10-09T14:48:42Z tests/fm-afk-contract.test.sh exit=0 duration_ms=35769 gate_skip=false
+round2-product-tests.log:236: FM_TEST_BEGIN 2026-10-09T14:48:43Z tests/fm-afk-return.test.sh family=afk expected_gate_skip=none
+round2-product-tests.log:237: ok - return catch-up owns live blocker remediation, reports itself to Bearings as content, preserves evidence once, and clears idempotently
+round2-product-tests.log:238: ok - tmux and Herdr blockers require the same explicit durable reclassification before ordinary work
+round2-product-tests.log:239: ok - needs-decision remains reportable without masquerading as a firstmate-actionable blocker
+round2-product-tests.log:240: ok - AFK return re-drains published wakes until handling acknowledges
+round2-product-tests.log:241: ok - away-mode re-entry fails closed while the prior return catch-up is pending
+round2-product-tests.log:242: ok - /quiet off's return path behaves identically for a quiet-content flag as for a legacy away-content one
+round2-product-tests.log:243: ok - check retries recorded terminal teardown and keeps catch-up gated until success
+round2-product-tests.log:244: ok - an unreadable superseded mandate stays required until its record validates
+round2-product-tests.log:245: ok - the retained contract epoch requires its final archive on every check
+round2-product-tests.log:246: ok - the return brief renders health, the words with the session account, waiting, could-not-fix, handled, and cost from durable records, and the gate shrinks to what the away session could not fix
+round2-product-tests.log:247: ok - the return brief lists landed work whose worker is still up, from the durable merge marker only, without gating on it and never offering a secondmate for teardown
+round2-product-tests.log:248: ok - the return brief points at the drain for branch outcomes on a host home and leaves the read cursor to it, and a Pi home's brief is unchanged
+round2-product-tests.log:249: ok - the all-silent return keeps the outcome stored without promising a drain presentation
+round2-product-tests.log:250: ok - a drain that cannot record its branch-outcome presentation keeps the return's catch-up gated until a check records it
+round2-product-tests.log:251: ok - a refreshed posture keeps its original window, superseded mandate, and earlier outcomes
+round2-product-tests.log:252: ok - a malformed posture record stays live and gates return catch-up
+round2-product-tests.log:253: ok - an epochless malformed record remains required until restored valid
+round2-product-tests.log:254: ok - an unreadable outcome store gates catch-up until a successful reread
+round2-product-tests.log:255: ok - an unavailable held listing gates catch-up until a successful reread
+round2-product-tests.log:256: ok - an unreadable status stays private and gates until a successful reread
+round2-product-tests.log:257: ok - a status-file-less leftover record gates return; a readable status on that same record is the proven path that passes
+round2-product-tests.log:258: ok - a leftover record with a readable status file lets return catch-up clear
+round2-product-tests.log:259: ok - the read-only guard treats the away-posture record as active away mode without the legacy flag
+round2-product-tests.log:260: ok - the return brief leads with supervisor health and names every detected gap
+round2-product-tests.log:261: ok - the return brief does not report an already-acked watcher-down marker as an open gap
+round2-product-tests.log:262: ok - the return brief reports a wake mid-handling at return as information, and only an open downtime episode as a gap
+round2-product-tests.log:263: ok - the return brief's failures section names an engine latch inside the away window with its time, error count, and cooldown state
+round2-product-tests.log:264: ok - a lost second trip append does not attach the current pause to a recovered episode
+round2-product-tests.log:265: ok - a recovered row preceding the stale retry time does not invent a second trip
+round2-product-tests.log:266: ok - a later failed probe does not change the trip-row error count
+round2-product-tests.log:267: ok - the return brief excludes prior-session latch rows
+round2-product-tests.log:268: ok - the return brief retains in-window trips and failed turns across a main restart
+round2-product-tests.log:269: ok - a return with only the legacy away flag still renders the brief and measures the window from the flag
+round2-product-tests.log:270: FM_TEST_END 2026-10-09T14:51:56Z tests/fm-afk-return.test.sh exit=0 duration_ms=193409 gate_skip=false
+round2-product-tests.log:271: FM_TEST_BEGIN 2026-10-09T14:51:56Z tests/fm-inbox.test.sh family=unclassified expected_gate_skip=none
+round2-product-tests.log:272: ok - plain note, list, and wake stay on the historical human path
+round2-product-tests.log:273: ok - plain note keeps exit 1 for a saved-but-unannounced failure
+round2-product-tests.log:274: ok - the same request id returns the original note as a distinguishable replay
+round2-product-tests.log:275: ok - a crash between recording the request id and publishing the note reuses the original id
+round2-product-tests.log:276: ok - saved-but-unannounced notes are repairable without creating a second note
+round2-product-tests.log:277: ok - repair and replay do not wake firstmate for an already-acknowledged note
+round2-product-tests.log:278: ok - receipts JSON is bounded by fixed bounds and discloses what it omitted
+round2-product-tests.log:279: ok - notes that predate the announcement marker are unknown, not re-announced
+round2-product-tests.log:280: ok - the reply channel is durable and its cursor is a strict order
+round2-product-tests.log:281: ok - the reply cursor never goes backwards when the sequence counter is lost
+round2-product-tests.log:282: ok - a reply without a valid sequence is reported as malformed
+round2-product-tests.log:283: ok - a non-UTF-8 note does not break the receipts view
+round2-product-tests.log:284: ok - readiness says unknown (or not-receivable) instead of inferring liveness from a lock
+round2-product-tests.log:285: ok - empty bodies and unsafe request ids are refused
+round2-product-tests.log:286: ok - a note body that opens with a double dash is queued as text
+round2-product-tests.log:287: ok - drain --ack still moves the note to handled
+round2-product-tests.log:288: FM_TEST_END 2026-10-09T14:52:27Z tests/fm-inbox.test.sh exit=0 duration_ms=31285 gate_skip=false
+round2-product-tests.log:289: FM_TEST_BEGIN 2026-10-09T14:52:28Z tests/fm-inbox-conversation.test.sh family=unclassified expected_gate_skip=none
+round2-product-tests.log:290: PASS: 9 inputs accounted for; 8 single dispatch claims, 1 stale bound input explicitly rejected; 6 replies retained
+round2-product-tests.log:291: PASS: capture/accept/publication/playback crash windows, duplicate races and wrong-session refusals
+round2-product-tests.log:292: PASS: the newest capture names the live call; a call nobody answered is superseded, a nameless one supersedes nothing
+round2-product-tests.log:293: PASS: a redial captured mid-pass is never superseded; the pass restarts and retires the dropped call
+round2-product-tests.log:294: PASS: live publication is owner-authored, digest-bound, and ordered; portions surface as waiting speech
+round2-product-tests.log:295: PASS: the session holding the lock answers what its predecessor left saved; a lock-less caller is refused
+round2-product-tests.log:296: PASS: an ElevenLabs-only home refuses an iMessage reply and records nothing new for a voice conversation
+round2-product-tests.log:297: PASS: a v2 policy carries a text destination; each conversation publishes only to the one it is bound to
+round2-product-tests.log:298: PASS: a destination withdrawn from the policy can no longer be published to
+round2-product-tests.log:299: ok - conversation contract: durable capture, session routing, reply and playback recovery
+round2-product-tests.log:300: FM_TEST_END 2026-10-09T14:54:39Z tests/fm-inbox-conversation.test.sh exit=0 duration_ms=131506 gate_skip=false
+round2-product-tests.log:301: FM_TEST_BEGIN 2026-10-09T14:54:39Z tests/fm-fleet-ledger.test.sh family=unclassified expected_gate_skip=none
+round2-product-tests.log:302: ok - flag on: dispatch, polled status lines, the local merge after its task's pending lines, and cleanup are recorded in order
+round2-product-tests.log:303: ok - flag on: a PR merge is recorded once, after the task's pending status lines
+round2-product-tests.log:304: ok - flag on: registering a PR records task.pr_ready with its full URL after the task's pending status lines, and the merge-time re-record adds nothing
+round2-product-tests.log:305: ok - flag on: a worker's status command records its line at once, and the watcher backstop does not record it again
+round2-product-tests.log:306: ok - flag on, state override outside the home: the worker's status command records its line at once
+round2-product-tests.log:307: ok - flag on, relative config override: a worker running elsewhere still records its line at once
+round2-product-tests.log:308: ok - append failing: the worker's status command exits nonzero and records nothing
+round2-product-tests.log:309: ok - ledger failing: the worker's status line still lands exactly, quietly, and the backstop records it later
+round2-product-tests.log:310: ok - flag off: the worker's status command is a plain append and leaves no ledger file, offset, or lock
+round2-product-tests.log:311: ok - flag off: the whole lifecycle leaves no ledger file, offset, or lock
+round2-product-tests.log:312: FM_TEST_END 2026-10-09T14:55:35Z tests/fm-fleet-ledger.test.sh exit=0 duration_ms=55219 gate_skip=false
+round2-product-tests.log:313: FM_TEST_BEGIN 2026-10-09T14:55:35Z tests/fm-git-strip-ai-trailers.test.sh family=backend-dispatch expected_gate_skip=none
+round2-product-tests.log:314: ok - a Cursor --trailer commit object has no AI co-author and keeps the captain identity
+round2-product-tests.log:315: ok - a human Co-authored-by trailer survives next to a stripped Cursor trailer
+round2-product-tests.log:316: ok - a human co-author at a vendor domain survives; only the exact bot address is stripped
+round2-product-tests.log:317: ok - a hook manager resolving the pane hooks dir fails instead of displacing the strip
+round2-product-tests.log:318: ok - a relaunch reinstall replaces the read-only strip dir and still strips
+round2-product-tests.log:319: ok - install chains the previous commit-msg hook after stripping
+round2-product-tests.log:320: ok - a relative project core.hooksPath resolves against the worktree and still runs
+round2-product-tests.log:321: ok - an inherited GIT_CONFIG hooksPath does not become the chained previous hooks
+round2-product-tests.log:322: ok - a project hook that appears after install still runs for the rest of the task
+round2-product-tests.log:323: ok - a pane GIT_CONFIG hooksPath still chains the repository git is actually in
+round2-product-tests.log:324: ok - an empty project core.hooksPath runs no repository hook and still strips the trailer
+round2-product-tests.log:325: ok - an unresolvable project core.hooksPath still refuses the commit
+round2-product-tests.log:326: ok - a valueless project core.hooksPath still refuses the commit
+round2-product-tests.log:327: ok - the repository's pre-push runs and can refuse under every hooksPath override channel
+round2-product-tests.log:328: ok - a git -c hooksPath override still strips the trailer and chains the project's hooks
+round2-product-tests.log:329: ok - commit-msg file mode strips the trailer and keeps the subject
+round2-product-tests.log:331: FM_TEST_END 2026-10-09T14:55:46Z tests/fm-git-strip-ai-trailers.test.sh exit=0 duration_ms=11606 gate_skip=false
+round2-capacity-account-tests.log:1: FM_TEST_BEGIN 2026-10-09T14:08:53Z tests/fm-project-capacity.test.sh family=backend-dispatch expected_gate_skip=none
+round2-capacity-account-tests.log:2: ok - a project with no declared capacity keeps today's uncapped dispatch
+round2-capacity-account-tests.log:3: ok - a spawn is admitted while its project still has a free place
+round2-capacity-account-tests.log:4: ok - a spawn beyond capacity is deferred before any record, brief, endpoint, worktree, or backlog move exists
+round2-capacity-account-tests.log:5: ok - a project name with spaces is declared by taking the capacity from the last field
+round2-capacity-account-tests.log:6: ok - a project name beginning with # is declared, and a # comment stays a comment
+round2-capacity-account-tests.log:7: ok - a home reached through a symlink counts each of its workers once
+round2-capacity-account-tests.log:8: ok - a recorded PR handoff or a cleanup each frees exactly one place
+round2-capacity-account-tests.log:9: ok - a restart of a task id does not count that task's own record
+round2-capacity-account-tests.log:10: ok - only this project's ship and scout records hold places
+round2-capacity-account-tests.log:11: ok - every local home shares one declared capacity per project origin, and remote homes do not count
+round2-capacity-account-tests.log:12: ok - an unreadable state directory or task record refuses admission rather than undercounting
+round2-capacity-account-tests.log:13: ok - concurrent spawns can never both take the last place
+round2-capacity-account-tests.log:14: ok - a spawn that fails after admission leaves no record and holds no place
+round2-capacity-account-tests.log:15: ok - an unreadable declaration refuses every fresh spawn rather than guessing the limit
+round2-capacity-account-tests.log:16: ok - a batch reports a capacity deferral as deferred, not failed
+round2-capacity-account-tests.log:17: ok - an Orca spawn takes the shared project lock whenever a same-origin clone is capped and defers before creating anything
+round2-capacity-account-tests.log:18: FM_TEST_END 2026-10-09T14:11:34Z tests/fm-project-capacity.test.sh exit=0 duration_ms=160995 gate_skip=false
+round2-capacity-account-tests.log:19: FM_TEST_BEGIN 2026-10-09T14:11:34Z tests/fm-worker-account.test.sh family=backend-dispatch expected_gate_skip=none
+round2-capacity-account-tests.log:20: ok - an absent pin leaves Claude and Pi launches exactly as they were
+round2-capacity-account-tests.log:21: ok - a Claude pin selects its root and sheds the credentials that would outrank it
+round2-capacity-account-tests.log:22: ok - a Claude pin refuses a signed-out root even when the invoking process has a usable login and API key
+round2-capacity-account-tests.log:23: ok - an ordinary Claude pin selects the default login and drops an ambient root
+round2-capacity-account-tests.log:24: ok - malformed, relative, CR-terminated, empty, extra-line, missing-root, and non-file pins refuse before launch
+round2-capacity-account-tests.log:25: ok - a Pi pin selects its root and passes the declared provider
+round2-capacity-account-tests.log:26: ok - a Pi pin refuses unqualified, missing, undeclared, signed-out, and raw launches
+round2-capacity-account-tests.log:27: ok - extension providers and a Pi without auth check fall back to an exact model-listing match
+round2-capacity-account-tests.log:28: ok - a Claude pin leaves codex and Pi launches unchanged
+round2-capacity-account-tests.log:29: ok - a raw Claude launch command receives the home's pin
+round2-capacity-account-tests.log:30: ok - a pinned home refuses a raw Claude command that overrides the account
+round2-capacity-account-tests.log:31: ok - an unpinned home keeps a raw Claude account override
+round2-capacity-account-tests.log:32: not ok - a local secondmate spawn under the launching home's pin should succeed: error: secondmate home cannot be inside the firstmate repo: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/fm-worker-account.W2qxTr/secondmate/secondmate-home: expected exit 0, got 1
+round2-capacity-account-tests.log:33: FM_TEST_END 2026-10-09T14:13:04Z tests/fm-worker-account.test.sh exit=1 duration_ms=90069 gate_skip=false
+round2-account-copy-final.log:1: FM_TEST_BEGIN 2026-10-09T14:15:55Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-worker-account.test.sh family=backend-dispatch expected_gate_skip=none
+round2-account-copy-final.log:2: ok - an absent pin leaves Claude and Pi launches exactly as they were
+round2-account-copy-final.log:3: ok - a Claude pin selects its root and sheds the credentials that would outrank it
+round2-account-copy-final.log:4: ok - a Claude pin refuses a signed-out root even when the invoking process has a usable login and API key
+round2-account-copy-final.log:5: ok - an ordinary Claude pin selects the default login and drops an ambient root
+round2-account-copy-final.log:6: ok - malformed, relative, CR-terminated, empty, extra-line, missing-root, and non-file pins refuse before launch
+round2-account-copy-final.log:7: ok - a Pi pin selects its root and passes the declared provider
+round2-account-copy-final.log:8: ok - a Pi pin refuses unqualified, missing, undeclared, signed-out, and raw launches
+round2-account-copy-final.log:9: ok - extension providers and a Pi without auth check fall back to an exact model-listing match
+round2-account-copy-final.log:10: ok - a Claude pin leaves codex and Pi launches unchanged
+round2-account-copy-final.log:11: ok - a raw Claude launch command receives the home's pin
+round2-account-copy-final.log:12: ok - a pinned home refuses a raw Claude command that overrides the account
+round2-account-copy-final.log:13: ok - an unpinned home keeps a raw Claude account override
+round2-account-copy-final.log:14: ok - a local secondmate reads the launching home's pin and its own home's file is never inherited over
+round2-account-copy-final.log:16: FM_TEST_END 2026-10-09T14:17:31Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-worker-account.test.sh exit=0 duration_ms=96331 gate_skip=false
+round2-account-copy-final.log:17: FM_TEST_BEGIN 2026-10-09T14:17:31Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-codex-account-selected.test.sh family=unclassified expected_gate_skip=none
+round2-account-copy-final.log:18: ok - codex --codex-home prefixes the launch with CODEX_HOME and records codex_home= in meta
+round2-account-copy-final.log:19: ok - codex --codex-home expands ~/ against the launching user's HOME at spawn time
+round2-account-copy-final.log:20: ok - codex --codex-home canonicalizes aliases before launch and metadata
+round2-account-copy-final.log:21: ok - codex without --codex-home writes no CODEX_HOME prefix and no codex_home= line
+round2-account-copy-final.log:22: ok - codex --codex-home refuses an account directory with no auth.json instead of falling back
+round2-account-copy-final.log:23: ok - codex --codex-home refuses an account whose auth.json is empty
+round2-account-copy-final.log:24: ok - codex --codex-home refuses a missing account directory
+round2-account-copy-final.log:25: ok - codex --codex-home refuses a relative path
+round2-account-copy-final.log:26: ok - codex --codex-home refuses a bare tilde
+round2-account-copy-final.log:27: ok - codex --codex-home refuses control bytes before metadata publication
+round2-account-copy-final.log:28: ok - codex --codex-home refuses an empty value
+round2-account-copy-final.log:29: ok - --codex-home is refused on a non-codex harness
+round2-account-copy-final.log:30: ok - --codex-home is refused on a --secondmate launch
+round2-account-copy-final.log:31: ok - batch dispatch forwards a shared --codex-home to every pair
+round2-account-copy-final.log:33: FM_TEST_END 2026-10-09T14:18:08Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-codex-account-selected.test.sh exit=0 duration_ms=37218 gate_skip=false
+round2-supervision-focused.log:1: FM_TEST_BEGIN 2026-10-09T14:50:11Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-supervision-primary-selected.test.sh family=unclassified expected_gate_skip=none
+round2-supervision-focused.log:2: ok - host: a primary with no verified dialog mirror keeps every attended close on main, and its away posture still runs
+round2-supervision-focused.log:3: FM_TEST_END 2026-10-09T14:50:57Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-supervision-primary-selected.test.sh exit=0 duration_ms=45596 gate_skip=false
+round2-supervision-focused.log:4: FM_TEST_BEGIN 2026-10-09T14:50:57Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-supervision-voice-selected.test.sh family=unclassified expected_gate_skip=none
+round2-supervision-focused.log:5: ok - host: away voice-only, mixed, and newly arriving conversation turns reach main without an engine turn
+round2-supervision-focused.log:6: ok - host: already-drained away wakes stay quiet at both offer boundaries, while corrupted queues reach main
+round2-supervision-focused.log:7: ok - host: an away wake is handled on the engine through the branch contract and never reaches main
+round2-supervision-focused.log:8: ok - host: a captain return during an engine turn hands that turn's outcomes to main
+round2-supervision-focused.log:9: FM_TEST_END 2026-10-09T14:53:29Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-supervision-voice-selected.test.sh exit=0 duration_ms=151769 gate_skip=false
+round2-publication-lock-after.log:1: FM_TEST_BEGIN 2026-10-09T14:27:34Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+round2-publication-lock-after.log:2: ok - device re-record publication waits without rewriting its registration
+round2-publication-lock-after.log:3: FM_TEST_END 2026-10-09T14:27:46Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=12268 gate_skip=false
+round2-publication-adjacent.log:1: FM_TEST_BEGIN 2026-10-09T14:28:43Z tests/fm-pr-check-security.test.sh family=pr-forge expected_gate_skip=none
+round2-publication-adjacent.log:2: ok - direct re-arm publication waits without replacing an armed poll
+round2-publication-adjacent.log:3: FM_TEST_END 2026-10-09T14:28:49Z tests/fm-pr-check-security.test.sh exit=0 duration_ms=5895 gate_skip=false
+round2-procevent-recovery-final.log:1: FM_TEST_BEGIN 2026-10-09T14:55:16Z tests/fm-procevent.test.sh family=standalone expected_gate_skip=none
+round2-procevent-recovery-final.log:2: ok - no configured source means no generated state and no process
+round2-procevent-recovery-final.log:3: ok - one blocking completion yields exactly one bounded normalized event
+round2-procevent-recovery-final.log:4: ok - a home reached through a symlinked ancestor runs its sources normally
+round2-procevent-recovery-final.log:6: ok - public start owns the process group recorded by its claim
+round2-procevent-recovery-final.log:7: ok - public start never claims an inherited caller process group
+round2-procevent-recovery-final.log:8: ok - an unhandled result survives restart and repeat drains, and only explicit acknowledgement stops its re-announcement
+round2-procevent-recovery-final.log:9: ok - publication cannot race a handled acknowledgement
+round2-procevent-recovery-final.log:10: ok - handled acknowledgement creation is private and fails safely
+round2-procevent-recovery-final.log:11: ok - automatic application waits for durable publication and failed publication remains recoverable
+round2-procevent-recovery-final.log:12: ok - a self-announcing adapter applies quietly and still publishes what it could not apply
+round2-procevent-recovery-final.log:14: ok - an adapter-classified terminal result is captured once, announced, and retires its source automatically
+round2-procevent-recovery-final.log:16: ok - a source stays armed unless its own adapter classifies the result terminal
+round2-procevent-recovery-final.log:18: ok - terminal retirement preserves and releases a concurrently replaced registration
+round2-procevent-recovery-final.log:19: ok - failed terminal retirement is fail-closed and idempotently recoverable
+round2-procevent-recovery-final.log:20: ok - one Send & End yields exactly one captured result, automatic retirement, and no recurring poll
+round2-procevent-recovery-final.log:21: ok - an empty board close is captured and recorded handled without ever waking the captain
+round2-procevent-recovery-final.log:22: ok - worker board replies and recovered listeners derive their server from the board session
+round2-procevent-recovery-final.log:23: ok - worker-owned Lavish rounds deliver to the worker, acknowledge on re-arm, and stop at session end
+round2-procevent-recovery-final.log:24: ok - a capture interrupted before its result commit does not wedge its source
+round2-procevent-recovery-final.log:25: ok - an orphaned capture is not acknowledged by a worker it never reached
+round2-procevent-recovery-final.log:26: ok - a worker-owned board is only armed for an owner its feedback can reach
+round2-procevent-recovery-final.log:27: ok - an acknowledged note is never resurrected and stops ringing across repeated reconciles
+round2-procevent-recovery-final.log:28: ok - acknowledging a terminal round concludes that round only
+round2-procevent-recovery-final.log:29: ok - an interrupted conclude leaves the ended board unpollable and finishes on retry
+round2-procevent-recovery-final.log:30: ok - a re-arm that cannot acknowledge its round leaves the running generation alone
+round2-procevent-recovery-final.log:31: ok - a worker-owned board is armed once and re-armed only to acknowledge an open round
+round2-procevent-recovery-final.log:32: ok - a board close carrying the captain's real answer is still announced
+round2-procevent-recovery-final.log:33: ok - the shipped poll governor bounds an instantly returning source
+round2-procevent-recovery-final.log:34: ok - a transient Lavish poll interruption is retried quietly and never announced
+round2-procevent-recovery-final.log:35: ok - a staged worker reply is handed to the board once across quiet poll retries
+round2-procevent-recovery-final.log:36: ok - a listener whose staged reply is gone polls the board without one
+round2-procevent-recovery-final.log:37: ok - a listener that refuses its own setup leaves the staged reply for the next one
+round2-procevent-recovery-final.log:38: ok - a listener whose artifact vanished leaves the staged reply for the next one
+round2-procevent-recovery-final.log:39: ok - an interruption that outlives the bounded retries is captured and announced
+round2-procevent-recovery-final.log:40: ok - only the exact interruption is retried; an unrelated SERVER_ERROR still surfaces
+round2-procevent-recovery-final.log:41: ok - only the literal two-line interruption enters the quiet retry policy
+round2-procevent-recovery-final.log:42: ok - arm rejects malformed and out-of-range retry delays before registration
+round2-procevent-recovery-final.log:43: ok - poll cleanup safely handles an apostrophe-containing TMPDIR
+round2-procevent-recovery-final.log:44: ok - Lavish classification staging stays bounded while nonmatches stream
+round2-procevent-recovery-final.log:45: ok - a drained-but-unhandled result survives a replacement session and is retired only by explicit handling, never twice
+round2-procevent-recovery-final.log:46: ok - pending results preserve numeric order and distinct wake identity
+round2-procevent-recovery-final.log:47: ok - one owner per canonical source across homes
+round2-procevent-recovery-final.log:48: ok - retiring a never-completing source stops its runner and its blocked child
+round2-procevent-recovery-final.log:49: ok - reconcile reaps a runner whose source registration is gone
+round2-procevent-recovery-final.log:51: ok - stale-owner recovery removes abandoned output without displacing a live owner
+round2-procevent-recovery-final.log:53: ok - cross-home stale recovery removes abandoned output from the old state directory
+round2-procevent-recovery-final.log:55: ok - concurrent stale-claim replacement starts exactly one runner
+round2-procevent-recovery-final.log:56: ok - an ambiguous leaderless group is preserved without replacement
+round2-procevent-recovery-final.log:57: ok - a truly dead generation with no surviving group is still safely reclaimed
+round2-procevent-recovery-final.log:58: ok - reconcile reclaims a dead generation whose state-root identity no longer matches
+round2-procevent-recovery-final.log:59: ok - retire releases a dead generation's claim instead of refusing forever
+round2-procevent-recovery-final.log:60: ok - a live generation is never reclaimed, drifted state root or not
+round2-procevent-recovery-final.log:61: ok - a reused pid never makes its surviving process group reclaimable
+round2-procevent-recovery-final.log:62: ok - start reclaims a reused-pid claim whose leftovers can still be tidied
+round2-procevent-recovery-final.log:63: ok - a launch that cannot confirm is announced once per failure episode
+round2-procevent-recovery-final.log:64: ok - a 64-char source id keeps the launch-failed key within the watcher's marker bound
+round2-procevent-recovery-final.log:65: ok - reconcile reports a launch it could not confirm instead of counting it as a start
+round2-procevent-recovery-final.log:66: ok - a launch that finished before confirmation looked is still reported as started
+round2-procevent-recovery-final.log:67: ok - a zero-padded launch confirm window is honored as base 10
+round2-procevent-recovery-final.log:68: ok - an unusable launch confirm window is refused by name instead of blamed on the sources
+round2-procevent-recovery-final.log:69: ok - a dead generation whose leftovers cannot be tidied never keeps owning its source
+round2-procevent-recovery-final.log:70: ok - claim replacement cannot produce a torn ownership snapshot
+round2-procevent-recovery-final.log:71: ok - retirement and start share one serialized lifecycle boundary
+round2-procevent-recovery-final.log:72: ok - detected PID reuse is refused before signalling
+round2-procevent-recovery-final.log:73: ok - transient identity failure preserves the live source for retry
+round2-procevent-recovery-final.log:74: ok - bounded home sweep preflights then retires every locally owned source
+round2-procevent-recovery-final.log:75: ok - home sweep leaves foreign-home claims and runners untouched
+round2-procevent-recovery-final.log:76: ok - home sweep refuses safely until runner identity is readable
+round2-procevent-recovery-final.log:77: ok - healthy runtime behavior remains registration-only
+round2-procevent-recovery-final.log:78: ok - registration rejects unrepresentable newline arguments
+round2-procevent-recovery-final.log:79: ok - nonzero exit with no output stays armed and silent
+round2-procevent-recovery-final.log:80: ok - oversized output is bounded rather than published whole or dropped
+round2-procevent-recovery-final.log:81: ok - live output stays bounded and retirement reaps the whole source group
+round2-procevent-recovery-final.log:82: ok - stop mismatch evidence preserves the proved-stop boundary
+round2-procevent-recovery-final.log:83: ok - stop unreadable evidence preserves the proved-stop boundary
+round2-procevent-recovery-final.log:84: ok - stop unreadable-pgid evidence preserves the proved-stop boundary
+round2-procevent-recovery-final.log:85: ok - stop nonleader evidence preserves the proved-stop boundary
+round2-procevent-recovery-final.log:86: ok - invalid output bounds fail closed
+round2-procevent-recovery-final.log:87: ok - the adapter derives physical identity without newline path corruption
+round2-procevent-recovery-final.log:88: ok - source-only homes trigger the general supervision guard
+round2-procevent-recovery-final.log:89: ok - the adapter classifies published poll output safely
+round2-procevent-recovery-final.log:90: ok - poll derives host and port from the artifact session, not ambient or configured routing
+round2-procevent-recovery-final.log:91: ok - quiet retries use the board session regardless of configuration changes
+round2-procevent-recovery-final.log:92: ok - missing or unreadable session routing preserves replies and never guesses another server
+round2-procevent-recovery-final.log:93: ok - the adapter owns which Lavish results end a source, and payload text cannot forge one
+round2-procevent-recovery-final.log:94: ok - the adapter owns which Lavish results are silent, and fails closed on everything else
+round2-procevent-recovery-final.log:95: ok - read distinguishes a live captain message from a session-ending message
+round2-procevent-recovery-final.log:96: ok - read names the message count with the same label as the message section
+round2-procevent-recovery-final.log:97: ok - read presents every annotation and a distinct session-ending message
+round2-procevent-recovery-final.log:98: ok - read never certifies rows missing declared fields as complete
+round2-procevent-recovery-final.log:99: ok - read keeps every annotation when the session-ending message is absent
+round2-procevent-recovery-final.log:100: ok - read surfaces a typed comment on an annotated element
+round2-procevent-recovery-final.log:101: ok - read still surfaces a typed comment that matches the element text
+round2-procevent-recovery-final.log:102: ok - read still presents a pure annotation with no comment
+round2-procevent-recovery-final.log:103: ok - read does not present choice context as a comment
+round2-procevent-recovery-final.log:104: ok - read still presents a pure message with no selector
+round2-procevent-recovery-final.log:105: ok - read distinguishes a feedback capture from an ended-with-nothing close
+round2-procevent-recovery-final.log:106: ok - an adapter with no silence verdict keeps announcing every result
+round2-procevent-recovery-final.log:107: ok - the published interfaces state the loss limitation and claim no lossless delivery
+round2-procevent-recovery-final.log:109: ok - an orphaned source command obeys the launch floor during its grace window
+round2-procevent-recovery-final.log:110: ok - a replacement registration starts with one fresh launch floor
+round2-procevent-recovery-final.log:111: ok - a superseded sleeping runner cannot recreate stale pacing state
+round2-procevent-recovery-final.log:112: ok - post-commit pacing cleanup cannot veto registration publication
+round2-procevent-recovery-final.log:113: ok - a pre-reboot monotonic stamp is treated as expired
+round2-procevent-recovery-final.log:114: ok - an expired owner lease stops a self-relaunching source generation
+round2-procevent-recovery-final.log:115: ok - a recreated state path does not preserve the old runner
+round2-procevent-recovery-final.log:117: ok - a runner fails closed when its owner guard cannot initialize
+round2-procevent-recovery-final.log:119: ok - a foreground start refreshes its lease while its caller remains attached
+round2-procevent-recovery-final.log:120: ok - wall-clock corrections do not alter owner lease age
+round2-procevent-recovery-final.log:122: ok - an attached-start keeper stops refreshing after its parent exits
+round2-procevent-recovery-final.log:123: ok - a detected ambiguous reused-PID group is not signalled
+round2-procevent-recovery-final.log:124: not ok - the listener under test was not reparented away from its session (ppid 4239)
+round2-procevent-recovery-final.log:125: FM_TEST_END 2026-10-09T15:05:13Z tests/fm-procevent.test.sh exit=1 duration_ms=596411 gate_skip=false
+round2-procevent-orphan-final.log:1: FM_TEST_BEGIN 2026-10-09T15:06:23Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-procevent-orphan-selected.test.sh family=unclassified expected_gate_skip=none
+round2-procevent-orphan-final.log:2: ok - a detached listener starts reparented, with a live descendant tree under it
+round2-procevent-orphan-final.log:3: ok - a listener whose owning session is gone stops itself and its whole process group
+round2-procevent-orphan-final.log:4: ok - reaping the listener stops the process churn under it
+round2-procevent-orphan-final.log:5: ok - an identical listener in a home whose session is still there is untouched
+round2-procevent-orphan-final.log:6: ok - retiring a source reaps its reparented listener and every descendant under it
+round2-procevent-orphan-final.log:7: FM_TEST_END 2026-10-09T15:06:37Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-procevent-orphan-selected.test.sh exit=0 duration_ms=13905 gate_skip=false

@@ -1,0 +1,15 @@
+$ fm-branch-outcome.sh append --task demo --verdict routine --summary "The local docs change is ready."
+1
+exit=0
+$ bash bin/fm-wake-drain.sh (stdout closed before Bash starts)
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-wake-drain.sh: line 736: printf: Bad file descriptor
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/bin/fm-wake-drain.sh: line 736: printf: write error: Bad file descriptor
+exit=1
+Read cursor after failed output: absent
+$ fm-wake-drain.sh (normal stdout)
+BRANCH OUTCOMES, ROUTINE (handled by the supervision session since your last drain; for your awareness, nothing to acknowledge):
+[seq 1] demo: The local docs change is ready.
+exit=0
+$ fm-wake-drain.sh (repeat)
+exit=0
+PASS: failed output preserves the unread routine outcome; one successful drain presents it and the next does not repeat it

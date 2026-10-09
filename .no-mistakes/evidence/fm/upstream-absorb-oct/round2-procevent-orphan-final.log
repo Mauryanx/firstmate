@@ -1,0 +1,10 @@
+FM_TEST_BEGIN 2026-10-09T15:06:23Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-procevent-orphan-selected.test.sh family=unclassified expected_gate_skip=none
+ok - a detached listener starts reparented, with a live descendant tree under it
+ok - a listener whose owning session is gone stops itself and its whole process group
+ok - reaping the listener stops the process churn under it
+ok - an identical listener in a home whose session is still there is untouched
+ok - retiring a source reaps its reparented listener and every descendant under it
+FM_TEST_END 2026-10-09T15:06:37Z /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-procevent-orphan-selected.test.sh exit=0 duration_ms=13905 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=14098
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=13905 failed=0
+FM_TEST_SLOWEST rank=1 script=/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/worker-code/tests/fm-procevent-orphan-selected.test.sh duration_ms=13905

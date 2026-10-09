@@ -1,0 +1,13 @@
+$ fm-spawn.sh isolated demo --mode local-only --yolo off
+error: refusing fleet lifecycle from inside a no-mistakes gate worktree (/home/firstmate/.no-mistakes/repos/8352e211db7e.git)
+[exit 3]
+
+$ fm-send.sh isolated Do not send.
+error: refusing fleet lifecycle from inside a no-mistakes gate worktree (/home/firstmate/.no-mistakes/repos/8352e211db7e.git)
+[exit 3]
+
+$ fm-teardown.sh isolated
+error: refusing fleet lifecycle from inside a no-mistakes gate worktree (/home/firstmate/.no-mistakes/repos/8352e211db7e.git)
+[exit 3]
+
+PASS: the worktree backstop refuses all three lifecycle entry points with the environment marker absent and leaves isolated state empty.

@@ -1,0 +1,70 @@
+FM_TEST_BEGIN 2026-10-09T17:18:47Z tests/fm-remote-inherit-focused.test.sh family=unclassified expected_gate_skip=none
+ok - overlapping remote home provisioning serializes through publication and rollback
+ok - competing cleanup of the public home cannot reach a live provisioning clone
+ok - a home that appears mid-provision makes the provision die without touching it
+ok - remote seed rollback preserves serialized competing routes
+ok - unknown readiness preserves its route and brief for reconciliation
+ok - remote seeding checks, repairs, and re-checks readiness, then stops on a remaining gap
+ok - remote seeding proceeds once the repair closes every gap
+ok - remote seeding provisions a supplied origin without touching the primary project tree
+ok - remote provisioning re-validates a supplied origin at the receiving host
+ok - seeding carries bitbucket, self-hosted, and scp-like origins through to the remote clone
+ok - remote seed registers the route and provisions the whole home and project clone on that host
+ok - remote inheritance rejects incomplete and superseded payload generations
+ok - mixed local and remote routes validate without migration
+ok - remote spawn launches on the remote-local backend and records a host-qualified route
+ok - legacy and mismatched remote endpoints fail closed before backend access
+ok - non-herdr remote endpoints are refused without changing either route
+not ok - remote spawn never reached its blocked inheritance write
+DIAGNOSTIC spawn-concurrent.out
+WARNING: watcher still down (same stale episode; last beat: 173s ago, grace 300s) - full banner already printed this episode.
+DIAGNOSTIC remote-herdr.log
+status --json
+status --json --session fm-remote
+workspace list --session fm-remote
+workspace create --cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home --label 2ndmate-ios --no-focus --session fm-remote
+tab list --workspace w1 --session fm-remote
+tab create --workspace w1 --cwd /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home --label fm-ios --no-focus --session fm-remote
+tab list --workspace w1 --session fm-remote
+pane list --workspace w1 --session fm-remote
+agent get w1:p2 --session fm-remote
+pane close w1:p2 --session fm-remote
+pane get w1:p3 --session fm-remote
+pane get w1:p3 --session fm-remote
+agent get w1:p3 --session fm-remote
+status --json --session fm-remote
+pane read w1:p3 --source recent --lines 200 --session fm-remote
+status --json --session fm-remote
+pane run w1:p3 export GOTMPDIR=/tmp/fm-ios/gotmp --session fm-remote
+status --json --session fm-remote
+pane run w1:p3 export COMPACT_ADVISER_DISABLE=1 --session fm-remote
+status --json --session fm-remote
+pane send-text w1:p3 . '/tmp/fm-ios+811fa8ad9117ad3ad8e35fb70246494b62cc0f89903422a612e7d55d9c0051ba/launch.s1791566473.2895562.29581.sh' --session fm-remote
+status --json --session fm-remote
+pane send-keys w1:p3 enter --session fm-remote
+pane get w1:p3 --session fm-remote
+agent get w1:p3 --session fm-remote
+pane process-info --pane w1:p3 --session fm-remote
+status --json --session fm-remote
+agent get w1:p3 --session fm-remote
+DIAGNOSTIC ssh.count
+98
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/sendemail-validate': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/post-checkout': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/pre-merge-commit': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/post-merge': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/pre-applypatch': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/pre-rebase': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/pre-commit': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/prepare-commit-msg': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/pre-auto-gc': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/pre-push': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/post-applypatch': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/post-commit': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/applypatch-msg': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/post-rewrite': Permission denied
+rm: cannot remove '/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/round4-source/state/round4-fixtures/fm-remote-secondmate-e2e.Ef389Q/remote-home/state/parent-route/ios.git-hooks/commit-msg': Permission denied
+FM_TEST_END 2026-10-09T17:24:54Z tests/fm-remote-inherit-focused.test.sh exit=1 duration_ms=366635 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=1 skipped_gate=0 duration_ms=366842
+FM_TEST_SUMMARY_FAMILY family=unclassified count=1 duration_ms=366635 failed=1
+FM_TEST_SLOWEST rank=1 script=tests/fm-remote-inherit-focused.test.sh duration_ms=366635

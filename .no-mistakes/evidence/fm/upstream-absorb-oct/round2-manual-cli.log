@@ -1,0 +1,66 @@
+$ fm-inbox.sh conversation lab-init
+{"lab":true,"network":false}
+exit=0
+$ fm-lock.sh 
+lock acquired: harness pid 3701412
+exit=0
+$ fm-inbox.sh conversation bind
+{"conversation_id":"round2-call","credential":"3n0A0t5nXX3qR43gRFtqqjFS9ZBAqIjrhrVzGBVZI3M"}
+exit=0
+$ fm-afk-contract.sh enter --words Keep routine supervision running. Save decisions for my return.
+Away posture recorded at 2026-10-09T14:12:39Z: hold-for-return only. No phone channel is configured; anything that needs you waits for your return. Your away instructions are recorded verbatim; the away session will carry them out where it can, and anything it is unsure of, or that needs you, waits for your return. Destructive, irreversible, and security-sensitive actions are never pre-authorizable, whatever the words say. Expected return: not given. Spend cap: 4 concurrent workers.
+Away posture (recorded):
+  entered: 2026-10-09T14:12:39Z
+  expected return: not given
+  spend cap: 4 concurrent workers
+  reach: hold-for-return only. No phone channel is configured; anything that needs you waits for your return.
+  your words (verbatim):
+    Keep routine supervision running. Save decisions for my return.
+exit=0
+$ fm-branch-dispatch.mjs scope --afk
+status=empty
+corrupted=0
+rows=
+tasks=
+unscoped=0
+exit=0
+$ fm-inbox.sh conversation capture
+{"request_id":"request-one","state":"saved"}
+exit=0
+Queued voice wake: check: conversation inbox note vc-af4a2b32e1cc179360d4050ce9db4f0f9e95e1e8939572fa0c599a011463991a; use fm-inbox.sh conversation accept
+$ fm-branch-dispatch.mjs offer --afk < queued-voice-wake
+eligible=0
+status=unsafe
+corrupted=0
+rows=
+tasks=
+unscoped=0
+exit=0
+$ fm-inbox.sh conversation accept
+error: voice conversation ownership refused - the supervision branch never performs this action; report the outcome and leave it to main (role partition: docs/pi-supervision-branch.md)
+exit=6
+$ fm-inbox.sh conversation accept
+{"dispatch":true,"input":{"authenticated_principal":"captain","committed_transcript":"Can you check the local queue?","conversation_id":"round2-call","correction_of":null,"created_at":"2026-10-09T00:00:00Z","previous_turn_id":null,"question_binding":null,"request_id":"request-one","revision":1,"turn_id":"turn-one"},"playback_context":[]}
+exit=0
+$ fm-inbox.sh conversation publish
+{"published":true,"response_id":"response-one"}
+exit=0
+$ fm-afk-contract.sh archive
+/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round2-0qdgqxoc/home/state/afk-contracts/1791555159.afk-contract
+exit=0
+$ fm-brief.sh round2-no-mistakes demo --mode no-mistakes --branch-prefix fix/
+scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round2-0qdgqxoc/home/data/round2-no-mistakes/brief.md (ship, mode=no-mistakes; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+Generated contract: mode=no-mistakes; branch=fix/round2-no-mistakes
+$ fm-brief.sh round2-direct-pr demo --mode direct-PR --branch-prefix fix/
+scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round2-0qdgqxoc/home/data/round2-direct-pr/brief.md (ship, mode=direct-PR; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+Generated contract: mode=direct-PR; branch=fix/round2-direct-pr
+$ fm-brief.sh round2-local-only demo --mode local-only --branch-prefix fix/
+scaffolded: /home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4G9DCM2DEDN0RDNFCWWW0YJ/.test-phase-tmp/manual-round2-0qdgqxoc/home/data/round2-local-only/brief.md (ship, mode=local-only; replace {TASK} and {FIRSTMATE_SPEC})
+exit=0
+Generated contract: mode=local-only; branch=fix/round2-local-only
+$ fm-brief.sh round2-missing-mode demo
+error: ship briefs require --mode <no-mistakes|direct-PR|local-only>; resolve it at intake from the captain's instruction and the project's registered posture in data/projects.md
+exit=1
+PASS: empty away scope, branch-refused voice acceptance, main conversation answer, delivery modes, custom branch prefixes, and missing-mode refusal
