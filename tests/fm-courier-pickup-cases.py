@@ -89,15 +89,20 @@ def stages():
     return [(row['message_id'], row['stage']) for row in outgoing('.stage.json').values()]
 
 
-def courier_takes():
-    """Consume every published text request and publish its sent receipt, as the courier does."""
+def courier_receipt(row):
+    receipt = receipts / ('result-%s.%s.json' % (row['id'], secrets.token_hex(4)))
+    receipt.write_text(json.dumps({'kind': 'courier-result', 'id': row['id'], 'digest': 'd', 'result': 'sent',
+                                   'approval_ref': None, 'idempotency_key': row['id'], 'message_id': 'm'}))
+    receipt.chmod(0o640)
+
+
+def courier_takes(receipted=True):
+    """Consume published texts and optionally publish their sent receipts, as the courier does."""
     sent = []
     for name, row in outgoing('.json').items():
         (outbox / name).unlink()
-        receipt = receipts / ('result-%s.%s.json' % (row['id'], secrets.token_hex(4)))
-        receipt.write_text(json.dumps({'kind': 'courier-result', 'id': row['id'], 'digest': 'd', 'result': 'sent',
-                                       'approval_ref': None, 'idempotency_key': row['id'], 'message_id': 'm'}))
-        receipt.chmod(0o640)
+        if receipted:
+            courier_receipt(row)
         sent.append(row)
     return sent
 
@@ -220,6 +225,12 @@ mark = json.loads(state_path.read_text())['marks']['m1']
 assert mark['stage'] == 'question' and mark['follows'] == 'vote-vote1', mark
 print('PASS: direct and propagated progress preserve question rank; a late original reply preserves its follower link')
 
+message('unrelated', 'Another request while you wait.')
+once()
+assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-unrelated'
+mark = json.loads(state_path.read_text())['marks']['m1']
+assert mark['follows'] == 'vote-vote1', mark
+
 # The final answer to his vote finishes his original message, and nothing moves it backwards.
 conversation('publish', {'conversation_id': 'text', 'request_id': answer['request_id'], 'response_id': 'a1',
                          'sequence': 2, 'kind': 'answer', 'final': True, 'destination': 'imessage',
@@ -231,10 +242,12 @@ assert stages()[-1] == ('m1', 'done') and ('m2', 'working') in stages(), stages(
 before = stages()
 once()
 assert stages() == before
+assert not json.loads(state_path.read_text())['marks']['m1'].get('awaiting_answer')
 print('PASS: a final answer marks done; stages are published in order and never backwards')
+print('PASS: an unrelated text preserves the established vote follower and its original done reaction')
 
-for answer_type in ('vote', 'text'):
-    original = 'receipt-' + answer_type
+for answer_type, timing in (('vote', 'together'), ('text', 'together'), ('vote', 'delayed'), ('text', 'delayed')):
+    original = 'receipt-' + answer_type + '-' + timing
     message(original, 'Ask before proceeding.')
     once()
     assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-' + original
@@ -243,7 +256,7 @@ for answer_type in ('vote', 'text'):
                              'question_binding': 'b-' + original, 'destination': 'imessage',
                              'speech_text': question})
     once()
-    [waiting_question] = courier_takes()
+    [waiting_question] = courier_takes(receipted=timing == 'together')
     assert (original, 'question') not in stages(), stages()
     assert (original, 'working') in stages(), stages()
     if answer_type == 'vote':
@@ -254,10 +267,21 @@ for answer_type in ('vote', 'text'):
         message('a-' + original, 'Ship it')
         answer_request = 'imsg-req-a-' + original
     once()
-    assert (original, 'question') in stages(), stages()
+    assert ((original, 'question') in stages()) == (timing == 'together'), stages()
     captured = conversation('accept', {'conversation_id': 'text'})['input']
     assert captured['request_id'] == answer_request, captured
     assert captured['committed_transcript'] == ('1. Ship it' if answer_type == 'vote' else 'Ship it'), captured
+    if timing == 'delayed':
+        mark = json.loads(state_path.read_text())['marks'][original]
+        assert mark['stage'] == 'working' and mark['follows'], mark
+        courier_receipt(waiting_question)
+        once()
+        assert (original, 'question') not in stages(), stages()
+    if answer_type == 'text':
+        record('vote', 'later-' + original, {'chosen': ['2. Wait'], 'request_id': waiting_question['id'],
+                                            'digest': 'd', 'poll_message_id': 'p-' + original})
+        once()
+        assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-vote-later-' + original
     conversation('publish', {'conversation_id': 'text', 'request_id': answer_request,
                              'response_id': 'done-' + original, 'sequence': 1, 'kind': 'answer', 'final': True,
                              'destination': 'imessage', 'speech_text': 'Proceeding with ' + answer_type})
@@ -265,8 +289,26 @@ for answer_type in ('vote', 'text'):
     assert [row['text'] for row in courier_takes()] == ['Proceeding with ' + answer_type]
     once()
     assert (original, 'done') in stages(), stages()
-    print('PASS: a waiting question receipt and %s answer in the same restart preserve the original done reaction'
-          % answer_type)
+    assert not json.loads(state_path.read_text())['marks'][original].get('awaiting_answer')
+    print('PASS: a %s answer with %s receipt preserves the original done reaction and clears its answer flag'
+          % (answer_type, timing))
+
+conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-unrelated', 'response_id': 'q-unrelated',
+                         'sequence': 1, 'kind': 'question', 'final': False, 'question_binding': 'b-unrelated',
+                         'destination': 'imessage', 'speech_text': 'Can we proceed?'})
+conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-unrelated', 'response_id': 'e-unrelated',
+                         'sequence': 2, 'kind': 'error', 'final': True, 'destination': 'imessage',
+                         'speech_text': 'Unable to proceed.'})
+once()
+assert json.loads(state_path.read_text())['marks']['unrelated']['awaiting_answer']
+[unnumbered] = courier_takes()
+assert unnumbered['text'] == 'Can we proceed?' and 'poll_options' not in unnumbered
+once()
+assert [row['text'] for row in courier_takes()] == ['Unable to proceed.']
+once()
+assert ('unrelated', 'failed') in stages(), stages()
+assert not json.loads(state_path.read_text())['marks']['unrelated'].get('awaiting_answer')
+print('PASS: a question without poll options awaits an answer at claim and clears the flag on failure')
 
 # A message with no text is told so, and one with a missing attachment is filed with a notice.
 message('m3', '')

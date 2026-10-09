@@ -437,6 +437,8 @@ class Pickup:
         if request is not None:
             mark['request'] = request
         mark.update(stage=stage, moved=moment)
+        if RANK[stage] == 3:
+            mark.pop('awaiting_answer', None)
         leaders, seen = [target], {target}
         while leaders:
             leader = leaders.pop()
@@ -445,12 +447,15 @@ class Pickup:
                     rank = RANK.get(follower.get('stage'), -1)
                     if rank != 3 and RANK[stage] >= rank:
                         follower.update(stage=stage, moved=moment)
+                        if RANK[stage] == 3:
+                            follower.pop('awaiting_answer', None)
                     seen.add(other)
                     leaders.append(other)
 
     def answered(self, target, asked=None):
         for other, mark in self.s['marks'].items():
-            if other != target and mark.get('stage') == 'question' and asked in (None, mark.get('request')):
+            if (other != target and mark.get('awaiting_answer') and not mark.get('follows')
+                    and asked in (None, mark.get('request'))):
                 mark['follows'] = target
 
     def target(self, request):
@@ -507,6 +512,8 @@ class Pickup:
             kind, request = row.get('kind'), row.get('request_id')
             stage = 'done' if row.get('final') is True and kind == 'answer' else STAGE_OF_KIND.get(kind, 'working')
             target = self.target(request)
+            if kind == 'question' and target and RANK[self.s['marks'][target]['stage']] != 3:
+                self.s['marks'][target]['awaiting_answer'] = True
             offered = options(claimed['speech_text']) if kind == 'question' and row.get('question_binding') else None
             self.owe(claimed['speech_text'], 'imsg-' + generation, [target, stage] if target else None,
                      response, generation, offered)
