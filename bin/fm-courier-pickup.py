@@ -53,11 +53,12 @@ including when capture fails and the failure notice is sent.
 Replies. Every 2 s the transport's poll advances each message's stage
 (accepted -> working, rejected -> failed), stops watching answered questions,
 and claims each waiting reply bound for imessage with deliver. Claiming a question
-durably marks its originating message as awaiting an answer, before delivery or
-its sent receipt. The first successfully captured answer links that message to
-the answer's stages; ordinary text cannot answer a question still queued and
-unpublished. Later captures and original-request replies preserve the
-link, and done or failed clears the awaiting flag. Each text to him
+durably records answer eligibility by its response ID on its originating message;
+successful outbox publication makes that question eligible for ordinary text answers,
+before its sent receipt. An answer or terminal non-delivery retires only that
+question. The first successfully captured answer links the message to the answer's
+stages; later captures and original-request replies preserve the link, and done or
+failed clears all its question eligibility. Each text to him
 is one outbox ID.json for the policy captain read from /etc/courier/policy.toml
 (root- or self-owned, not group/world-writable), ID derived from the claim or
 the fixed sentence's key, published 0640 by fsync, rename and directory fsync.
@@ -396,7 +397,7 @@ class Pickup:
                 return
             self.s['pending'] = {'message': 'vote-' + key, 'target': 'vote-' + key, 'words': record['chosen'][0],
                                  'created': record['published_at'], 'notice': None,
-                                 'asked': poll['asked'], 'binding': poll['binding']}
+                                 'asked': poll['asked'], 'binding': poll['binding'], 'question': poll['question']}
             self.s['polls'].pop(record['request_id'])
         self.s['pending'].update(attempts=0, not_before=0, turn=None, request=None, previous=None)
         self.save()
@@ -440,7 +441,7 @@ class Pickup:
                 return True
         self.s['pending'] = None
         self.tail = entry['turn']
-        self.answered(entry['target'], entry.get('asked'))
+        self.answered(entry['target'], entry.get('asked'), entry.get('question'))
         self.move(entry['target'], 'filed', request=entry['request'])
         if 'binding' in entry:
             self.s['marks'][entry['target']]['silent'] = True  # A vote has no message of his to mark.
@@ -483,14 +484,15 @@ class Pickup:
                     seen.add(other)
                     leaders.append(other)
 
-    def answered(self, target, asked=None):
-        unpublished = {t['mark'][0] for t in self.s['texts']
-                       if t['published'] is None and t['mark'] and t['mark'][1] == 'question'}
+    def answered(self, target, asked=None, question=None):
         for other, mark in self.s['marks'].items():
-            if (other != target and mark.get('awaiting_answer') and not mark.get('follows')
-                    and asked in (None, mark.get('request'))
-                    and (asked is not None or other not in unpublished)):
-                mark['follows'] = target
+            if other == target or asked not in (None, mark.get('request')):
+                continue
+            waiting = mark.get('awaiting_answer', {})
+            response = question if asked is not None else next((q for q, published in waiting.items() if published), None)
+            if response in waiting:
+                waiting.pop(response)
+                mark.setdefault('follows', target)
 
     def target(self, request):
         return next((t for t, m in self.s['marks'].items() if m.get('request') == request), None)
@@ -548,7 +550,7 @@ class Pickup:
             stage = 'done' if row.get('final') is True and kind == 'answer' else STAGE_OF_KIND.get(kind, 'working')
             target = self.target(request)
             if kind == 'question' and target and RANK[self.s['marks'][target]['stage']] != 3:
-                self.s['marks'][target]['awaiting_answer'] = True
+                self.s['marks'][target].setdefault('awaiting_answer', {})[response] = False
             offered = options(claimed['speech_text']) if kind == 'question' and row.get('question_binding') else None
             self.owe(claimed['speech_text'], 'imsg-' + generation, [target, stage] if target else None,
                      response, generation, offered)
@@ -580,6 +582,8 @@ class Pickup:
         """Publish owed texts one at a time, each after the previous one settled."""
         while self.s['texts']:
             entry = self.s['texts'][0]
+            questions = (self.s['marks'].get(entry['mark'][0], {}).get('awaiting_answer', {})
+                         if entry['mark'] and entry['mark'][1] == 'question' else {})
             result = self.receipt(entry['id'])
             if result is None and (entry['published'] is None
                                    or (self.now() - entry['published'] >= RECEIPT_RETRY
@@ -594,12 +598,17 @@ class Pickup:
                     self.save()
                 self.publish(entry['id'] + '.json', row)
                 entry['published'] = self.now()
+                if entry['response'] in questions:
+                    questions[entry['response']] = True
                 self.save()
                 result = self.receipt(entry['id'])
             if result != 'sent' and result not in GAVE_UP:
                 return
-            if result in GAVE_UP and entry['mark'] and entry['mark'][1] == 'question':
-                self.s['marks'].get(entry['mark'][0], {}).pop('awaiting_answer', None)
+            if entry['response'] in questions:
+                if result == 'sent':
+                    questions[entry['response']] = True
+                else:
+                    questions.pop(entry['response'])
             self.s['texts'].pop(0)
             if result == 'sent':
                 if entry['id'] in self.s['polls']:

@@ -355,6 +355,74 @@ for answer_type, timing in (('vote', 'together'), ('text', 'together'), ('vote',
     print('PASS: a %s answer with %s receipt preserves the original done reaction and clears its answer flag'
           % (answer_type, timing))
 
+for answer_type, later_state in (('text', 'queued'), ('vote', 'refused')):
+    original = 'multi-' + later_state
+    first_response, second_response = 'q1-' + original, 'q2-' + original
+    first_binding, second_binding = 'b1-' + original, 'b2-' + original
+    message(original, 'Ask two questions on this request.')
+    once()
+    assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-' + original
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-' + original,
+                             'response_id': first_response, 'sequence': 1, 'kind': 'question', 'final': False,
+                             'question_binding': first_binding, 'destination': 'imessage', 'speech_text': question})
+    once()
+    [first_question] = courier_takes()
+    once()
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-' + original,
+                             'response_id': 'block-' + original, 'sequence': 2, 'kind': 'progress', 'final': False,
+                             'destination': 'imessage', 'speech_text': 'Wait before the next question.'})
+    once()
+    [blocker] = courier_takes(receipted=False)
+    courier_receipt(blocker, result='unknown')
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-' + original,
+                             'response_id': second_response, 'sequence': 3, 'kind': 'question', 'final': False,
+                             'question_binding': second_binding, 'destination': 'imessage', 'speech_text': question})
+    once()
+    mark = json.loads(state_path.read_text())['marks'][original]
+    assert mark['awaiting_answer'] == {first_response: True, second_response: False}, mark
+    assert not outgoing('.json'), outgoing('.json')
+    if later_state == 'refused':
+        courier_receipt(blocker)
+        once()
+        [second_question] = courier_takes(receipted=False)
+        courier_receipt(second_question, result='denied-limit')
+        once()
+        state = json.loads(state_path.read_text())
+        assert state['marks'][original]['awaiting_answer'] == {first_response: True}, state
+        assert first_question['id'] in state['polls'] and second_question['id'] not in state['polls']
+        record('vote', 'v-' + original, {'chosen': ['1. Ship it'], 'request_id': first_question['id'],
+                                        'digest': 'd', 'poll_message_id': 'p-' + original})
+        answer_request = 'imsg-req-vote-v-' + original
+    else:
+        message('a-' + original, 'My answer to the first question.')
+        answer_request = 'imsg-req-a-' + original
+    once()
+    captured = conversation('accept', {'conversation_id': 'text'})['input']
+    assert captured['request_id'] == answer_request, captured
+    assert captured['committed_transcript'] == ('1. Ship it' if answer_type == 'vote' else 'My answer to the first question.'), captured
+    if answer_type == 'vote':
+        assert captured['question_binding'] == first_binding, captured
+    mark = json.loads(state_path.read_text())['marks'][original]
+    assert mark['stage'] == 'question' and mark['follows'], mark
+    assert first_response not in mark['awaiting_answer'], mark
+    if later_state == 'queued':
+        assert mark['awaiting_answer'] == {second_response: False}, mark
+        courier_receipt(blocker)
+        once()
+        [second_question] = courier_takes()
+        once()
+        assert json.loads(state_path.read_text())['marks'][original]['awaiting_answer'] == {second_response: True}
+    conversation('publish', {'conversation_id': 'text', 'request_id': answer_request,
+                             'response_id': 'done-' + original, 'sequence': 1, 'kind': 'answer', 'final': True,
+                             'destination': 'imessage', 'speech_text': 'Finished after answering the first question.'})
+    once()
+    assert [row['text'] for row in courier_takes()] == ['Finished after answering the first question.']
+    once()
+    assert (original, 'done') in stages(), stages()
+    assert not json.loads(state_path.read_text())['marks'][original].get('awaiting_answer')
+    print('PASS: a %s second question preserves the first question\'s %s answer binding and done reaction'
+          % (later_state, answer_type))
+
 conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-unrelated', 'response_id': 'q-unrelated',
                          'sequence': 1, 'kind': 'question', 'final': False, 'question_binding': 'b-unrelated',
                          'destination': 'imessage', 'speech_text': 'Can we proceed?'})
