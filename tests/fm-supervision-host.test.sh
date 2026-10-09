@@ -2050,6 +2050,78 @@ test_attended_latch_keeps_closes_on_main_and_records_recovery_off_main() {
   pass "host: attended, two engine errors latch the session, main keeps every close unchanged in the cooldown, a failed probe doubles it up to its cap, and a routine probe's recovery stays in the ledger, off main"
 }
 
+test_away_voice_turns_reach_main_before_engine_handling() {
+  local home scenario real_node credential key
+  command -v python3 >/dev/null 2>&1 || fail "away voice routing requires python3"
+  real_node=$(command -v node)
+  for scenario in voice-only mixed arriving; do
+    home="$TMP_ROOT/away-voice-$scenario"
+    FM_HOME="$home" "$ROOT/bin/fm-inbox.sh" conversation lab-init \
+      <<< '{"speech_catalog":{"ack":"On it."}}' > "$TMP_ROOT/voice-init-$scenario.json" \
+      || fail "$scenario: could not initialize the conversation lab"
+    home=$(make_home "away-voice-$scenario" away)
+    FM_HOME="$home" "$FAKE_CLAUDE" -c '
+      printf "%s\n" "$$" > "$FM_HOME/state/.lock"
+      "$FM_REPO/bin/fm-inbox.sh" conversation bind
+    ' <<< '{"conversation_id":"call","authenticated_principal":"captain"}' > "$home/voice-binding.json" \
+      || fail "$scenario: could not bind the conversation"
+    credential=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["credential"])' "$home/voice-binding.json")
+    printf '{"conversation_id":"call","credential":"%s","turn_id":"t1","request_id":"r1","committed_transcript":"Are you there?","revision":1,"previous_turn_id":null,"created_at":"2026-10-09T00:00:00Z","call_id":"live-call"}\n' \
+      "$credential" > "$home/voice-request.json"
+    if [ "$scenario" = arriving ]; then
+      cat > "$home/fakebin/node" <<SH
+#!/usr/bin/env bash
+case "\$*" in
+  *fm-branch-dispatch.mjs\ offer*)
+    count=\$(cat "\$FM_HOME/offer-count" 2>/dev/null || echo 0)
+    count=\$((count + 1))
+    printf '%s\n' "\$count" > "\$FM_HOME/offer-count"
+    if [ "\$count" -eq 2 ]; then
+      "\$FM_REPO/bin/fm-inbox.sh" conversation capture < "\$FM_HOME/voice-request.json" > "\$FM_HOME/voice-capture.json" || exit 1
+    fi ;;
+esac
+exec "$real_node" "\$@"
+SH
+      chmod +x "$home/fakebin/node"
+      start_host "$home"
+      wait_until 150 watcher_live "$home" || fail "$scenario: the host never started its watcher"
+      append_status "$home" 'step one'
+    else
+      [ "$scenario" != mixed ] \
+        || append_wake "$home/state" signal demo.status "signal: $home/state/demo.status"
+      FM_HOME="$home" "$ROOT/bin/fm-inbox.sh" conversation capture \
+        < "$home/voice-request.json" > "$home/voice-capture.json" \
+        || fail "$scenario: could not capture the voice turn"
+      start_host "$home"
+    fi
+    wait_until 250 host_exited "$home" \
+      || fail "$scenario: the pending voice turn left main parked: $(cat "$home/state/.supervision-host.log")"
+    expect_code 0 "$(cat "$home/host.rc")" "$scenario: the voice hand-back must exit cleanly"
+    [ "$(engine_calls "$home")" -eq 0 ] || fail "$scenario: the engine took the wake with a pending voice turn"
+    [ "$(handled_count "$home")" -eq 0 ] || fail "$scenario: the host counted the wake as handled"
+    python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["state"] == "saved"' "$home/voice-capture.json" \
+      || fail "$scenario: the captured voice request must still be saved"
+    key=$(awk -F '\t' '$3 == "check" && $4 ~ /^inbox:vc-/ { sub(/^inbox:/, "", $4); print $4; exit }' "$home/state/.wake-queue")
+    [ -n "$key" ] || fail "$scenario: the captured turn has no queued voice row"
+    assert_grep "inbox:$key" "$home/state/.wake-queue" "$scenario: the voice row must remain queued for main"
+    [ -f "$home/state/inbox/$key.note" ] || fail "$scenario: the voice request must remain saved for main"
+    assert_re '^supervision-host: .*main-only.*this wake is yours$' "$home/host.out" \
+      "$scenario: the host must hand the wake to main"
+    [ "$(marker_kind "$home")" = downtime ] || fail "$scenario: the hand-back must be deliverable to main"
+    if [ "$scenario" = arriving ]; then
+      assert_re '^signal: .*demo.status' "$home/host.out" "$scenario: the original close must reach main"
+      [ "$(cat "$home/offer-count")" -eq 2 ] || fail "$scenario: the turn boundary did not recheck the offer"
+    else
+      assert_re '^check: conversation turn queued:.*inbox:vc-' "$home/host.out" \
+        "$scenario: the conversation wake must reach main"
+    fi
+    [ "$scenario" = voice-only ] \
+      || assert_grep 'demo.status' "$home/state/.wake-queue" "$scenario: the sibling routine row must stay queued for main"
+    stop_home_processes "$home"
+  done
+  pass "host: away voice-only, mixed, and newly arriving conversation turns reach main without an engine turn"
+}
+
 test_away_wake_is_handled_on_the_engine_and_never_reaches_main() {
   local home lock_pid session first second pid watcher
   home=$(make_home away-handled away)
@@ -2953,6 +3025,11 @@ test_superseded_host_leaves_the_owner_untouched() {
   pass "host: a host under a superseded auto-arm generation stands down without touching the owner"
 }
 
+if [ -n "${FM_TEST_ONLY:-}" ]; then
+  "$FM_TEST_ONLY"
+  exit 0
+fi
+
 test_claude_stop_hook_restores_handoff_when_successor_closed_before_exit_to_main
 test_claude_stop_hook_restores_handoff_when_successor_closed_mid_engine_turn
 test_claude_stop_hook_notifies_when_closed_successor_downtime_restore_fails
@@ -3001,6 +3078,7 @@ test_attended_wake_carries_the_dialog_mirror
 test_dialog_bearing_files_are_owner_only
 test_undelivered_dialog_is_fed_again_on_the_next_turn
 test_attended_wake_with_an_unreadable_mirror_reaches_main
+test_away_voice_turns_reach_main_before_engine_handling
 test_away_wake_is_handled_on_the_engine_and_never_reaches_main
 test_away_turn_without_a_report_hands_the_wake_to_main
 test_return_during_an_engine_turn_hands_its_outcomes_to_main

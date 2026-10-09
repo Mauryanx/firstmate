@@ -59,7 +59,7 @@
 #     session's next park without --restart requests a take-over of its cycle
 #     rather than an ordinary attach; bin/fm-watch-arm.sh's --take-over header owns the
 #     conditions under which that restores a single owner and the fallback;
-#   - away (an away record exists): every close goes to the engine.
+#   - away (an away record exists): the offer rule with --afk routes the close.
 # Every turn that starts attended meets that rule again at its start, so a
 # close accepted away whose turn starts attended (the captain returned in
 # between) or an attended close whose task turned main-only while the
@@ -834,14 +834,14 @@ health_record() {  # <engine-error 0|1> <reports>
 }
 
 # Handle one close on the engine, in the posture the record gives when the
-# turn starts (TURN_POSTURE). Returns 0 when the wake is handled (or held
-# nothing the branch may claim), 2 with ATTENDED_WHY set when the turn starts
+# turn starts (TURN_POSTURE). Returns 0 when the wake is handled,
+# 2 with ATTENDED_WHY set when the turn starts
 # attended and the supervision session may not take the close
 # (attended_acceptor, whose offer scan is the turn's scope), else sets HANDLE_WHY and returns 1; sets ENGINE_ERROR
 # when the turn failed on the engine itself. Runs in the host's own shell,
 # never a subshell, because it advances the host's grant and turn state.
 handle_wake() {  # <reason-lines>
-  local reason=$1 first scope status corrupted rows tasks unscoped rc turn readback
+  local reason=$1 first scope rows tasks unscoped rc turn readback
   local receipts usage result errors unacked mirror
   LAST_TURN=
   ENGINE_ERROR=0
@@ -853,26 +853,18 @@ handle_wake() {  # <reason-lines>
     attended_acceptor "$first" || return 2
     scope=$ATTENDED_OFFER
   else
-    set --
-    case "$first" in heartbeat*) set -- --heartbeat ;; esac
-    if ! scope=$(node "$SCRIPT_DIR/fm-branch-dispatch.mjs" scope "$@" --afk 2>/dev/null); then
+    if ! scope=$(printf '%s\n' "$first" | node "$SCRIPT_DIR/fm-branch-dispatch.mjs" offer --afk 2>/dev/null); then
       HANDLE_WHY="branch eligibility could not be computed"
       return 1
     fi
+    if [ "$(printf '%s\n' "$scope" | sed -n 's/^eligible=//p')" != 1 ]; then
+      HANDLE_WHY="main-only"
+      return 1
+    fi
   fi
-  status=$(printf '%s\n' "$scope" | sed -n 's/^status=//p')
-  corrupted=$(printf '%s\n' "$scope" | sed -n 's/^corrupted=//p')
   rows=$(printf '%s\n' "$scope" | sed -n 's/^rows=//p')
   tasks=$(printf '%s\n' "$scope" | sed -n 's/^tasks=//p')
   unscoped=$(printf '%s\n' "$scope" | sed -n 's/^unscoped=//p')
-  if [ "$corrupted" = 1 ]; then
-    HANDLE_WHY="a queued wake could not be read or resolved to a task record, so its scope is unknown"
-    return 1
-  fi
-  if [ "$status" = empty ] || [ -z "$rows" ]; then
-    log_line "no-op	nothing for the branch to claim	$first"
-    return 0
-  fi
   if [ "$GRANT_ACTIVE" -eq 0 ]; then
     if ! "$SCRIPT_DIR/fm-wake-grant.sh" activate "$HOST_PID" "$GEN" >/dev/null 2>&1; then
       HANDLE_WHY="the branch grant could not be activated"
@@ -1116,6 +1108,12 @@ while :; do
     fi
     if health_cooling; then
       exit_to_main "the away session is paused after repeated engine errors until $(fm_supervision_host_clock "$HEALTH_RETRY"); this wake is yours"
+    fi
+    if ! AWAY_OFFER=$(printf '%s\n' "$REASON" | node "$SCRIPT_DIR/fm-branch-dispatch.mjs" offer --afk 2>/dev/null); then
+      exit_to_main "branch eligibility could not be computed; this wake is yours"
+    fi
+    if [ "$(printf '%s\n' "$AWAY_OFFER" | sed -n 's/^eligible=//p')" != 1 ]; then
+      exit_to_main "main-only; this wake is yours"
     fi
   fi
 
