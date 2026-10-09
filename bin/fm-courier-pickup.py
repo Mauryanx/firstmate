@@ -22,8 +22,11 @@ strict UTF-8 JSON (no duplicate keys or nonstandard numbers) with exactly the
 v1 fields, and its seq, type and key match its name. Records are handled one at
 a time in sequence order. state/courier-pickup/state.json holds the highest
 sequence handled (the cursor) and every handled Linq message id and vote key,
-so a message is filed once across restarts; a malformed or duplicate record is refused, logged by
-name only and passed, and the courier's own pickup deadline tells the captain.
+so a message is filed once across restarts. Untrusted, malformed, duplicate,
+vanished or symlinked records are refused, logged without their contents and
+passed; the courier's own pickup deadline tells the captain. Other I/O failures
+while listing, opening or reading leave the cursor unchanged for the next tick
+to retry.
 
 A message record is filed exactly as the direct bridge files it: capture with
 turn_id imsg-<message_id>, request_id imsg-req-<message_id>, the conversation's
@@ -80,8 +83,8 @@ ranked alongside done and both terminal, as the courier applies them.
 FM_COURIER_ROOT (default /) relocates srv/courier and etc/courier for offline
 tests; FM_COURIER_USER (default courier) names the record and receipt owner.
 The binding is FM_HOME/state/imessage/binding.json, exactly
-{conversation_id, credential, destination: "imessage"}. Refusals exit 1,
-usage 2.
+{conversation_id, credential, destination: "imessage"}. Startup refusals exit 1,
+usage 2; per-tick failures are logged and the loop continues.
 """
 
 import calendar
@@ -123,7 +126,7 @@ GAVE_UP = ('denied', 'denied-limit', 'closed')
 
 
 class Refused(Exception):
-    """A record, file or configuration cannot be trusted; never retried as is."""
+    """A trust check or transport call refused its input; callers decide retries."""
 
 
 def log(message):
