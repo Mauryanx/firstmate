@@ -19,6 +19,9 @@ set -u
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 TMP_ROOT=$(fm_test_tmproot fm-procevent-tests)
 export FM_PROCEVENT_CLAIM_ROOT="$TMP_ROOT/claims"
+# Lifecycle cases need a confirmed launch, not a three-second startup promise
+# under CI load. Cases testing the window override this setting explicitly.
+export FM_PROCEVENT_LAUNCH_CONFIRM_SECONDS="${FM_PROCEVENT_LAUNCH_CONFIRM_SECONDS:-30}"
 export LAVISH_AXI_STATE_DIR="$TMP_ROOT/lavish-state"
 mkdir -p "$LAVISH_AXI_STATE_DIR"
 
@@ -2319,8 +2322,10 @@ ep_reconcile "failed=1" 1 "the second cycle stopped relaunching a source that ca
 [ "$(launch_failed_wake_count "$HEP" episode-src)" = 1 ] \
   || fail "the same failure episode was announced twice: $ep_out"
 ep_repair
-ep_reconcile "started=1" 0 "a repaired source did not confirm"
-assert_contains "$ep_out" "failed=0" "a repaired source was still reported failed: $ep_out"
+# A detached attempt from an earlier cycle may read the repaired registration
+# before this scan and already own it. Recovery requires a successful scan and
+# the captured result below, rather than a new launch in this particular scan.
+ep_reconcile "failed=0" 0 "a repaired source was still reported failed"
 [ "$(launch_failed_wake_count "$HEP" episode-src)" = 1 ] \
   || fail "a confirmed launch produced a launch-failed wake: $ep_out"
 wait_capture "$HEP" episode-src \
@@ -2622,7 +2627,8 @@ pass "detected PID reuse is refused before signalling"
 HL="$TMP_ROOT/hl"; new_home "$HL"
 IDENTITY_TRIGGER="$TMP_ROOT/identity-trigger"
 pe_register "$HL" lavish identity-src -- "$BLOCKER" "$IDENTITY_TRIGGER" "identity" >/dev/null
-pe "$HL" reconcile >/dev/null
+identity_start=$(pe "$HL" reconcile) \
+  || fail "identity fixture launch did not confirm: $identity_start"
 wait_for "$FM_PROCEVENT_CLAIM_ROOT/identity-src.claim" || fail "identity fixture runner did not claim its source"
 identity_pid=$(sed -n '2p' "$FM_PROCEVENT_CLAIM_ROOT/identity-src.claim")
 IDENTITY_FAKEBIN=$(fm_fakebin "$TMP_ROOT/identity-tools")
@@ -3842,6 +3848,15 @@ HORPHAN="$TMP_ROOT/orphan-dead-owner"; new_home "$HORPHAN"
 fm_test_track_procevent_home "$HORPHAN"
 HKEEP="$TMP_ROOT/orphan-live-owner"; new_home "$HKEEP"
 fm_test_track_procevent_home "$HKEEP"
+# A detached orphan can be adopted by init or by a pre-existing ancestor
+# subreaper (for example a user systemd). Record that ancestry before launch;
+# the short-lived launcher's descendants must not remain its parent.
+orphan_adopters=' 1 '
+orphan_ancestor=$PPID
+while [ -n "$orphan_ancestor" ] && [ "$orphan_ancestor" -gt 1 ]; do
+  orphan_adopters="$orphan_adopters$orphan_ancestor "
+  orphan_ancestor=$(ps -o ppid= -p "$orphan_ancestor" 2>/dev/null | tr -d '[:space:]')
+done
 orphan_pe "$HORPHAN" register lavish orphan-src -- "$ORPHAN_STUB" "$TMP_ROOT/orphan-dead" >/dev/null
 orphan_pe "$HKEEP" register lavish keep-src -- "$QUIET_STUB" "$TMP_ROOT/orphan-live" >/dev/null
 orphan_pe "$HORPHAN" reconcile >/dev/null
@@ -3860,8 +3875,10 @@ ORPHAN_DESCENDANT=$(cat "$TMP_ROOT/orphan-dead.descendant")
 # The reproduction condition itself: the listener is already an orphan in the
 # kernel's sense before anything is asserted about reaping it.
 orphan_ppid=$(ps -o ppid= -p "$ORPHAN_PID" 2>/dev/null | tr -d '[:space:]')
-[ "$orphan_ppid" = 1 ] \
-  || fail "the listener under test was not reparented away from its session (ppid $orphan_ppid)"
+case "$orphan_adopters" in
+  *" $orphan_ppid "*) ;;
+  *) fail "the listener under test was not reparented away from its session (ppid $orphan_ppid)" ;;
+esac
 kill -0 -"$ORPHAN_PID" 2>/dev/null \
   || fail "the listener's process group was not running"
 kill -0 "$ORPHAN_DESCENDANT" 2>/dev/null \

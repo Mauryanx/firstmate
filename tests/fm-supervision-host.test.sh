@@ -188,11 +188,14 @@ stop_home_processes() {  # <home>
     kill -TERM "$pid" 2>/dev/null || true
   done < <(cat "$home/orphan-pid" 2>/dev/null)
 }
-suite_cleanup() {
+stop_fixture_processes() {
   local home
   while IFS= read -r home; do
     [ -n "$home" ] && stop_home_processes "$home"
   done < <(cat "$HOMES_FILE" 2>/dev/null)
+}
+suite_cleanup() {
+  stop_fixture_processes
   fm_test_cleanup
 }
 trap suite_cleanup EXIT
@@ -3077,11 +3080,20 @@ test_superseded_host_leaves_the_owner_untouched() {
   pass "host: a host under a superseded auto-arm generation stands down without touching the owner"
 }
 
+# Completed cases must not leave parked hosts and polling watchers competing
+# with later cases' bounded delivery checks. Keep EXIT cleanup for failures.
+run_test() {
+  "$1"
+  stop_fixture_processes
+  : > "$HOMES_FILE"
+}
+
 if [ -n "${FM_TEST_ONLY:-}" ]; then
-  "$FM_TEST_ONLY"
+  run_test "$FM_TEST_ONLY"
   exit 0
 fi
 
+test_cases=(
 test_claude_stop_hook_restores_handoff_when_successor_closed_before_exit_to_main
 test_claude_stop_hook_restores_handoff_when_successor_closed_mid_engine_turn
 test_claude_stop_hook_notifies_when_closed_successor_downtime_restore_fails
@@ -3158,3 +3170,7 @@ test_unchanged_held_outcome_reaches_the_captain_once_until_a_new_event
 test_unverified_engine_hands_every_away_wake_to_main
 test_host_outside_the_lock_owner_stands_down
 test_superseded_host_leaves_the_owner_untouched
+)
+for test_case in "${test_cases[@]}"; do
+  run_test "$test_case"
+done

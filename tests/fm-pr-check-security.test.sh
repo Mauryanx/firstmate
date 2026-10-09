@@ -3318,11 +3318,20 @@ SH
   pass "a renumbered registration is never re-recorded around a tampered artifact:$exercised, or a pending retirement"
 }
 
+cleanup_poll_publish_holder() {
+  if [ -n "${PR_POLL_HOLDER_PID:-}" ]; then
+    : > "$PR_POLL_HOLDER_RELEASE"
+    wait "$PR_POLL_HOLDER_PID" 2>/dev/null || true
+  fi
+  fm_test_cleanup
+}
+
 start_poll_publish_holder() {  # <dir> <state> <id>
   local dir=$1 state=$2 id=$3 i
   PR_POLL_HOLDER_ACQUIRED="$dir/poll-publish-holder-acquired"
   PR_POLL_HOLDER_RELEASE="$dir/poll-publish-holder-release"
   PR_POLL_HOLDER_LOCK="$state/.pr-poll-publish-$id.lock"
+  trap cleanup_poll_publish_holder EXIT
   cat > "$dir/poll-publish-holder.sh" <<'SH'
 #!/usr/bin/env bash
 set -eu
@@ -3349,6 +3358,7 @@ SH
 release_poll_publish_holder() {
   : > "$PR_POLL_HOLDER_RELEASE"
   wait "$PR_POLL_HOLDER_PID" || fail "poll publication holder did not release its lock"
+  PR_POLL_HOLDER_PID=
 }
 
 test_device_rerecord_serializes_direct_rearm() {
@@ -3418,7 +3428,9 @@ SH
     FM_TEST_GH_LOG="$dir/gh.log" FM_TEST_GH_STATE=OPEN \
     run_watcher_bounded "$dir/home" "$dir/fakebin" > "$dir/watch.out" 2> "$dir/watch.err" &
   watcher_pid=$!
-  for i in $(seq 1 100); do
+  # Startup is not a two-second product guarantee. Allow it to reach the
+  # lock under load, within half the watcher's independent 60-second bound.
+  for i in $(seq 1 1500); do
     [ -d "$state/.control-task-a.lock" ] && break
     sleep 0.02
   done
