@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Full remote secondmate lifecycle over the deterministic generic SSH boundary.
 set -u
+# Give each background fixture leg its own process group so failed assertions
+# can stop its subprocesses before removing the homes they are still writing.
+set -m
 
 # shellcheck source=tests/lib.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
@@ -31,9 +34,20 @@ PARENT_ROUTE_INBOX="$REMOTE_HOME/state/parent-route/ios.inbox"
 CLAIMS="$TMP_ROOT/claims"
 mkdir -p "$PARENT/data" "$PARENT/state" "$PARENT/config" "$PARENT/projects" "$REMOTE_ROOT" "$CLAIMS"
 cleanup() {
-  local worker_pid=''
+  local worker_pid='' fixture_pid fixture_jobs
   touch "$TMP_ROOT/provision.release" "$TMP_ROOT/seed.release" "$TMP_ROOT/handoff.release" \
     "$TMP_ROOT/inherit.release" "$TMP_ROOT/launch.release" "$TMP_ROOT/race-clone.release" 2>/dev/null || true
+  fixture_jobs=$(jobs -pr)
+  for fixture_pid in $fixture_jobs; do
+    kill -TERM -- "-$fixture_pid" 2>/dev/null || true
+  done
+  if [ -n "$fixture_jobs" ]; then
+    sleep 0.2
+    for fixture_pid in $fixture_jobs; do
+      kill -KILL -- "-$fixture_pid" 2>/dev/null || true
+      wait "$fixture_pid" 2>/dev/null || true
+    done
+  fi
   # A watcher leg cut short by a failed assertion is still polling the root.
   if [ -n "${watch_pid:-}" ]; then
     kill "$watch_pid" 2>/dev/null || true
@@ -48,7 +62,7 @@ cleanup() {
     . "$ROOT/bin/fm-remote-job-lib.sh"
     fm_remote_job_stop_worker_tree "$worker_pid" || true
   fi
-  rm -rf -- "$TMP_ROOT"
+  fm_test_cleanup
 }
 trap cleanup EXIT
 

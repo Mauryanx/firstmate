@@ -193,15 +193,9 @@ Read the modes as stopping points rather than as artifacts and they line up clea
 - `no-mistakes` runs the pipeline, then publishes.
 
 On that reading the forge composes with the two modes that publish and is meaningless on the one that does not.
-That inverts both rules the delivery-mode design currently carries, which permit `local-only forge=gerrit` as an annotation that changes nothing and refuse `direct-PR forge=gerrit` outright.
-The composition test says that is backwards on both counts: the refusal lands on the combination that has a meaning, and the permission on the combination that does not.
+[`bin/fm-project-mode.sh`](../bin/fm-project-mode.sh) owns the registered binding and enforces this composition; [`bin/fm-dod-lib.sh`](../bin/fm-dod-lib.sh) owns the worker's delivery contract.
 
-The refusal reads as reasonable only because of the name.
-"That mode's definition of done is a pull request this forge does not have" is a true statement about the string `direct-PR` and not about the stopping point it names, and section 2 is why those two came apart.
-
-The permission is not merely useless, which is worth being plain about, because an inert annotation in a brief is not inert at landing.
-`local-only`'s configured landing is a guarded fast-forward of the project's local default branch.
-On a project whose changes are supposed to reach a review server, that landing advances local `main` with content the server has never seen, and the annotation that was supposed to record "this is a Gerrit project" is the one thing in the posture that does not get consulted.
+Rejecting a forge binding on `local-only` prevents its local fast-forward landing from advancing `main` with content the review server has never seen.
 
 ## 4. What Gerrit makes structurally impossible
 
@@ -343,7 +337,8 @@ Choosing the upstream route first would have meant waiting; choosing it second c
 The merge poll watches one change number, and a stack is several changes, so grouping them by topic is the obvious handle.
 Topic membership is mutable on the server, though, so a watch keyed on a topic alone is keyed on something anyone with access can change out from under it.
 
-The resolution is to **pin the membership and detect growth rather than follow it**.
+Stack watching remains unimplemented; [`bin/fm-dod-lib.sh`](../bin/fm-dod-lib.sh) owns the current single-change limit.
+A future stack watch must **pin the membership and detect growth rather than follow it**.
 Record the change numbers the stack had when the watch was armed, keep watching exactly those, and re-read the topic only to notice that it no longer matches.
 A change that appears or disappears is then reported as a change to the thing being watched, instead of being absorbed silently into it.
 That keeps the watch's subject fixed, which is what makes a merged verdict mean anything, while still surfacing the case a bare pin would hide: someone adding a change to the stack after the watch was armed.
@@ -352,4 +347,4 @@ That keeps the watch's subject fixed, which is what makes a merged verdict mean 
 
 None.
 Every question this note raised is answered where its reasoning sits, rather than repeated as a list here.
-What is left is implementation.
+The single-change integration is implemented; remaining stack-watch work is described in [Watching a stack](#watching-a-stack).

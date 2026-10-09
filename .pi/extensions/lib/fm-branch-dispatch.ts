@@ -21,12 +21,10 @@ import { runCommandAsync } from "./fm-async-exec.ts";
 // Postures (docs/pi-supervision-branch.md "Postures"). The away-posture record
 // state/.afk-contract (owner: bin/fm-afk-contract.sh) is the posture; it is
 // read as a file at every routing decision, never inferred from chat. While
-// it exists the branch takes EVERY actionable row - check rows, decision-owned
-// rows, and heartbeat rows included - and main is offered nothing the branch
-// can take. The two vetoes that describe a broken queue stay vetoes in both
-// postures, and such a wake, like every watcher-failure alarm, still falls
-// back to main exactly as attended, because only main can repair supervision
-// itself; parking main is a cost measure, continuity is the safety property.
+// it exists routing follows branchOfferForWake below, including its live
+// voice-turn exception. Broken queues and watcher-failure alarms still fall
+// back to main, because only main can repair supervision itself; parking main
+// is a cost measure, continuity is the safety property.
 
 export const FM_BRANCH_DISPATCH_EVENT = "fm-branch-supervision:dispatch";
 
@@ -216,11 +214,11 @@ const UNSAFE_SCOPE: UnreadWakeScope = {
 // scan - that is queue corruption, not an everyday mixed queue.
 //
 // In the away posture (`afk`, the dispatcher's read of the away-posture
-// record) the partition above collapses: main is parked, so check rows,
-// decision-owned signal and stale rows, and heartbeat rows are all claimed by
-// the branch on whatever wake finds them unread. The two vetoes that describe
-// a broken queue rather than a routing choice - an unresolvable task-local row
-// and a structurally invalid or unknown row - stay vetoes in both postures.
+// record) the partition above collapses except for live voice turns, which
+// branchOfferForWake keeps on main. Other check rows, decision-owned signal
+// and stale rows, and heartbeat rows may be claimed on any wake. Broken-queue
+// vetoes - an unresolvable task-local row and a structurally invalid or unknown
+// row - still apply in both postures.
 function statusLineVerb(line: string): string {
   const beforeColon = line.split(":", 1)[0].split("[", 1)[0].trim();
   const words = beforeColon.split(/\s+/);

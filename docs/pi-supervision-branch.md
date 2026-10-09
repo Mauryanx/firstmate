@@ -46,7 +46,7 @@ Some wakes stay on main:
 - Every watcher-failure alarm also stays on main.
 
 All of that describes the attended posture.
-The away posture, recorded by `state/.afk-contract`, hands every row to the branch and parks main (see "Postures" below).
+The away posture follows the routing and main-only exceptions in [Postures](#postures).
 
 ### How outcomes reach main
 
@@ -101,8 +101,7 @@ What is never offered, or falls back to main:
 - When a triggering close has no acceptor (extension absent, branch broken), it keeps today's wake-to-main path.
 - Watcher-failure alarms always go to main, because only main can repair the watcher cycle.
 
-Under the away-posture record, the check-kind and decision-owned exclusions lift and every actionable row is offered ("Postures" below).
-The no-acceptor fallback and the alarms still reach main in that posture.
+For away routing, including the live voice-turn exception, see [Postures](#postures).
 
 #### Decision-owned rows
 
@@ -563,13 +562,14 @@ A leftover `state/.afk` flag declines nothing.
 
 ### While the record exists
 
-- Every actionable row is branch-eligible.
-  Check rows, decision-owned signal and stale rows, and heartbeat rows are claimed by the branch on whatever wake finds them unread.
-  The trigger class no longer forces a batch to main.
+- Check rows other than live voice turns, decision-owned signal and stale rows, and heartbeat rows are branch-eligible on whatever wake finds them unread.
+  An unread `inbox:vc-*` check row stays on main, and its presence keeps the whole close on main even when other rows are branch-eligible, so main can answer the caller through [answer-voice-turn](../.agents/skills/answer-voice-turn/SKILL.md).
+  Other trigger classes no longer force a batch to main.
   The two vetoes that describe a broken queue, an unresolvable task-local row and a structurally invalid row, stay vetoes in both postures.
   A prompt that claims a check row is not scoped by task, so the branch may report it as `fleet`.
 - Main is parked, and reachable only for the classes only main can act on:
   - A watcher-failure alarm is delivered to main as always, because `fm_watch_arm_pi` lives there.
+  - A close containing an unread live voice turn stays on main under the routing rule above.
   - A wake the branch declines or cannot take (a broken branch inside its cooldown, an unresolvable or corrupt scan) falls back to main exactly as attended.
 
   Parking is a cost and chat-cleanliness measure.
