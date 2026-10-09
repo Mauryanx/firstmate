@@ -3859,6 +3859,29 @@ while [ -n "$orphan_ancestor" ] && [ "$orphan_ancestor" -gt 1 ]; do
 done
 orphan_pe "$HORPHAN" register lavish orphan-src -- "$ORPHAN_STUB" "$TMP_ROOT/orphan-dead" >/dev/null
 orphan_pe "$HKEEP" register lavish keep-src -- "$QUIET_STUB" "$TMP_ROOT/orphan-live" >/dev/null
+# Both listeners must be running before the owner-loss experiment starts.
+# Keep their short leases fresh while startup of the other home is in progress.
+ORPHAN_SETUP_STOP="$TMP_ROOT/orphan-setup.stop"
+ORPHAN_SETUP_KEEPERS=()
+stop_orphan_setup() {
+  local pid
+  : > "$ORPHAN_SETUP_STOP"
+  for pid in "${ORPHAN_SETUP_KEEPERS[@]:-}"; do
+    [ -n "$pid" ] || continue
+    wait "$pid" 2>/dev/null || true
+  done
+  ORPHAN_SETUP_KEEPERS=()
+}
+trap 'stop_orphan_setup; fm_test_cleanup' EXIT
+for setup_home in "$HORPHAN" "$HKEEP"; do
+  (
+    while [ -d "$setup_home/state" ] && [ ! -e "$ORPHAN_SETUP_STOP" ]; do
+      orphan_pe "$setup_home" list >/dev/null 2>&1 || true
+      sleep 0.1
+    done
+  ) &
+  ORPHAN_SETUP_KEEPERS+=("$!")
+done
 orphan_pe "$HORPHAN" reconcile >/dev/null
 orphan_pe "$HKEEP" reconcile >/dev/null
 
@@ -3888,6 +3911,8 @@ pass "a detached listener starts reparented, with a live descendant tree under i
 # Only the second home's session stays present, on the same short bound, so the
 # owning session is the single difference between the two listeners.
 keep_owner_present() { orphan_pe "$HKEEP" reconcile >/dev/null 2>&1 || true; sleep 0.25; }
+stop_orphan_setup
+keep_owner_present
 
 # This stub exits on the ordinary signal, so the stop ceiling is not spent here.
 # The deadline is DERIVED from the documented bound; the timing case below is

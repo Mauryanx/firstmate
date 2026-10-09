@@ -236,6 +236,48 @@ assert_equals "0" "$(count_wakes "$home")" \
   "an acknowledged note never gets a repair wake"
 pass "repair and replay do not wake firstmate for an already-acknowledged note"
 
+# The inbox contract reports durable acknowledgement independently of whether
+# a wake was previously announced. Reject stale responses and another pickup
+# promise after a normally announced note has been handled.
+home=$(make_home announced-then-acked)
+announced=$(run_inbox "$home" note --request-id handled-1 --json "handle once") \
+  || fail "normal submission should announce the note"
+announced_id=$(printf '%s' "$announced" | json_get id)
+assert_equals "True" "$(printf '%s' "$announced" | json_get announced)" \
+  "the note is announced before acknowledgement"
+run_inbox "$home" drain --ack "$announced_id" >/dev/null || fail "drain --ack failed"
+handled_receipts=$(run_inbox "$home" receipts --all-pending --all-handled)
+assert_equals "[]" "$(printf '%s' "$handled_receipts" | json_get pending)" \
+  "acknowledgement leaves no pending note"
+assert_equals "True" "$(printf '%s' "$handled_receipts" | json_get handled 0 acknowledged)" \
+  "receipts confirm the durable acknowledgement"
+handled_replay=$(run_inbox "$home" note --request-id handled-1 --json "handle once") \
+  || fail "handled request-id replay should succeed"
+handled_announce=$(run_inbox "$home" announce --json "$announced_id") \
+  || fail "announce of a handled, previously announced note should succeed"
+for response in "$handled_replay" "$handled_announce"; do
+  assert_equals "replay" "$(printf '%s' "$response" | json_get outcome)" \
+    "handled responses report replay"
+  assert_equals "$announced_id" "$(printf '%s' "$response" | json_get id)" \
+    "handled responses keep the original identity"
+  assert_equals "True" "$(printf '%s' "$response" | json_get acknowledged)" \
+    "handled responses report the durable acknowledgement"
+  assert_equals "True" "$(printf '%s' "$response" | json_get announced)" \
+    "handled responses retain the historical announcement"
+  assert_equals "$home/state/inbox/handled/$announced_id.note" \
+    "$(printf '%s' "$response" | json_get path)" "handled responses name the handled record"
+done
+handled_human=$(run_inbox "$home" note --request-id handled-1 "handle once")
+assert_contains "$handled_human" "firstmate has already acknowledged this note." \
+  "human replay reports acknowledgement instead of promising another pickup"
+assert_not_contains "$handled_human" "firstmate will pick this up" \
+  "human replay does not promise another pickup"
+assert_equals "already-acknowledged $announced_id" \
+  "$(run_inbox "$home" announce "$announced_id")" "human announce prioritizes acknowledgement"
+assert_equals "0" "$(count_notes "$home")" "handled retries do not republish the note"
+assert_equals "1" "$(count_wakes "$home")" "handled retries do not append another wake"
+pass "normally announced notes report durable acknowledgement on replay and announce"
+
 # --- bounded receipts JSON, omission disclosure, reply cursor ---------------
 
 json_len() {  # <key>

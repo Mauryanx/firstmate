@@ -376,7 +376,10 @@ finish_note_result() {  # <outcome> <id> <request-id> <json> <strict-exit> <summ
     0) announced=1 ;;
     2) acknowledged=1 ;;
   esac
-  [ -f "$INBOX/handled/$id.note" ] && path="$INBOX/handled/$id.note"
+  if [ -f "$INBOX/handled/$id.note" ]; then
+    path="$INBOX/handled/$id.note"
+    acknowledged=1
+  fi
   if [ "$json" -eq 1 ]; then
     emit_note_json "$outcome" "$id" "$request_id" 1 "$announced" "$path" "$acknowledged"
   else
@@ -386,10 +389,10 @@ finish_note_result() {  # <outcome> <id> <request-id> <json> <strict-exit> <summ
       printf 'queued %s\n' "$id"
     fi
     printf '  %s\n' "$summary"
-    if [ "$announced" -eq 1 ]; then
-      printf '  firstmate will pick this up at its next check.\n'
-    elif [ "$acknowledged" -eq 1 ]; then
+    if [ "$acknowledged" -eq 1 ]; then
       printf '  firstmate has already acknowledged this note.\n'
+    elif [ "$announced" -eq 1 ]; then
+      printf '  firstmate will pick this up at its next check.\n'
     fi
   fi
   if [ "$announced" -eq 1 ] || [ "$acknowledged" -eq 1 ]; then
@@ -505,7 +508,7 @@ cmd_note() {
 }
 
 cmd_announce() {
-  local json=0 id summary path state rc=0
+  local json=0 id summary path state rc=0 acknowledged=0
   if [ "${1:-}" = "--json" ]; then
     json=1
     shift
@@ -521,8 +524,11 @@ cmd_announce() {
   fi
   case "$state" in
     true)
+      [ "$path" != "$INBOX/handled/$id.note" ] || acknowledged=1
       if [ "$json" -eq 1 ]; then
-        emit_note_json replay "$id" "" 1 1 "$path"
+        emit_note_json replay "$id" "" 1 1 "$path" "$acknowledged"
+      elif [ "$acknowledged" -eq 1 ]; then
+        printf 'already-acknowledged %s\n' "$id"
       else
         printf 'already-announced %s\n' "$id"
       fi
