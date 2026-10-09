@@ -21,6 +21,7 @@ env = {k: v for k, v in os.environ.items() if not k.startswith('FM_') and k != '
 env.update(FM_HOME=str(home), FM_NOTIFY_COURIER='1', FM_COURIER_ROOT=str(courier),
            FM_COURIER_USER=pwd.getpwuid(os.getuid()).pw_name)
 cli, pickup = root / 'bin/fm-inbox.sh', root / 'bin/fm-courier-pickup.py'
+state_path = home / 'state/courier-pickup/state.json'
 CAPTAIN = '+12025550101'
 
 
@@ -174,6 +175,19 @@ assert replies[0]['delivery']['state'] == 'completed', replies
 assert stages()[-1] == ('m1', 'question'), stages()
 print('PASS: accepted turns show working; a numbered question is texted with its poll; its stage follows the sent receipt')
 
+conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-m1', 'response_id': 'q1-progress',
+                         'sequence': 2, 'kind': 'progress', 'final': False, 'destination': 'imessage',
+                         'speech_text': 'Considering the options.'})
+once()
+assert [row['text'] for row in courier_takes()] == ['Considering the options.']
+once()
+assert json.loads(state_path.read_text())['marks']['m1']['stage'] == 'question'
+assert stages()[-1] == ('m1', 'question'), stages()
+
+record('vote', 'vote-empty', {'chosen': [], 'request_id': asked['id'], 'digest': 'd', 'poll_message_id': 'p1'})
+once()
+assert not any(r['turn_id'].startswith('imsg-vote-') for r in requests()), requests()
+
 # His vote is filed once, as his bound answer to that question; another vote on it is not.
 record('vote', 'vote1', {'chosen': ['2. Wait'], 'request_id': asked['id'], 'digest': 'd', 'poll_message_id': 'p1'})
 record('vote', 'vote2', {'chosen': ['1. Ship it'], 'request_id': asked['id'], 'digest': 'd', 'poll_message_id': 'p1'})
@@ -185,10 +199,30 @@ assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'
 answer = conversation('accept', {'conversation_id': 'text'})['input']
 assert answer['committed_transcript'] == '2. Wait' and answer['question_binding'] == 'b1'
 print('PASS: a vote on a question it asked is filed once with that question\'s binding; other votes are not filed')
+print('PASS: an empty vote leaves the question watch available for a later nonempty vote across restart')
+
+conversation('publish', {'conversation_id': 'text', 'request_id': answer['request_id'], 'response_id': 'a1-progress',
+                         'sequence': 1, 'kind': 'progress', 'final': False, 'destination': 'imessage',
+                         'speech_text': 'Preparing to wait.'})
+once()
+assert [row['text'] for row in courier_takes()] == ['Preparing to wait.']
+once()
+mark = json.loads(state_path.read_text())['marks']['m1']
+assert mark['stage'] == 'question' and mark['follows'] == 'vote-vote1', mark
+
+conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-m1', 'response_id': 'q1-late',
+                         'sequence': 3, 'kind': 'progress', 'final': False, 'destination': 'imessage',
+                         'speech_text': 'The original request is still in progress.'})
+once()
+assert [row['text'] for row in courier_takes()] == ['The original request is still in progress.']
+once()
+mark = json.loads(state_path.read_text())['marks']['m1']
+assert mark['stage'] == 'question' and mark['follows'] == 'vote-vote1', mark
+print('PASS: direct and propagated progress preserve question rank; a late original reply preserves its follower link')
 
 # The final answer to his vote finishes his original message, and nothing moves it backwards.
 conversation('publish', {'conversation_id': 'text', 'request_id': answer['request_id'], 'response_id': 'a1',
-                         'sequence': 1, 'kind': 'answer', 'final': True, 'destination': 'imessage',
+                         'sequence': 2, 'kind': 'answer', 'final': True, 'destination': 'imessage',
                          'speech_text': 'Waiting, then.'})
 once()
 assert [row['text'] for row in courier_takes()] == ['Waiting, then.']
@@ -215,7 +249,6 @@ print('PASS: an empty message is told NOT_TEXT and marked failed; an unsaved att
 # A message nobody can file - no live session - is told the failure sentence after its retries.
 (home / 'state/.lock').write_text('99999999\n')
 message('m5', 'anyone there?')
-state_path = home / 'state/courier-pickup/state.json'
 for _ in range(3):
     once()
     state = json.loads(state_path.read_text())
@@ -228,6 +261,29 @@ once()
 assert ('m5', 'failed') in stages()
 (home / 'state/.lock').write_text(owner + '\n')
 print('PASS: a message that cannot be filed is retried, then told the failure sentence and marked failed')
+
+conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-m2', 'response_id': 'q2',
+                         'sequence': 1, 'kind': 'question', 'final': False, 'question_binding': 'b2',
+                         'destination': 'imessage', 'speech_text': question})
+once()
+[failed_poll] = courier_takes()
+once()
+(home / 'state/.lock').write_text('99999999\n')
+record('vote', 'vote-failure', {'chosen': ['1. Ship it'], 'request_id': failed_poll['id'],
+                                 'digest': 'd', 'poll_message_id': 'p3'})
+for _ in range(3):
+    once()
+    state = json.loads(state_path.read_text())
+    if state['pending'] is not None:
+        state['pending']['not_before'] = 0
+        state_path.write_text(json.dumps(state))
+assert json.loads(state_path.read_text())['pending'] is None
+assert [row['text'] for row in courier_takes()] == ["I couldn't reach Firstmate."]
+once()
+assert not any(target.startswith('vote-') for target, stage in stages()), stages()
+(home / 'state/.lock').write_text(owner + '\n')
+assert not any(r['turn_id'] == 'imsg-vote-vote-failure' for r in requests()), requests()
+print('PASS: a vote that exhausts capture retries sends the failure notice without a synthetic-message reaction')
 
 # Pickup latency: from the courier's rename to the turn's check wake, while running.
 running = subprocess.Popen([sys.executable, str(pickup), 'run'], env=env, stdout=subprocess.DEVNULL,

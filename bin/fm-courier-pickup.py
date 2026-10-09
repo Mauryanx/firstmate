@@ -359,13 +359,14 @@ class Pickup:
             self.s['pending'] = {'message': identity, 'target': identity, 'words': record['transcript'],
                                  'created': record['created_at'], 'notice': notice}
         else:
-            poll = self.s['polls'].pop(record['request_id'], None)
+            poll = self.s['polls'].get(record['request_id'])
             if poll is None or not record['chosen']:
                 self.save()  # Not a question this program asked, or nothing chosen: never filed.
                 return
             self.s['pending'] = {'message': 'vote-' + key, 'target': 'vote-' + key, 'words': record['chosen'][0],
                                  'created': record['published_at'], 'notice': None,
                                  'asked': poll['asked'], 'binding': poll['binding']}
+            self.s['polls'].pop(record['request_id'])
         self.s['pending'].update(attempts=0, not_before=0, turn=None, request=None, previous=None)
         self.save()
 
@@ -402,7 +403,8 @@ class Pickup:
                 self.tail = None
                 log('gave up filing %s: %s' % (entry['message'], exc))
                 self.s['pending'] = None
-                self.owe(FAILURE, 'imsg-failed-' + entry['message'], [entry['target'], 'failed'])
+                self.owe(FAILURE, 'imsg-failed-' + entry['message'],
+                         None if 'binding' in entry else [entry['target'], 'failed'])
                 self.save()
                 return True
         self.s['pending'] = None
@@ -429,16 +431,20 @@ class Pickup:
         """Move a message's mark, and every mark following it (the direct bridge's rule)."""
         moment = self.now()
         mark = self.s['marks'].setdefault(target, {'shown': None})
+        rank = RANK.get(mark.get('stage'), -1)
+        if mark.get('follows') or rank == 3 or RANK[stage] < rank:
+            return
         if request is not None:
             mark['request'] = request
         mark.update(stage=stage, moved=moment)
-        mark.pop('follows', None)
         leaders, seen = [target], {target}
         while leaders:
             leader = leaders.pop()
             for other, follower in self.s['marks'].items():
                 if follower.get('follows') == leader and other not in seen:
-                    follower.update(stage=stage, moved=moment)
+                    rank = RANK.get(follower.get('stage'), -1)
+                    if rank != 3 and RANK[stage] >= rank:
+                        follower.update(stage=stage, moved=moment)
                     seen.add(other)
                     leaders.append(other)
 
