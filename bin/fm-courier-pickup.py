@@ -84,6 +84,7 @@ usage 2.
 """
 
 import calendar
+import errno
 import fcntl
 import hashlib
 import json
@@ -157,7 +158,12 @@ def directory(path):
 
 def read_owned(parent, name, uid, mode, limit=LIMIT):
     """One regular single-link file under ``parent`` with exact owner and mode."""
-    fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
+    try:
+        fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=parent)
+    except OSError as exc:
+        if exc.errno not in (errno.ENOENT, errno.ELOOP):
+            raise
+        raise Refused(str(exc)) from exc
     try:
         info = os.fstat(fd)
         if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != uid
@@ -360,7 +366,7 @@ class Pickup:
                 handled = 'message-' + record['message_id'] if kind == 'message' else 'vote-' + key
                 if handled in self.s['handled']:
                     raise Refused('duplicate ' + handled)
-            except (Refused, OSError) as exc:
+            except Refused as exc:
                 log('refused inbound record %s: %s' % (name, exc))
                 self.s['cursor'] = int(seq)
                 self.save()

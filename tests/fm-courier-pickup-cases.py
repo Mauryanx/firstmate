@@ -5,6 +5,7 @@ receipts the way the courier does, and reads the outbox requests Firstmate
 publishes. Firstmate's side runs through its real CLI against a real pilot
 conversation transport, so a record becomes a real vc- note and check wake.
 """
+import errno
 import fcntl
 import json
 import os
@@ -43,6 +44,26 @@ def once(code=0, extra=None, clock_offset=0):
     result = subprocess.run(command, text=True, capture_output=True,
                             env=dict(env, **(extra or {})), timeout=60)
     assert result.returncode == code, result
+    return result
+
+
+def fault_once(name, error):
+    script = '''import errno,os,runpy,sys
+target, error, spool = sys.argv[1:4]
+error = int(error)
+def fault(event, args):
+    if event == "open" and isinstance(args[0], (str, bytes)) and os.path.basename(os.fsdecode(args[0])) == target:
+        if error == errno.ENOENT:
+            os.unlink(os.path.join(spool, target))
+        else:
+            raise OSError(error, "injected inbound I/O failure", target)
+sys.addaudithook(fault)
+sys.argv = sys.argv[4:]
+runpy.run_path(sys.argv[0], run_name="__main__")
+'''
+    result = subprocess.run([sys.executable, '-c', script, name, str(error), str(inbound), str(pickup), 'once'],
+                            text=True, capture_output=True, env=env, timeout=60)
+    assert result.returncode == 0, result
     return result
 
 
@@ -134,8 +155,12 @@ assert not (home / 'state/courier-pickup').exists()
 print('PASS: without FM_NOTIFY_COURIER=1 the pickup exits 3 and touches nothing')
 
 # A record in the spool becomes exactly one conversation turn, filed as the direct bridge files it.
-message('m1', 'Ship the fix\n[attachment: /srv/courier/inbox/media/m1.png (image/png, 10 bytes)]',
-        attachments=[{'line': '[attachment: /srv/courier/inbox/media/m1.png (image/png, 10 bytes)]', 'saved': True}])
+first_record = message('m1', 'Ship the fix\n[attachment: /srv/courier/inbox/media/m1.png (image/png, 10 bytes)]',
+                       attachments=[{'line': '[attachment: /srv/courier/inbox/media/m1.png (image/png, 10 bytes)]', 'saved': True}])
+failed_read = fault_once(first_record, errno.EIO)
+assert 'inbound spool unavailable' in failed_read.stderr, failed_read.stderr
+assert json.loads(state_path.read_text())['cursor'] == 0
+assert not notes() and not wakes() and not requests()
 once()
 assert len(notes()) == 1 and len(wakes()) == 1, (notes(), wakes())
 [filed] = requests()
@@ -146,6 +171,7 @@ assert stages() == [('m1', 'filed')], stages()
 once()
 assert len(notes()) == 1 and len(wakes()) == 1 and len(stages()) == 1
 print('PASS: a spool record becomes exactly one turn and one wake, acknowledged filed; a rescan files nothing again')
+print('PASS: an operational message-read error preserves the cursor and files the same record after restart')
 
 # Duplicates and malformed records are refused, and the record after them is still filed in order.
 message('m1')  # the same message key again under a later sequence
@@ -160,13 +186,17 @@ seq += 1
 seq += 1
 os.link(inbound / sorted(os.listdir(inbound))[0], inbound / ('%012d-message-m-hard.json' % seq))
 message('m2', 'Then deploy')
-refused = once()
+vanished_record = message('m-vanished', 'Removed by the courier after listing.')
+refused = fault_once(vanished_record, errno.ENOENT)
 assert len(notes()) == 2 and len(wakes()) == 2, notes()
 assert [r['turn_id'] for r in requests()] == ['imsg-m1', 'imsg-m2'] and requests()[1]['previous_turn_id'] == 'imsg-m1'
-for name in ('message-m1', 'm-bad-mode', 'm-bad-seq', 'm-extra', 'm-dupkey', 'm-nan', 'v-bad', 'm-link', 'm-hard'):
+for name in ('message-m1', 'm-bad-mode', 'm-bad-seq', 'm-extra', 'm-dupkey', 'm-nan', 'v-bad', 'm-link', 'm-hard', 'm-vanished'):
     assert name in refused.stderr, (name, refused.stderr)
 assert 'Ship the fix' not in refused.stderr  # refusals name the record, never his words
 print('PASS: duplicate, wrong-mode, mismatched, extra-field, duplicate-key, NaN, symlinked and hard-linked records are refused')
+assert not (inbound / vanished_record).exists()
+assert json.loads(state_path.read_text())['cursor'] == seq
+print('PASS: a record that vanishes between listing and open is refused and passed')
 
 # Firstmate's acceptance moves his message to working; a numbered question goes out as text plus poll.
 assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-m1'
@@ -213,9 +243,14 @@ once()
 assert not any(r['turn_id'].startswith('imsg-vote-') for r in requests()), requests()
 
 # His vote is filed once, as his bound answer to that question; another vote on it is not.
-record('vote', 'vote1', {'chosen': ['2. Wait'], 'request_id': asked['id'], 'digest': 'd', 'poll_message_id': 'p1'})
+vote_record = record('vote', 'vote1', {'chosen': ['2. Wait'], 'request_id': asked['id'], 'digest': 'd', 'poll_message_id': 'p1'})
 record('vote', 'vote2', {'chosen': ['1. Ship it'], 'request_id': asked['id'], 'digest': 'd', 'poll_message_id': 'p1'})
 record('vote', 'vote3', {'chosen': ['Yes'], 'request_id': 'fm-notify-poll', 'digest': 'd', 'poll_message_id': 'p2'})
+cursor = json.loads(state_path.read_text())['cursor']
+failed_read = fault_once(vote_record, errno.EIO)
+assert 'inbound spool unavailable' in failed_read.stderr, failed_read.stderr
+assert json.loads(state_path.read_text())['cursor'] == cursor
+assert not any(r['turn_id'].startswith('imsg-vote-') for r in requests()), requests()
 once()
 voted = [r for r in requests() if r['turn_id'].startswith('imsg-vote-')]
 assert len(voted) == 1 and voted[0]['question_binding'] == 'b1', requests()
@@ -223,6 +258,7 @@ assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'
 answer = conversation('accept', {'conversation_id': 'text'})['input']
 assert answer['committed_transcript'] == '2. Wait' and answer['question_binding'] == 'b1'
 print('PASS: a vote on a question it asked is filed once with that question\'s binding; other votes are not filed')
+print('PASS: an operational vote-read error preserves ordering and captures the original choice after restart')
 print('PASS: a question delayed two days keeps its watch across restart and accepts a vote after delivery')
 print('PASS: an empty vote leaves the question watch available for a later nonempty vote across restart')
 
@@ -678,5 +714,5 @@ print('PASS: a hung capture sends one failure notice before its failed stage, al
 
 # Firstmate never wrote, renamed or deleted anything in the courier's spool.
 assert all(not name.startswith('.') for name in os.listdir(inbound))
-assert len(os.listdir(inbound)) == seq
-print('PASS: the spool is left exactly as the courier published it')
+assert len(os.listdir(inbound)) == seq - 1
+print('PASS: the spool is left exactly as the courier left it after deleting its vanished record')
