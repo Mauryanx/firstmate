@@ -143,7 +143,8 @@ conversation('pilot-init', {'publication_policy': 'owner-authored-v2', 'destinat
 binding = conversation('bind', {'conversation_id': 'text', 'authenticated_principal': 'captain',
                                 'destination': 'imessage'})
 (home / 'state/imessage').mkdir(mode=0o700)
-(home / 'state/imessage/binding.json').write_text(json.dumps(dict(binding, destination='imessage')))
+assert binding['destination'] == 'imessage', binding
+(home / 'state/imessage/binding.json').write_text(json.dumps(binding))  # exactly as bind returned it
 for directory in (inbound, outbox, receipts, courier / 'etc/courier'):
     directory.mkdir(parents=True)
 (courier / 'etc/courier/policy.toml').write_text(
@@ -467,6 +468,9 @@ assert not outgoing('.json'), outgoing('.json')
 inflight_receipt.unlink()
 once(clock_offset=2 * 86400 + 61)
 assert (outbox / (original['id'] + '.json')).read_bytes() == original_bytes
+courier_takes(receipted=False)
+once(clock_offset=2 * 86400 + 61 - 600)  # The wall clock stepped back 10 minutes.
+assert (outbox / (original['id'] + '.json')).read_bytes() == original_bytes
 assert [row['id'] for row in courier_takes()] == [original['id']]
 once()
 assert [row['text'] for row in courier_takes()] == ['Recovery complete.']
@@ -474,7 +478,7 @@ once()
 assert ('receipt-recovery', 'done') in stages(), stages()
 assert all(row['delivery']['state'] == 'completed'
            for row in conversation('poll', binding)['replies'] if row['response_id'].startswith('recovery-'))
-print('PASS: a pruned receipt is recovered by byte-identical same-ID republication, limited to once per 60 s')
+print('PASS: a pruned receipt is recovered by byte-identical same-ID republication, limited to once per 60 s, and not stalled by a backward clock step')
 
 message('best-effort-poll', 'Ask with an optional native poll.')
 once()
@@ -700,12 +704,8 @@ print('PASS: an empty message is told NOT_TEXT and marked failed; an unsaved att
 # A message nobody can file - no live session - is told the failure sentence after its retries.
 (home / 'state/.lock').write_text('99999999\n')
 message('m5', 'anyone there?')
-for _ in range(3):
+for _ in range(3):  # Each run is a new process, so its retry is due at once.
     once()
-    state = json.loads(state_path.read_text())
-    if state['pending'] is not None:
-        state['pending']['not_before'] = 0  # skip the retry wait, not the retry
-        state_path.write_text(json.dumps(state))
 assert json.loads(state_path.read_text())['pending'] is None
 assert ('m5', 'failed') not in stages(), stages()
 assert [row['text'] for row in courier_takes()] == ["I couldn't reach Firstmate."]
@@ -723,8 +723,6 @@ for attempt in range(3):
     if attempt < 2:
         assert state['pending']['words'] == 'x' * 16001
         assert state['pending']['attempts'] == attempt + 1
-        state['pending']['not_before'] = 0
-        state_path.write_text(json.dumps(state))
 assert state['pending'] is None
 assert not any(r['turn_id'] == 'imsg-m-long' for r in requests()), requests()
 assert ('m-long', 'failed') not in stages(), stages()
@@ -744,10 +742,6 @@ record('vote', 'vote-failure', {'chosen': ['1. Ship it'], 'request_id': failed_p
                                  'digest': 'd', 'poll_message_id': 'p3'})
 for _ in range(3):
     once()
-    state = json.loads(state_path.read_text())
-    if state['pending'] is not None:
-        state['pending']['not_before'] = 0
-        state_path.write_text(json.dumps(state))
 assert json.loads(state_path.read_text())['pending'] is None
 assert [row['text'] for row in courier_takes()] == ["I couldn't reach Firstmate."]
 once()
@@ -778,6 +772,33 @@ finally:
 second = subprocess.run([sys.executable, str(pickup), 'once'], env=env, capture_output=True, text=True, timeout=30)
 assert second.returncode == 0
 print('PASS: each record reaches the wake queue in under a second while the pickup runs')
+
+# A backward wall-clock step while running neither stalls reading replies nor sending them.
+stepped = ('import runpy,sys,time; wall=time.time; start=time.monotonic(); '
+           'time.time=lambda: wall()-(600 if time.monotonic()-start > 1 else 0); sys.argv=sys.argv[1:]; '
+           'runpy.run_path(sys.argv[0], run_name="__main__")')
+while conversation('accept', {'conversation_id': 'text'})['dispatch']:
+    pass
+running = subprocess.Popen([sys.executable, '-c', stepped, str(pickup), 'run'], env=env, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.PIPE, text=True)
+try:
+    time.sleep(2.5)  # past the 10-minute step back
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-lat0', 'response_id': 'stepped',
+                             'sequence': 1, 'kind': 'answer', 'final': True, 'destination': 'imessage',
+                             'speech_text': 'Sent despite the clock.'})
+    started = time.monotonic()
+    while not outgoing('.json'):
+        assert time.monotonic() - started < 10, 'a backward clock step stalled the reply'
+        assert running.poll() is None, 'pickup exited'
+        time.sleep(0.1)
+    assert [row['text'] for row in courier_takes()] == ['Sent despite the clock.']
+    while ('lat0', 'done') not in stages():
+        assert time.monotonic() - started < 10, 'the sent reply never moved its stage'
+        time.sleep(0.1)
+finally:
+    running.terminate()
+    running.wait(timeout=10)
+print('PASS: after a backward wall-clock step the running pickup still reads and sends replies on its cadence')
 
 # Slow failure: a hung capture queues its notice, whose sent receipt precedes the
 # failed stage, inside the courier's 120 s PICKUP_DEADLINE from the record's rename.

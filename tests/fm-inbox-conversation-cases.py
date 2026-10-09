@@ -445,6 +445,9 @@ call = bind('call')
 text_bind = {'conversation_id': 'text', 'authenticated_principal': 'captain', 'destination': 'imessage'}
 text = run('bind', text_bind)
 assert run('bind', text_bind) == text
+assert set(text) == {'conversation_id', 'credential', 'destination'} and text['destination'] == 'imessage'
+assert set(call) == {'conversation_id', 'credential'}  # a default binding is unchanged
+text = {k: text[k] for k in ('conversation_id', 'credential')}  # the transport identity
 for rebind in (dict(text_bind, destination='elevenlabs'), {'conversation_id': 'text', 'authenticated_principal': 'captain'},
                {'conversation_id': 'call', 'authenticated_principal': 'captain', 'destination': 'imessage'},
                {'conversation_id': 'fax', 'authenticated_principal': 'captain', 'destination': 'fax'}):
