@@ -13,12 +13,10 @@
 # with NoNewPrivileges=yes and no User=, capability or path grant of its own,
 # so the export reads and writes exactly what that account already can.
 #
-# The units name this checkout's absolute paths, resolved when they are
-# rendered, so re-run install after moving the checkout or changing FM_HOME
-# rather than editing the files; each run starts a fresh export, so updating
-# Firstmate needs no restart. Enabling the timer is the activation step, so
-# install never runs systemctl; docs/configuration.md "Brain-room client" owns
-# the enable and rollback runbook.
+# The units name this checkout's absolute paths and FM_HOME as selected when
+# rendered. Enabling the timer is the activation step, so install never runs
+# systemctl; docs/configuration.md "Brain-room client" owns the activation,
+# reinstallation and rollback runbook.
 #
 # Usage:
 #   fm-brain-journal-export-service.sh render service|timer
