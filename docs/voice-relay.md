@@ -5,7 +5,9 @@
 The voice interface keeps the first mate responsible for the conversation and uses voice only to carry input and deliver replies the first mate explicitly published.
 `bin/fm-inbox.sh conversation --help` is the owner of its commands, event schema, recovery boundaries and publication restrictions.
 Its regression is `bin/fm-test-run.sh tests/fm-inbox-conversation.test.sh`, which drives the transport through that public CLI with no client, browser or speech provider taking part.
-The optional, administrator-staged two-peer filesystem contract is owned by `python3 bin/fm_shared_interface.py --help`; its focused checks are `FM_CONVERSATION_CASE=shared bash tests/fm-inbox-conversation.test.sh` and `bash tests/fm-wake-queue.test.sh --shared-interface`.
+When the captain's texts arrive through the courier, [`bin/fm-courier-pickup.py`](../bin/fm-courier-pickup.py) reads the courier's inbound spool as Firstmate and files each message into this transport, then sends published replies through Firstmate-owned outbox requests.
+This replaces the shared writable transport interface: the courier has no access to Firstmate's home, and pickup leaves courier-owned files and credentials untouched.
+The courier wire is owned by firstmate-voice's `docs/courier-inbound-interface.txt`; pickup's `--help` owns its invocation and local state, and `bin/fm-test-run.sh tests/fm-courier-pickup.test.sh` is its offline regression.
 
 A captured turn lands as `state/inbox/vc-<hash>.note` and appends one ordinary `check` wake, so the first mate finds it in the same drain as everything else.
 From there it is not an ordinary note.
@@ -27,6 +29,23 @@ Publication is accountable speech.
 Each published portion records its exact content digest, author identity, destination and turn, and live publication stays refused until the owner has explicitly enabled it for this home under the captain's disclosure authorization.
 That is accountability for deliberate speech, not an automated claim that any scan makes arbitrary private content safe to say out loud.
 The same transport can carry a text conversation, such as iMessage, when the owner's policy authorizes that destination; each conversation is bound to one destination, so a call's reply is never sent as a text and a text's reply is never spoken, and `bin/fm-inbox.sh conversation --help` owns that policy and binding.
+
+### Running the courier pickup
+
+On a Linux host with systemd, run the pickup as the `fm-courier-pickup.service` user unit that [`bin/fm-courier-pickup-service.sh`](../bin/fm-courier-pickup-service.sh) renders; its header owns what the unit contains.
+With the unit enabled and the Firstmate account lingering, the pickup starts at boot and recovers from failures.
+The offline regression checks the installed unit's effective settings and startup command, and verifies systemd syntax when `systemd-analyze` is available.
+Run the service commands as the Firstmate account; only the lingering setup below requires root.
+
+1. The user manager starts at boot only for a lingering account, so confirm `loginctl show-user "$USER" -p Linger` prints `Linger=yes`; otherwise root runs `loginctl enable-linger <account>` once.
+2. Install the unit for this home with `FM_HOME=<absolute home> bin/fm-courier-pickup-service.sh install`, retain the printed unit path for rollback, then run `systemctl --user daemon-reload`.
+3. Enabling the unit turns the pickup on, so do it as part of courier activation: `systemctl --user enable --now fm-courier-pickup.service`.
+   Read its state with `systemctl --user status fm-courier-pickup.service` and its log with `journalctl --user -u fm-courier-pickup.service`.
+4. After updating Firstmate, moving the checkout or changing `FM_HOME`, repeat step 2 and run `systemctl --user restart fm-courier-pickup.service`, because a running pickup keeps the code it started with.
+
+To roll back, run `systemctl --user disable --now fm-courier-pickup.service`, delete the unit at the path printed by `install`, and run `systemctl --user daemon-reload`.
+The pickup's own state under `state/courier-pickup/` stays, so enabling it again resumes from its cursor without refiling anything.
+While it is stopped, spooled messages wait in the courier's spool and the courier's pickup deadline tells the captain.
 
 ## Existing audio prototype
 

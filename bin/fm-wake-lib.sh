@@ -18,19 +18,6 @@ FM_LOCK_STALE_AFTER="${FM_LOCK_STALE_AFTER:-2}"
 _FM_UNAME=$(uname 2>/dev/null || echo unknown)
 mkdir -p "$STATE"
 
-# Only an explicitly staged dedicated voice interface shares these artifacts.
-# The metadata helper owns the allowlist; ordinary operational locks stay private.
-_fm_shared_wake_access() { # <publication-path> [<opened-temporary-path>]
-  [ -e "$FM_HOME/.fm-voice-shared-interface" ] \
-    || [ -L "$FM_HOME/.fm-voice-shared-interface" ] || return 0
-  FM_HOME="$FM_HOME" python3 "$FM_WAKE_LIB_DIR/fm_shared_interface.py" "$1" "${2:-$1}"
-}
-
-_fm_wake_prepare_file() {
-  : >> "$1" || return 1
-  _fm_shared_wake_access "$1"
-}
-
 # Most wake-library consumers need only queue and lock primitives, including
 # deliberately minimal recovery fixtures and remote installations.
 # Load the classifier only when a status presentation helper is actually used.
@@ -71,17 +58,11 @@ else
 fi
 
 fm_pid_alive() {
-  local pid=$1 error
+  local pid=$1
   case "$pid" in
     ''|*[!0-9]*) return 1 ;;
   esac
-  if error=$(LC_ALL=C builtin kill -0 "$pid" 2>&1); then
-    return 0
-  fi
-  case "$error" in
-    *'Operation not permitted'|*'Permission denied') return 0 ;;
-    *) return 1 ;;
-  esac
+  kill -0 "$pid" 2>/dev/null
 }
 
 fm_pid_identity() {
@@ -520,23 +501,15 @@ fm_lock_abs_path() {
 }
 
 fm_lock_owner_dir() {
-  local lockdir=$1 lock_abs ownerdir
+  local lockdir=$1 lock_abs
   lock_abs=$(fm_lock_abs_path "$lockdir") || return 1
-  ownerdir=$(mktemp -d "${lock_abs}.owner.XXXXXX" 2>/dev/null) || return 1
-  # A rejected staged interface is configuration, not contention: return 2 so
-  # waiters stop instead of retrying a failure no other process can clear.
-  if ! _fm_shared_wake_access "$ownerdir"; then
-    rmdir "$ownerdir"
-    return 2
-  fi
-  printf '%s\n' "$ownerdir"
+  mktemp -d "${lock_abs}.owner.XXXXXX" 2>/dev/null
 }
 
 fm_lock_prepare_owner() {
   local ownerdir=$1 mypid back
   fm_current_pid mypid || return 1
   printf '%s\n' "$mypid" > "$ownerdir/pid" 2>/dev/null || return 1
-  _fm_shared_wake_access "$ownerdir/pid" || return 2
   back=$(cat "$ownerdir/pid" 2>/dev/null || true)
   [ "$back" = "$mypid" ]
 }
@@ -609,18 +582,16 @@ fm_lock_claim() {
 }
 
 fm_lock_try_create() {
-  local lockdir=$1 allowed_steal_owner=${2:-} ownerdir rc
+  local lockdir=$1 allowed_steal_owner=${2:-} ownerdir
   FM_LOCK_OWNER_DIR=
-  ownerdir=$(fm_lock_owner_dir "$lockdir") || return
+  ownerdir=$(fm_lock_owner_dir "$lockdir") || return 1
   if [ -e "$lockdir" ] || [ -L "$lockdir" ]; then
     fm_lock_discard_owner "$ownerdir"
     return 1
   fi
-  rc=0
-  fm_lock_prepare_owner "$ownerdir" || rc=$?
-  if [ "$rc" -ne 0 ]; then
+  if ! fm_lock_prepare_owner "$ownerdir"; then
     fm_lock_discard_owner "$ownerdir"
-    return "$rc"
+    return 1
   fi
   if ln -s "$ownerdir" "$lockdir" 2>/dev/null && fm_lock_points_to_owner "$lockdir" "$ownerdir"; then
     if fm_lock_claim "$lockdir" "$ownerdir" "$allowed_steal_owner"; then
@@ -706,7 +677,6 @@ fm_recovery_marker_read() {
 }
 
 _fm_atomic_replace() {
-  _fm_shared_wake_access "$2" "$1" || return 1
   mv -f -- "$1" "$2"
 }
 
@@ -901,7 +871,7 @@ _fm_recovery_marker_ack() {
   tmp=$(mktemp "${marker}.tmp.XXXXXX") || { fm_lock_release "$lock"; return 1; }
   if ! printf '%s\n' "$line" > "$tmp" \
     || ! chmod 0600 "$tmp" \
-    || ! _fm_atomic_replace "$tmp" "$marker"; then
+    || ! mv -f -- "$tmp" "$marker"; then
     rm -f -- "$tmp"
     fm_lock_release "$lock"
     return 1
@@ -1178,10 +1148,9 @@ fm_lock_reap_dead_link() {
 # hold abandoned by this very process (a trap interrupted its critical section)
 # is reclaimed like fm_lock_try_acquire's self-held branch.
 fm_lock_try_acquire_steal_mutex() {  # <steal-lock>
-  local lockdir=$1 current rc=0
+  local lockdir=$1 current
   FM_LOCK_OWNER_DIR=
-  fm_lock_try_create "$lockdir" || rc=$?
-  [ "$rc" -eq 1 ] || return "$rc"
+  fm_lock_try_create "$lockdir" && return 0
   fm_current_pid current || return 1
   fm_lock_reap_dead_link "$lockdir.steal" || true
   if [ "$(cat "$lockdir/pid" 2>/dev/null || true)" = "$current" ]; then
@@ -1198,9 +1167,9 @@ fm_lock_try_acquire() {
   FM_LOCK_OWNER_DIR=
   FM_LOCK_RECOVERED_PID=
 
-  rc=0
-  fm_lock_try_create "$lockdir" || rc=$?
-  [ "$rc" -eq 1 ] || return "$rc"
+  if fm_lock_try_create "$lockdir"; then
+    return 0
+  fi
 
   fm_current_pid current || return 1
   pid=$(cat "$lockdir/pid" 2>/dev/null || true)
@@ -1214,9 +1183,9 @@ fm_lock_try_acquire() {
     # - the hang reproduced by the self-held reclaim regression in
     # tests/fm-wake-queue.test.sh - so reclaim the abandoned hold instead.
     fm_lock_remove_path "$lockdir" || true
-    rc=0
-    fm_lock_try_create "$lockdir" || rc=$?
-    [ "$rc" -eq 1 ] || return "$rc"
+    if fm_lock_try_create "$lockdir"; then
+      return 0
+    fi
     FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     return 1
   fi
@@ -1230,12 +1199,10 @@ fm_lock_try_acquire() {
   fi
 
   steal="$lockdir.steal"
-  rc=0
-  fm_lock_try_acquire_steal_mutex "$steal" || rc=$?
-  if [ "$rc" -ne 0 ]; then
+  if ! fm_lock_try_acquire_steal_mutex "$steal"; then
     FM_LOCK_HELD_PID=$(cat "$lockdir/pid" 2>/dev/null || true)
     FM_LOCK_OWNER_DIR=
-    return "$rc"
+    return 1
   fi
   steal_owner=${FM_LOCK_OWNER_DIR:-}
 
@@ -1279,12 +1246,11 @@ fm_lock_try_acquire() {
     return 1
   fi
   fm_lock_remove_path "$lockdir" || true
-  rc=0
+  rc=1
   if fm_lock_try_create "$lockdir" "$steal_owner"; then
+    rc=0
     # shellcheck disable=SC2034 # Read by sourcing callers after lock acquisition.
     FM_LOCK_RECOVERED_PID=$cur
-  else
-    rc=$?
   fi
   if [ "$rc" -ne 0 ]; then
     # shellcheck disable=SC2034 # Read by callers after fm_lock_try_acquire returns.
@@ -1296,11 +1262,8 @@ fm_lock_try_acquire() {
 }
 
 fm_lock_acquire_wait() {
-  local lockdir=$1 rc
-  while :; do
-    rc=0
-    fm_lock_try_acquire "$lockdir" || rc=$?
-    [ "$rc" -eq 1 ] || return "$rc"
+  local lockdir=$1
+  while ! fm_lock_try_acquire "$lockdir"; do
     sleep 0.1
   done
 }
@@ -1327,7 +1290,7 @@ _fm_lock_acquire_wait_handoff() {  # <lockdir> <caller-pid>
   case "$caller_pid" in ''|*[!0-9]*) return 1 ;; esac
   fm_pid_alive "$caller_pid" || return 1
   trap 'fm_lock_release "$lockdir"; exit 143' TERM INT
-  fm_lock_acquire_wait "$lockdir" || return
+  fm_lock_acquire_wait "$lockdir" || return 1
   if [ -L "$lockdir" ]; then
     ownerdir=$(fm_lock_link_owner "$lockdir" 2>/dev/null) || {
       fm_lock_release "$lockdir"
@@ -1360,9 +1323,9 @@ fm_lock_acquire_wait_bounded() {
   local lockdir=$1 seconds=$2 caller_pid rc owner_pid
   case "$seconds" in ''|*[!0-9]*|0) return 2 ;; esac
   _fm_wake_require_timeout || return 1
-  rc=0
-  fm_lock_try_acquire "$lockdir" || rc=$?
-  [ "$rc" -eq 1 ] || return "$rc"
+  if fm_lock_try_acquire "$lockdir"; then
+    return 0
+  fi
 
   fm_current_pid caller_pid || return 1
   # shellcheck disable=SC2016 # Positional parameters expand in the child shell.
@@ -1388,8 +1351,6 @@ fm_lock_acquire_wait_bounded() {
   # helper cleanup cannot manufacture a false contention advisory.
   if fm_lock_try_acquire "$lockdir"; then
     return 0
-  else
-    [ "$?" -ne 2 ] || return 2
   fi
   if [ "$rc" -eq 124 ]; then
     owner_pid=$(cat "$lockdir/pid" 2>/dev/null || true)
@@ -2170,7 +2131,7 @@ fm_wake_clean_field() {
 
 fm_wake_append() {
   local status=0
-  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK" || return
+  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
   fm_wake_append_locked "$@" || status=$?
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
   return "$status"
@@ -2204,18 +2165,10 @@ fm_wake_append_locked() {
       ''|*[!0-9]*) seq=0 ;;
     esac
     seq=$((seq + 1))
-    if _fm_wake_prepare_file "$seq_file"; then
-      printf '%s\n' "$seq" > "$seq_file" || status=$?
-    else
-      status=$?
-    fi
+    printf '%s\n' "$seq" > "$seq_file" || status=$?
   fi
   if [ "$status" -eq 0 ]; then
-    if _fm_wake_prepare_file "$FM_WAKE_QUEUE"; then
-      printf '%s\t%s\t%s\t%s\t%s\n' "$epoch" "$seq" "$kind" "$clean_key" "$clean_payload" >> "$FM_WAKE_QUEUE" || status=$?
-    else
-      status=$?
-    fi
+    printf '%s\t%s\t%s\t%s\t%s\n' "$epoch" "$seq" "$kind" "$clean_key" "$clean_payload" >> "$FM_WAKE_QUEUE" || status=$?
   fi
   if [ "$status" -ne 0 ]; then
     _fm_wake_append_recovery_restore_locked || true
@@ -2238,7 +2191,7 @@ fm_wake_queued_keys() {
     signal|stale|check|heartbeat) ;;
     *) printf 'fm_wake_queued_keys: invalid wake kind: %s\n' "$kind" >&2; return 2 ;;
   esac
-  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK" || return
+  fm_lock_acquire_wait "$FM_WAKE_QUEUE_LOCK"
   fm_wake_queued_keys_locked "$kind"
   fm_lock_release "$FM_WAKE_QUEUE_LOCK"
 }
@@ -2351,9 +2304,9 @@ fm_wake_restore_queue() {
   local drained=$1 restore
   restore="$STATE/.wake-queue.restore.$(fm_current_pid)"
   if [ -e "$FM_WAKE_QUEUE" ]; then
-    cat "$drained" "$FM_WAKE_QUEUE" > "$restore" && _fm_atomic_replace "$restore" "$FM_WAKE_QUEUE"
+    cat "$drained" "$FM_WAKE_QUEUE" > "$restore" && mv "$restore" "$FM_WAKE_QUEUE"
   else
-    _fm_atomic_replace "$drained" "$FM_WAKE_QUEUE"
+    mv "$drained" "$FM_WAKE_QUEUE"
   fi
 }
 

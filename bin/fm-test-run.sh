@@ -433,7 +433,7 @@ family_for_basename() {
     fm-remote-entrypoint.test.sh|fm-remote-secondmate-parent-binding.test.sh|\
     fm-send-remote-delivery.test.sh|fm-spawn-pool-base-freshen.test.sh|\
     fm-test-fixture-cleanup.test.sh|fm-test-fixtures.test.sh|\
-    fm-voice-relay.test.sh|fm-brain-desk.test.sh|fm-wake-drain-open-decisions-cursor.test.sh|\
+    fm-voice-relay.test.sh|fm-brain-desk.test.sh|fm-courier-pickup.test.sh|fm-wake-drain-open-decisions-cursor.test.sh|\
     fm-wake-drain-open-decisions.test.sh|fm-wake-drain-outcome-backstop.test.sh)
       printf '%s\n' standalone
       ;;
@@ -1595,6 +1595,9 @@ families_for_changed_path() {
       ;;
     bin/fm-brain-desk.py|tests/fm-brain-desk-cases.py)
       printf '%s\n' __script__:fm-brain-desk.test.sh
+      ;;
+    bin/fm-courier-pickup.py|bin/fm-courier-pickup-service.sh|tests/fm-courier-pickup-cases.py)
+      printf '%s\n' __script__:fm-courier-pickup.test.sh
       ;;
     bin/fm-inbox.sh|bin/fm_inbox_conversation.py|tests/fm-inbox-conversation-cases.py)
       printf '%s\n' __script__:fm-inbox-conversation.test.sh

@@ -1357,6 +1357,7 @@ Opting into this App for CI requires a no-mistakes build with the `github_ci_rea
 [`bin/fm-brain-desk.py`](../bin/fm-brain-desk.py) is Firstmate's client for the installed brain rooms: desk questions, the morning-brief `brainctl` verbs, and the journal-input export; its help owns invocation, endpoints, bounds and result validation.
 It is off unless `FM_BRAIN_DESK_ENABLED=1`, so callers keep their direct brain path until the rooms are activated, and an enabled but unavailable room refuses rather than falling back to raw brain access.
 Phone and text notifications, including their optional courier route, belong to firstmate-voice's `fm-notify`; the wedge alarm reaches it through a `command:` directive ([wedge-alarm.md](wedge-alarm.md#channels)).
+For inbound courier conversations, follow the [pickup activation runbook](voice-relay.md#running-the-courier-pickup); [`bin/fm-courier-pickup.py`](../bin/fm-courier-pickup.py)'s `--help` owns its binding requirements.
 
 ## Toolchain
 
