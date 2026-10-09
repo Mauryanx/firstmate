@@ -1,0 +1,43 @@
+Firstmate pickup: observed courier file operations from real CLI executions.
+Each trace includes child processes. All credentials and records belong to disposable fixtures.
+Full traces are retained alongside this excerpt.
+
+pickup-capture.strace
+3869766 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbound>
+3869766 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbound>
+3869766 openat(4<<disposable-courier-root>/srv/courier/inbound>, "000000000001-message-manual-1.json", O_RDONLY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC) = 5<<disposable-courier-root>/srv/courier/inbound/000000000001-message-manual-1.json>
+3869766 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbound>
+3869766 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/outbox>
+3869766 openat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-75a48dbfb7eb2d18bbd1022a50bf52b3.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5<<disposable-courier-root>/srv/courier/outbox/.fm-pickup-75a48dbfb7eb2d18bbd1022a50bf52b3.tmp>
+3869766 renameat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-75a48dbfb7eb2d18bbd1022a50bf52b3.tmp", 4<<disposable-courier-root>/srv/courier/outbox>, "st-000000000001-25351b9eb4076ca4.stage.json") = 0
+3869766 unlinkat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-75a48dbfb7eb2d18bbd1022a50bf52b3.tmp", 0) = -1 ENOENT (No such file or directory)
+
+pickup-policy-refusal.strace
+3874356 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbound>
+3874356 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbox>
+3874356 newfstatat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/etc/courier/policy.toml", {st_mode=S_IFREG|0660, st_size=42, ...}, AT_SYMLINK_NOFOLLOW) = 0
+3874356 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/outbox>
+3874356 openat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-70f0a621b7032a1a68f801cc56d3202f.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5<<disposable-courier-root>/srv/courier/outbox/.fm-pickup-70f0a621b7032a1a68f801cc56d3202f.tmp>
+3874356 renameat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-70f0a621b7032a1a68f801cc56d3202f.tmp", 4<<disposable-courier-root>/srv/courier/outbox>, "st-000000000002-11da8e064f6d83a4.stage.json") = 0
+3874356 unlinkat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-70f0a621b7032a1a68f801cc56d3202f.tmp", 0) = -1 ENOENT (No such file or directory)
+
+pickup-reply.strace
+3875321 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbox>
+3875321 newfstatat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/etc/courier/policy.toml", {st_mode=S_IFREG|0600, st_size=42, ...}, AT_SYMLINK_NOFOLLOW) = 0
+3875321 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/etc/courier/policy.toml", O_RDONLY|O_CLOEXEC) = 4<<disposable-courier-root>/etc/courier/policy.toml>
+3875321 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/outbox>
+3875321 openat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-e7b247b6ef8779207e31f708b29c695d.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5<<disposable-courier-root>/srv/courier/outbox/.fm-pickup-e7b247b6ef8779207e31f708b29c695d.tmp>
+3875321 renameat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-e7b247b6ef8779207e31f708b29c695d.tmp", 4<<disposable-courier-root>/srv/courier/outbox>, "fm-577f0c70954198e6d4db5f6db2ef6661dd94c95f0b5ef998.json") = 0
+3875321 unlinkat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-e7b247b6ef8779207e31f708b29c695d.tmp", 0) = -1 ENOENT (No such file or directory)
+3875321 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbox>
+3875321 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbound>
+3875321 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbox>
+
+pickup-settle.strace
+3875802 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbox>
+3875802 openat(4<<disposable-courier-root>/srv/courier/inbox>, "result-fm-577f0c70954198e6d4db5f6db2ef6661dd94c95f0b5ef998.manual.json", O_RDONLY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC) = 5<<disposable-courier-root>/srv/courier/inbox/result-fm-577f0c70954198e6d4db5f6db2ef6661dd94c95f0b5ef998.manual.json>
+3875802 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/inbound>
+3875802 openat(AT_FDCWD</home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4FHFHD0EJJR9Z226W7BADVC>, "<disposable-courier-root>/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4<<disposable-courier-root>/srv/courier/outbox>
+3875802 openat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-676a6531b23b2fa48c681d5f379db123.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5<<disposable-courier-root>/srv/courier/outbox/.fm-pickup-676a6531b23b2fa48c681d5f379db123.tmp>
+3875802 renameat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-676a6531b23b2fa48c681d5f379db123.tmp", 4<<disposable-courier-root>/srv/courier/outbox>, "st-000000000003-3cb159b8822d9c90.stage.json") = 0
+3875802 unlinkat(4<<disposable-courier-root>/srv/courier/outbox>, ".fm-pickup-676a6531b23b2fa48c681d5f379db123.tmp", 0) = -1 ENOENT (No such file or directory)

@@ -1,0 +1,92 @@
+{
+  "accepted_input": {
+    "authenticated_principal": "captain",
+    "committed_transcript": "Please acknowledge the isolated pickup.\n[attachment: /srv/courier/inbox/media/fixture.txt (text/plain, 21 bytes)]",
+    "conversation_id": "text",
+    "correction_of": null,
+    "created_at": "2026-10-09T01:00:00Z",
+    "previous_turn_id": null,
+    "question_binding": null,
+    "request_id": "imsg-req-manual-1",
+    "revision": 1,
+    "turn_id": "imsg-manual-1"
+  },
+  "outgoing_reply": {
+    "attachments": [],
+    "channel": "imessage",
+    "id": "fm-577f0c70954198e6d4db5f6db2ef6661dd94c95f0b5ef998",
+    "purpose": "reply",
+    "text": "The isolated pickup and attachment reference reached Firstmate.",
+    "to": "+12025550101"
+  },
+  "outbox_mode": "0o640",
+  "stages": [
+    {
+      "id": "st-000000000001-25351b9eb4076ca4",
+      "message_id": "manual-1",
+      "stage": "filed"
+    },
+    {
+      "id": "st-000000000002-11da8e064f6d83a4",
+      "message_id": "manual-1",
+      "stage": "working"
+    },
+    {
+      "id": "st-000000000003-3cb159b8822d9c90",
+      "message_id": "manual-1",
+      "stage": "done"
+    }
+  ],
+  "courier_files_unchanged": {
+    "private/ledger.json": {
+      "sha256": "cc8bf0a9b5a4ebf37d8a8667a197fc48fbba5d90043914347589a5bf9682a0fa",
+      "mode": "0o600",
+      "uid": 1100,
+      "inode": 451677,
+      "mtime_ns": 1791531205500010950
+    },
+    "srv/courier/inbound/000000000001-message-manual-1.json": {
+      "sha256": "f71d625ba2bfc081c5b7b423f1545d46534fee37f1915e5f8b358cb9b6646aff",
+      "mode": "0o640",
+      "uid": 1100,
+      "inode": 451679,
+      "mtime_ns": 1791531205500193067
+    },
+    "srv/courier/inbox/media/fixture.txt": {
+      "sha256": "e28269a4b5c06f06a2e9c007894acf11a576b63fb4b9aaf2aec5792bb900469a",
+      "mode": "0o600",
+      "uid": 1100,
+      "inode": 451678,
+      "mtime_ns": 1791531205500079153
+    },
+    "etc/courier/policy.toml": {
+      "sha256": "7116b3e3554e9f0460d3df8c1cd1839d97d481eb05bf775be30d27d00fdd5487",
+      "mode": "0o600",
+      "uid": 1100,
+      "inode": 451675,
+      "mtime_ns": 1791531205499858755
+    },
+    "etc/courier/credential.json": {
+      "sha256": "9f7f4d62fd474731eb5ca8944b41eadd135d06916c024294674ed76706b7f38c",
+      "mode": "0o600",
+      "uid": 1100,
+      "inode": 451676,
+      "mtime_ns": 1791531205499940960
+    }
+  },
+  "receipt_unchanged": {
+    "srv/courier/inbox/result-fm-577f0c70954198e6d4db5f6db2ef6661dd94c95f0b5ef998.manual.json": {
+      "sha256": "f048e95f3487940c63412b539b2b1e797b0371fb331a5b9a9b22aae4cd835a41",
+      "mode": "0o640",
+      "uid": 1100,
+      "inode": 452168,
+      "mtime_ns": 1791531214188684553
+    }
+  },
+  "file_syscall_traces": [
+    "pickup-capture.strace",
+    "pickup-policy-refusal.strace",
+    "pickup-reply.strace",
+    "pickup-settle.strace"
+  ]
+}

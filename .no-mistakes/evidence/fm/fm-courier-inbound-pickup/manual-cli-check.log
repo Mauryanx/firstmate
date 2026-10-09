@@ -1,0 +1,8 @@
+capture: fm-courier-pickup: filed manual-1 as request imsg-req-manual-1
+policy-refusal: fm-courier-pickup: courier outbox unavailable: courier policy is not root-owned and protected
+reply: 
+settle: 
+CLI exchange: {"transcript": "Please acknowledge the isolated pickup.\n[attachment: /srv/courier/inbox/media/fixture.txt (text/plain, 21 bytes)]", "outgoing_reply": {"attachments": [], "channel": "imessage", "id": "fm-577f0c70954198e6d4db5f6db2ef6661dd94c95f0b5ef998", "purpose": "reply", "text": "The isolated pickup and attachment reference reached Firstmate.", "to": "+12025550101"}, "outbox_mode": "0o640", "stages": [{"id": "st-000000000001-25351b9eb4076ca4", "message_id": "manual-1", "stage": "filed"}, {"id": "st-000000000002-11da8e064f6d83a4", "message_id": "manual-1", "stage": "working"}, {"id": "st-000000000003-3cb159b8822d9c90", "message_id": "manual-1", "stage": "done"}]}
+PASS: file syscall traces show no credential, ledger or media opens; read-only inbound and receipts are unchanged
+second pickup: exit=1; fm-courier-pickup: another pickup holds this home
+missing home: exit=1; fm-courier-pickup: explicit FM_HOME is required
