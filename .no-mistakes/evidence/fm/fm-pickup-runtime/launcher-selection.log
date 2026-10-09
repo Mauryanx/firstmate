@@ -1,0 +1,4 @@
+Only changed product path: bin/fm-courier-pickup-service.sh
+$ bin/fm-test-run.sh --list --changed --base aff6f9bbacc4d74e76325b1cc5da1c24f924883d
+tests/fm-courier-pickup.test.sh
+The real runner selected the pickup suite for the launcher-only change.

@@ -1,0 +1,48 @@
+FM_TEST_BEGIN 2026-10-09T08:52:32Z tests/fm-courier-pickup.test.sh family=standalone expected_gate_skip=none
+PASS: without FM_NOTIFY_COURIER=1 the pickup exits 3 and touches nothing
+PASS: a spool record becomes exactly one turn and one wake, acknowledged filed; a rescan files nothing again
+PASS: an operational message-read error preserves the cursor and files the same record after restart
+PASS: duplicate, wrong-mode, mismatched, extra-field, duplicate-key, NaN, symlinked and hard-linked records are refused
+PASS: a record that vanishes between listing and open is refused and passed
+PASS: accepted turns show working; a numbered question is texted with its poll; its stage follows the sent receipt
+PASS: a vote on a question it asked is filed once with that question's binding; other votes are not filed
+PASS: an operational vote-read error preserves ordering and captures the original choice after restart
+PASS: a question delayed two days keeps its watch across restart and accepts a vote after delivery
+PASS: an empty vote leaves the question watch available for a later nonempty vote across restart
+PASS: direct and propagated progress preserve question rank; a late original reply preserves its follower link
+PASS: a final answer marks done; stages are published in order and never backwards
+PASS: an unrelated text preserves the established vote follower and its original done reaction
+PASS: a vote answer with together receipt preserves the original done reaction and clears its answer flag
+PASS: a text answer with together receipt preserves the original done reaction and clears its answer flag
+PASS: a vote answer with delayed receipt preserves the original done reaction and clears its answer flag
+PASS: a text answer with delayed receipt preserves the original done reaction and clears its answer flag
+PASS: a text answer with refused receipt preserves the original done reaction and clears its answer flag
+PASS: a queued second question preserves the first question's text answer binding and done reaction
+PASS: a refused second question preserves the first question's vote answer binding and done reaction
+PASS: a question without poll options awaits an answer at claim and clears the flag on failure
+PASS: a pruned receipt is recovered by byte-identical same-ID republication, limited to once per 60 s
+PASS: an unknown poll receipt holds the queue, playback, reaction and watch until its sent receipt
+PASS: unsupported failed and refused receipt results do not settle a question or release later replies
+PASS: an unpublished numbered question ignores unrelated text and finishes only after its later answer
+PASS: a numbered question whose outbox publication fails stays ineligible until publication succeeds
+PASS: an unpublished unnumbered question ignores unrelated text and finishes only after its later answer
+PASS: a unnumbered question whose outbox publication fails stays ineligible until publication succeeds
+PASS: a consumed text with an unknown result holds later portions past 300 s until a terminal receipt
+PASS: a refused poll has no vote watch; a queued failure reaction waits for its own notice receipt
+PASS: a refused question retires answer eligibility and does not follow a later unrelated request
+PASS: a delivered poll expires after its delivery-based watch lifetime
+PASS: an empty message is told NOT_TEXT and marked failed; an unsaved attachment is filed with its notice
+PASS: a message that cannot be filed is retried, then told the failure sentence and marked failed
+PASS: a 16001-character transcript within the wire byte limit attempts capture and receives the normal failure notice and stage
+PASS: a vote that exhausts capture retries sends the failure notice without a synthetic-message reaction
+pickup latency (rename to queued wake), seconds: 0.790 0.578 0.558 0.577 0.538
+PASS: each record reaches the wake queue in under a second while the pickup runs
+slow-failure stage after 85.7 s
+PASS: a hung capture sends one failure notice before its failed stage, all within 120 s of pickup
+PASS: the spool is left exactly as the courier left it after deleting its vanished record
+ok - courier pickup: one turn per record, refusals, replies, polls, stages and latency
+ok - courier pickup service: valid unit runs this pickup for its home, refuses unsafe paths
+FM_TEST_END 2026-10-09T08:56:57Z tests/fm-courier-pickup.test.sh exit=0 duration_ms=265097 gate_skip=false
+FM_TEST_SUMMARY total=1 failed=0 skipped_gate=0 duration_ms=265303
+FM_TEST_SUMMARY_FAMILY family=standalone count=1 duration_ms=265097 failed=0
+FM_TEST_SLOWEST rank=1 script=tests/fm-courier-pickup.test.sh duration_ms=265097

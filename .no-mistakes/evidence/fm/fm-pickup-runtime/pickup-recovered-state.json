@@ -1,0 +1,26 @@
+{
+  "cursor": 2,
+  "handled": {
+    "message-manual1": 1791507600,
+    "message-manual2": 1791507600
+  },
+  "marks": {
+    "manual1": {
+      "moved": 1791536133.4313045,
+      "request": "imsg-req-manual1",
+      "shown": "filed",
+      "stage": "filed"
+    },
+    "manual2": {
+      "moved": 1791536133.9633055,
+      "request": "imsg-req-manual2",
+      "shown": "filed",
+      "stage": "filed"
+    }
+  },
+  "pending": null,
+  "polls": {},
+  "stages": 2,
+  "texts": [],
+  "version": 1
+}

@@ -1,0 +1,14 @@
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Get:1 https://mirror.hetzner.com/ubuntu/packages resolute-updates/main amd64 systemd amd64 259.5-0ubuntu3.4 [3129 kB]
+Fetched 3129 kB in 0s (8601 kB/s)
+isolated manager exit=1
+
+Workspace-local systemd package extracted without installing or changing host packages.
+Attempt: bwrap --unshare-user --unshare-pid --unshare-cgroup --ro-bind / / --bind <worktree> <worktree> --proc /proc --die-with-parent <workspace-systemd> --user --unit=default.target
+HOME, XDG_CONFIG_HOME, XDG_RUNTIME_DIR and SYSTEMD_UNIT_PATH isolated under this worktree.
+Systemd startup syscall evidence (strace):
+2802973 openat(AT_FDCWD, "/sys/fs/cgroup/init.scope/cgroup.procs", O_WRONLY|O_NOCTTY|O_CLOEXEC) = -1 EACCES (Permission denied)
+2802973 exit_group(1)                   = ?
+An isolated manager cannot join its cgroup with this process authority; host cgroup mounts were kept read-only to protect operator state. A disposable systemd VM or an independently delegated writable cgroup is required for supervised restart and boot checks.
