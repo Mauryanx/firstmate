@@ -35,7 +35,8 @@ down before the first attempt so every retry is byte-identical. capture saves
 the vc- note and appends its check wake, which the watcher's conversation ring
 surfaces within about a second (docs/watcher-continuity.md). A capture that
 fails is retried after 5 and 20 seconds, then, unless the transport shows it
-landed, the captain is told dispatch FAILURE text. An empty transcript is not
+landed, the captain is told dispatch FAILURE text. A restart retries the pending
+capture immediately, retaining its attempt count. An empty transcript is not
 filed and he is told NOT_TEXT. With every transport call bounded at 10 s, the
 failure notice is normally queued within about 75 s of reading the message,
 and its failed stage follows the notice's sent receipt. If the notice waits
@@ -73,7 +74,8 @@ firstmate-voice follow-up), as the direct bridge does today.
 Texts go one at a time in order: the next is published only after
 the courier's terminal result receipt for the previous one.
 If a consumed request has no result receipt, pickup republishes its identical
-saved request at most once per 60 s to recover the receipt using the same ID.
+saved request after 60 s to recover the receipt using the same ID; a last
+publication timestamp ahead of wall time makes recovery due immediately.
 A sent receipt records playback completed and
 moves the stage the reply implies (receipt/progress working, question question,
 error failed, final answer done). Stages are published as ID.stage.json in
@@ -83,8 +85,12 @@ ranked alongside done and both terminal, as the courier applies them.
 FM_COURIER_ROOT (default /) relocates srv/courier and etc/courier for offline
 tests; FM_COURIER_USER (default courier) names the record and receipt owner.
 The binding is FM_HOME/state/imessage/binding.json, exactly
-{conversation_id, credential, destination: "imessage"}. Startup refusals exit 1,
-usage 2; per-tick failures are logged and the loop continues.
+{conversation_id, credential, destination: "imessage"} as fm-inbox.sh
+conversation bind returned it. Startup refusals exit 1, usage 2; per-tick
+failures are logged and the loop continues. Reply reads and capture retries are
+paced on the monotonic clock, so a wall-clock step neither stalls nor rushes
+them. Wall time stamps persistent records and governs their expiry and receipt
+recovery.
 """
 
 import calendar
@@ -230,8 +236,9 @@ def epoch(text):
 
 
 class Pickup:
-    def __init__(self, home, root, courier_user, now=time.time):
-        self.home, self.now = home, now
+    def __init__(self, home, root, courier_user, now=time.time, clock=time.monotonic):
+        # clock keeps reply reads and capture retries independent of wall-clock steps.
+        self.home, self.now, self.clock = home, now, clock
         self.inbound = root / 'srv/courier/inbound'
         self.outbox = root / 'srv/courier/outbox'
         self.receipts = root / 'srv/courier/inbox'
@@ -259,6 +266,7 @@ class Pickup:
         if self.s.get('version') != 1:
             raise Refused('unsupported pickup state')
         self.next_reply = 0.0
+        self.retry_at = 0.0  # The pending capture's next attempt; a restart retries at once.
         self.quiet = {}
         # The turn this process last filed. Only this single-instance peer files
         # into the iMessage conversation, so it is the conversation's tail; a
@@ -402,13 +410,14 @@ class Pickup:
                                  'created': record['published_at'], 'notice': None,
                                  'asked': poll['asked'], 'binding': poll['binding'], 'question': poll['question']}
             self.s['polls'].pop(record['request_id'])
-        self.s['pending'].update(attempts=0, not_before=0, turn=None, request=None, previous=None)
+        self.retry_at = 0.0
+        self.s['pending'].update(attempts=0, turn=None, request=None, previous=None)
         self.save()
 
     def file(self):
         """Try the pending capture once it is due; whether the queue moved past it."""
         entry = self.s['pending']
-        if entry['not_before'] > self.now():
+        if self.retry_at > self.clock():
             return False
         try:
             if entry['turn'] is None:
@@ -430,7 +439,7 @@ class Pickup:
             self.tail = None
             entry['attempts'] += 1
             if entry['attempts'] <= len(RETRY_DELAYS):
-                entry['not_before'] = self.now() + RETRY_DELAYS[entry['attempts'] - 1]
+                self.retry_at = self.clock() + RETRY_DELAYS[entry['attempts'] - 1]
                 log('filing %s failed (attempt %d): %s' % (entry['message'], entry['attempts'], exc))
                 self.save()
                 return False
@@ -589,7 +598,8 @@ class Pickup:
                          if entry['mark'] and entry['mark'][1] == 'question' else {})
             result = self.receipt(entry['id'])
             if result is None and (entry['published'] is None
-                                   or (self.now() - entry['published'] >= RECEIPT_RETRY
+                                   # A publish time ahead of now means the clock stepped back.
+                                   or (not 0 <= self.now() - entry['published'] < RECEIPT_RETRY
                                        and not os.path.lexists(self.outbox / (entry['id'] + '.json')))):
                 row = entry.get('wire')
                 if row is None:
@@ -647,8 +657,8 @@ class Pickup:
             self.clear('pick')
         except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
             self.once('pick', 'inbound spool unavailable: %s' % exc)
-        if self.s['pending'] is None and (force_replies or self.now() >= self.next_reply):
-            self.next_reply = self.now() + REPLY_EVERY
+        if self.s['pending'] is None and (force_replies or self.clock() >= self.next_reply):
+            self.next_reply = self.clock() + REPLY_EVERY
             try:
                 self.replies()
                 self.clear('replies')
