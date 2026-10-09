@@ -32,13 +32,15 @@ pilot-init (owner): {publication_policy: "owner-authored-elevenlabs-v1"}, or
     therefore needs no reset of state/voice-conversation/policy.json.
 
 bind (owner): {conversation_id, authenticated_principal, destination?}. Returns
-    a random transport credential bound to this conversation and its authenticated
-    principal. destination defaults to "elevenlabs" and must be one the live
-    policy authorizes (a lab authorizes only the default); it is fixed at the
-    first bind, and publish refuses any reply for another destination, so a
+    {conversation_id, credential, destination?}: a random transport credential
+    bound to this conversation and its authenticated principal, plus the bound
+    destination when it is not the default. Transport calls carry only the
+    conversation_id and credential. destination defaults to "elevenlabs" and
+    must be one the live policy authorizes (a lab authorizes only the default);
+    it is fixed at the first bind, and publish refuses any reply for another destination, so a
     reply meant for a call never goes out as a text and a text never reaches a
     call. A conversation bound to a
-    destination other than "elevenlabs" reports it from accept and audit; one
+    destination other than "elevenlabs" reports it from bind, accept and audit; one
     bound to the default carries no such field, exactly as before it existed.
     Repeat bind by the session holding the lock is idempotent; a different
     principal or destination cannot adopt the conversation.
@@ -362,7 +364,7 @@ class Conversation:
                 self.c['destination'] = destination
             self.j['conversations'][self.cid] = self.c
             self.save()
-        return {'conversation_id': self.cid, 'credential': self.c['credential']}
+        return self.scoped({'conversation_id': self.cid, 'credential': self.c['credential']})
 
     def wake(self, key):
         env = dict(os.environ, FM_HOME=str(self.home))

@@ -83,8 +83,11 @@ ranked alongside done and both terminal, as the courier applies them.
 FM_COURIER_ROOT (default /) relocates srv/courier and etc/courier for offline
 tests; FM_COURIER_USER (default courier) names the record and receipt owner.
 The binding is FM_HOME/state/imessage/binding.json, exactly
-{conversation_id, credential, destination: "imessage"}. Startup refusals exit 1,
-usage 2; per-tick failures are logged and the loop continues.
+{conversation_id, credential, destination: "imessage"} as fm-inbox.sh
+conversation bind returned it. Startup refusals exit 1, usage 2; per-tick
+failures are logged and the loop continues. Reply reads and capture retries are
+paced on the monotonic clock, so a wall-clock step neither stalls nor rushes
+them; wall time only stamps records.
 """
 
 import calendar
@@ -230,8 +233,10 @@ def epoch(text):
 
 
 class Pickup:
-    def __init__(self, home, root, courier_user, now=time.time):
-        self.home, self.now = home, now
+    def __init__(self, home, root, courier_user, now=time.time, clock=time.monotonic):
+        # now stamps records; clock alone schedules this process's intervals,
+        # so a wall-clock step never stalls or rushes a reply read or a retry.
+        self.home, self.now, self.clock = home, now, clock
         self.inbound = root / 'srv/courier/inbound'
         self.outbox = root / 'srv/courier/outbox'
         self.receipts = root / 'srv/courier/inbox'
@@ -259,6 +264,7 @@ class Pickup:
         if self.s.get('version') != 1:
             raise Refused('unsupported pickup state')
         self.next_reply = 0.0
+        self.retry_at = 0.0  # The pending capture's next attempt; a restart retries at once.
         self.quiet = {}
         # The turn this process last filed. Only this single-instance peer files
         # into the iMessage conversation, so it is the conversation's tail; a
@@ -402,13 +408,14 @@ class Pickup:
                                  'created': record['published_at'], 'notice': None,
                                  'asked': poll['asked'], 'binding': poll['binding'], 'question': poll['question']}
             self.s['polls'].pop(record['request_id'])
-        self.s['pending'].update(attempts=0, not_before=0, turn=None, request=None, previous=None)
+        self.retry_at = 0.0
+        self.s['pending'].update(attempts=0, turn=None, request=None, previous=None)
         self.save()
 
     def file(self):
         """Try the pending capture once it is due; whether the queue moved past it."""
         entry = self.s['pending']
-        if entry['not_before'] > self.now():
+        if self.retry_at > self.clock():
             return False
         try:
             if entry['turn'] is None:
@@ -430,7 +437,7 @@ class Pickup:
             self.tail = None
             entry['attempts'] += 1
             if entry['attempts'] <= len(RETRY_DELAYS):
-                entry['not_before'] = self.now() + RETRY_DELAYS[entry['attempts'] - 1]
+                self.retry_at = self.clock() + RETRY_DELAYS[entry['attempts'] - 1]
                 log('filing %s failed (attempt %d): %s' % (entry['message'], entry['attempts'], exc))
                 self.save()
                 return False
@@ -589,7 +596,8 @@ class Pickup:
                          if entry['mark'] and entry['mark'][1] == 'question' else {})
             result = self.receipt(entry['id'])
             if result is None and (entry['published'] is None
-                                   or (self.now() - entry['published'] >= RECEIPT_RETRY
+                                   # A publish time ahead of now means the clock stepped back.
+                                   or (not 0 <= self.now() - entry['published'] < RECEIPT_RETRY
                                        and not os.path.lexists(self.outbox / (entry['id'] + '.json')))):
                 row = entry.get('wire')
                 if row is None:
@@ -647,8 +655,8 @@ class Pickup:
             self.clear('pick')
         except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
             self.once('pick', 'inbound spool unavailable: %s' % exc)
-        if self.s['pending'] is None and (force_replies or self.now() >= self.next_reply):
-            self.next_reply = self.now() + REPLY_EVERY
+        if self.s['pending'] is None and (force_replies or self.clock() >= self.next_reply):
+            self.next_reply = self.clock() + REPLY_EVERY
             try:
                 self.replies()
                 self.clear('replies')
