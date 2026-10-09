@@ -550,6 +550,17 @@ Opting into this App for CI requires a no-mistakes build with the `github_ci_rea
 
 [`bin/fm-brain-desk.py`](../bin/fm-brain-desk.py) is Firstmate's client for the installed brain rooms: desk questions, the morning-brief `brainctl` verbs, and the journal-input export; its help owns invocation, endpoints, bounds and result validation.
 It is off unless `FM_BRAIN_DESK_ENABLED=1`, so callers keep their direct brain path until the rooms are activated, and an enabled but unavailable room refuses rather than falling back to raw brain access.
+
+Under the rooms, the nightly brain journal at 04:05 UTC reads only the journal input, so schedule the export daily on a Linux host with systemd through the `fm-brain-journal-export.timer` user unit that [`bin/fm-brain-journal-export-service.sh`](../bin/fm-brain-journal-export-service.sh) renders; its header owns what the timer and service contain.
+Run these commands as the Firstmate account; the timer fires only while that account's user manager runs, so it must linger (`loginctl show-user "$USER" -p Linger` prints `Linger=yes`, otherwise root runs `loginctl enable-linger <account>` once).
+
+1. Install both units for this home with `FM_HOME=<absolute home> bin/fm-brain-journal-export-service.sh install`, retain the printed unit paths for rollback, then run `systemctl --user daemon-reload`.
+2. Enable the schedule as part of room activation with `systemctl --user enable --now fm-brain-journal-export.timer`, and optionally run one export now with `systemctl --user start fm-brain-journal-export.service`.
+3. Read the next run with `systemctl --user list-timers fm-brain-journal-export.timer`, the last result with `systemctl --user status fm-brain-journal-export.service`, and its output with `journalctl --user -u fm-brain-journal-export.service`; a refused export leaves the service failed until the next run.
+4. After moving the checkout or changing `FM_HOME`, repeat step 1; updating Firstmate needs no restart because each run starts fresh.
+
+To roll back, run `systemctl --user disable --now fm-brain-journal-export.timer`, delete both unit files at the paths printed by `install`, and run `systemctl --user daemon-reload`; files already exported stay in the journal input.
+[`tests/fm-brain-desk.test.sh`](../tests/fm-brain-desk.test.sh) checks the installed units' effective settings, schedule and export command, and verifies systemd syntax and the calendar when `systemd-analyze` is available; firing under a live user manager is not covered offline.
 Phone and text notifications, including their optional courier route, belong to firstmate-voice's `fm-notify`; the wedge alarm reaches it through a `command:` directive ([wedge-alarm.md](wedge-alarm.md#channels)).
 For inbound courier conversations, follow the [pickup activation runbook](voice-relay.md#running-the-courier-pickup); [`bin/fm-courier-pickup.py`](../bin/fm-courier-pickup.py)'s `--help` owns its binding requirements.
 
