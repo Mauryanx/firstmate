@@ -700,13 +700,16 @@ DIRS
 # A drain that cannot print the section, because its output is already
 # closed, has presented nothing, so the rows stay unread for the next drain.
 test_branch_outcomes_stay_unread_when_the_drain_cannot_print() {
-  local home drained
+  local home drained rc=0
   home="$TMP_ROOT/drain-closed"
   mkdir -p "$home/state" "$home/config"
   : > "$home/config/supervision-host"
   FM_HOME="$home" "$ROOT/bin/fm-branch-outcome.sh" append --task demo --verdict routine --summary 'merged the docs fix' >/dev/null \
     || fail "fixture: could not record the routine outcome"
-  FM_HOME="$home" "$FAKE_CLAUDE" -c '"$0" >&- 2>/dev/null' "$ROOT/bin/fm-wake-drain.sh" || true
+  # Invoke Bash directly: the script's /usr/bin/env shebang can reopen a
+  # closed stdout as /dev/null, making a discarded write appear successful.
+  FM_HOME="$home" "$FAKE_CLAUDE" -c 'bash "$0" >&- 2>/dev/null' "$ROOT/bin/fm-wake-drain.sh" || rc=$?
+  [ "$rc" -ne 0 ] || fail "a drain with closed stdout must report presentation failure"
   drained=$(FM_HOME="$home" "$FAKE_CLAUDE" -c '"$0" 2>&1' "$ROOT/bin/fm-wake-drain.sh")
   assert_contains "$drained" "[seq 1] demo: merged the docs fix" "a routine outcome a drain could not print must follow on the next drain"
   drained=$(FM_HOME="$home" "$FAKE_CLAUDE" -c '"$0" 2>&1' "$ROOT/bin/fm-wake-drain.sh")

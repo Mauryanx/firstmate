@@ -2273,8 +2273,11 @@ awk '/^argv:$/ { print; exit } { print }' "$EP_SOURCE" > "$TMP_ROOT/episode-bad.
 ep_damage() { cat "$TMP_ROOT/episode-bad.source" > "$EP_SOURCE"; }
 ep_repair() { cat "$TMP_ROOT/episode-good.source" > "$EP_SOURCE"; }
 ep_reconcile() {  # <expected-fragment> <expected-exit-nonzero:0|1> <msg>; sets ep_out
-  local rc=0
-  ep_out=$(FM_PROCEVENT_LAUNCH_CONFIRM_SECONDS=2 pe "$HEP" reconcile) || rc=$?
+  local rc=0 window=2
+  # Only the intentionally broken registration needs a short failure window.
+  # Repair tests recovery, not a two-second startup guarantee under CI load.
+  [ "$2" -ne 0 ] || window=30
+  ep_out=$(FM_PROCEVENT_LAUNCH_CONFIRM_SECONDS=$window pe "$HEP" reconcile) || rc=$?
   assert_contains "$ep_out" "$1" "$3: $ep_out"
   if [ "$2" -eq 1 ]; then
     [ "$rc" -ne 0 ] || fail "$3 (reconcile exited 0): $ep_out"
@@ -2320,12 +2323,10 @@ ep_reconcile "started=1" 0 "a repaired source did not confirm"
 assert_contains "$ep_out" "failed=0" "a repaired source was still reported failed: $ep_out"
 [ "$(launch_failed_wake_count "$HEP" episode-src)" = 1 ] \
   || fail "a confirmed launch produced a launch-failed wake: $ep_out"
-for _ in $(seq 1 100); do
-  [ -e "$FM_PROCEVENT_CLAIM_ROOT/episode-src.claim" ] || break
-  sleep 0.1
-done
-[ ! -e "$FM_PROCEVENT_CLAIM_ROOT/episode-src.claim" ] \
-  || fail "the confirmed episode runner never released its claim"
+wait_capture "$HEP" episode-src \
+  || fail "the repaired source never captured its result and released its claim"
+[ "$(cat "$(first_result "$HEP" episode-src)")" = 'episode result' ] \
+  || fail "the repaired source did not capture its command's output"
 ep_damage
 ep_reconcile "failed=1" 1 "a source that failed again after recovering was not reported failed"
 [ "$(launch_failed_wake_count "$HEP" episode-src)" = 2 ] \

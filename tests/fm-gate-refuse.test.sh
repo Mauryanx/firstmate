@@ -293,7 +293,7 @@ run_spawn() {
 }
 
 test_spawn_refuses_and_admits() {
-  local home proj fakebin wt out rc
+  local home proj fakebin wt out rc admitted_id="spawn-ok-$$"
   home="$TMP/spawn-home"; mkdir -p "$home/data"
   proj=$(make_normal_repo "$TMP/spawn-proj")
   fm_git_add_origin "$proj" "$TMP/spawn-origin.git"
@@ -314,12 +314,14 @@ test_spawn_refuses_and_admits() {
   assert_absent "$home/state/spawn-backstop.meta" "spawn: refused backstop launch must not record meta"
 
   # no-regression: neutral cwd, marker UNSET, genuine isolated worktree.
-  out=$(run_spawn "$NORMAL_CWD" "$home" spawn-ok "$proj" "$wt" "$fakebin"); rc=$?
-  expect_code 0 "$rc" "spawn: a normal session must still spawn"
-  assert_contains "$out" "spawned spawn-ok" "spawn: normal launch should report success"
+  # The product's task temp root is keyed by task id across homes. Keep this
+  # admitted task unique so another test user's stale temp cannot answer it.
+  out=$(run_spawn "$NORMAL_CWD" "$home" "$admitted_id" "$proj" "$wt" "$fakebin"); rc=$?
+  expect_code 0 "$rc" "spawn: a normal session must still spawn: $out"
+  assert_contains "$out" "spawned $admitted_id" "spawn: normal launch should report success"
   assert_not_contains "$out" "$ENV_MSG" "spawn: normal launch must not print the gate refusal"
   assert_not_contains "$out" "$PATH_MSG" "spawn: normal launch must not print the backstop refusal"
-  assert_present "$home/state/spawn-ok.meta" "spawn: normal launch should record meta"
+  assert_present "$home/state/$admitted_id.meta" "spawn: normal launch should record meta"
   pass "fm-spawn: refuses on marker and gate-worktree backstop; a normal crew spawn is unaffected"
 }
 

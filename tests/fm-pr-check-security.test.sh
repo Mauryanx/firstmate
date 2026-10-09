@@ -3439,6 +3439,11 @@ SH
   pass "device re-record publication waits without rewriting its registration"
 }
 
+if [ -n "${FM_TEST_ONLY:-}" ]; then
+  "$FM_TEST_ONLY"
+  exit 0
+fi
+
 test_parser_matrix
 test_gitlab_merge_watch
 test_gerrit_merge_watch
