@@ -118,7 +118,7 @@ PARTLY_TEXT = 'Only the text of that message reached Firstmate; the attachment d
 PARTLY_FILED = 'Firstmate has that message, but not everything attached to it.'
 STAGE_OF_KIND = {'receipt': 'working', 'progress': 'working', 'question': 'question', 'error': 'failed'}
 RANK = {'filed': 0, 'working': 1, 'question': 2, 'done': 3, 'failed': 3}
-GAVE_UP = ('denied', 'denied-limit', 'closed', 'failed', 'refused')
+GAVE_UP = ('denied', 'denied-limit', 'closed')
 
 
 class Refused(Exception):
@@ -202,7 +202,7 @@ def validate(name, record):
         attachments = record['attachments']
         if (record['message_id'] != key or not isinstance(record['chat_id'], str) or not record['chat_id']
                 or not isinstance(record['created_at'], str) or not STAMP.fullmatch(record['created_at'])
-                or not isinstance(record['transcript'], str) or len(record['transcript']) > 16000
+                or not isinstance(record['transcript'], str)
                 or type(record['other_parts']) is not int or record['other_parts'] < 0
                 or not isinstance(attachments, list)
                 or not all(isinstance(a, dict) and set(a) == {'line', 'saved'} and isinstance(a['line'], str)

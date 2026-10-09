@@ -175,6 +175,7 @@ print('PASS: an operational message-read error preserves the cursor and files th
 
 # Duplicates and malformed records are refused, and the record after them is still filed in order.
 message('m1')  # the same message key again under a later sequence
+message('m-wire-limit', 'x' * 131072)
 message('m-bad-mode', mode=0o600)
 message('m-bad-seq', seq_in_body=999)
 message('m-extra', extra_field=True)
@@ -190,7 +191,7 @@ vanished_record = message('m-vanished', 'Removed by the courier after listing.')
 refused = fault_once(vanished_record, errno.ENOENT)
 assert len(notes()) == 2 and len(wakes()) == 2, notes()
 assert [r['turn_id'] for r in requests()] == ['imsg-m1', 'imsg-m2'] and requests()[1]['previous_turn_id'] == 'imsg-m1'
-for name in ('message-m1', 'm-bad-mode', 'm-bad-seq', 'm-extra', 'm-dupkey', 'm-nan', 'v-bad', 'm-link', 'm-hard', 'm-vanished'):
+for name in ('message-m1', 'm-wire-limit', 'm-bad-mode', 'm-bad-seq', 'm-extra', 'm-dupkey', 'm-nan', 'v-bad', 'm-link', 'm-hard', 'm-vanished'):
     assert name in refused.stderr, (name, refused.stderr)
 assert 'Ship the fix' not in refused.stderr  # refusals name the record, never his words
 print('PASS: duplicate, wrong-mode, mismatched, extra-field, duplicate-key, NaN, symlinked and hard-linked records are refused')
@@ -431,6 +432,16 @@ assert state['polls'][optional_poll['id']]['opened'] is None
 assert ('best-effort-poll', 'question') not in stages(), stages()
 assert next(row for row in conversation('poll', binding)['replies']
             if row['response_id'] == 'best-effort-question')['delivery']['state'] != 'completed'
+for alias in ('failed', 'refused'):
+    courier_receipt(optional_poll, result=alias)
+    once()
+    state = json.loads(state_path.read_text())
+    assert state['texts'][0]['id'] == optional_poll['id'] and not outgoing('.json'), state
+    assert state['marks']['best-effort-poll']['awaiting_answer']
+    assert state['polls'][optional_poll['id']]['opened'] is None
+    assert ('best-effort-poll', 'question') not in stages(), stages()
+    assert next(row for row in conversation('poll', binding)['replies']
+                if row['response_id'] == 'best-effort-question')['delivery']['state'] != 'completed'
 courier_receipt(optional_poll)
 settled = time.time()
 once()
@@ -454,6 +465,7 @@ assert [row['text'] for row in courier_takes()] == ['Waiting after the optional 
 once()
 assert ('best-effort-poll', 'done') in stages(), stages()
 print('PASS: an unknown poll receipt holds the queue, playback, reaction and watch until its sent receipt')
+print('PASS: unsupported failed and refused receipt results do not settle a question or release later replies')
 
 for offered_question, variant in ((question, 'numbered'), ('Can we proceed?', 'unnumbered')):
     original = 'unpublished-' + variant
@@ -633,6 +645,25 @@ once()
 assert [s for s in stages() if s[0] == 'm5'] == [('m5', 'failed')], stages()
 (home / 'state/.lock').write_text(owner + '\n')
 print('PASS: a message that cannot be filed is retried, then told the failure sentence and marked failed')
+
+long_record = message('m-long', 'x' * 16001)
+assert (inbound / long_record).stat().st_size < 131072
+for attempt in range(3):
+    failed_capture = once()
+    assert 'filing m-long' in failed_capture.stderr, failed_capture.stderr
+    state = json.loads(state_path.read_text())
+    if attempt < 2:
+        assert state['pending']['words'] == 'x' * 16001
+        assert state['pending']['attempts'] == attempt + 1
+        state['pending']['not_before'] = 0
+        state_path.write_text(json.dumps(state))
+assert state['pending'] is None
+assert not any(r['turn_id'] == 'imsg-m-long' for r in requests()), requests()
+assert ('m-long', 'failed') not in stages(), stages()
+assert [row['text'] for row in courier_takes()] == ["I couldn't reach Firstmate."]
+once()
+assert [s for s in stages() if s[0] == 'm-long'] == [('m-long', 'failed')], stages()
+print('PASS: a 16001-character transcript within the wire byte limit attempts capture and receives the normal failure notice and stage')
 
 conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-m2', 'response_id': 'q2',
                          'sequence': 1, 'kind': 'question', 'final': False, 'question_binding': 'b2',
