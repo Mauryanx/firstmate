@@ -233,6 +233,41 @@ once()
 assert stages() == before
 print('PASS: a final answer marks done; stages are published in order and never backwards')
 
+for answer_type in ('vote', 'text'):
+    original = 'receipt-' + answer_type
+    message(original, 'Ask before proceeding.')
+    once()
+    assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-' + original
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-' + original,
+                             'response_id': 'q-' + original, 'sequence': 1, 'kind': 'question', 'final': False,
+                             'question_binding': 'b-' + original, 'destination': 'imessage',
+                             'speech_text': question})
+    once()
+    [waiting_question] = courier_takes()
+    assert (original, 'question') not in stages(), stages()
+    assert (original, 'working') in stages(), stages()
+    if answer_type == 'vote':
+        record('vote', 'v-' + original, {'chosen': ['1. Ship it'], 'request_id': waiting_question['id'],
+                                        'digest': 'd', 'poll_message_id': 'p-' + original})
+        answer_request = 'imsg-req-vote-v-' + original
+    else:
+        message('a-' + original, 'Ship it')
+        answer_request = 'imsg-req-a-' + original
+    once()
+    assert (original, 'question') in stages(), stages()
+    captured = conversation('accept', {'conversation_id': 'text'})['input']
+    assert captured['request_id'] == answer_request, captured
+    assert captured['committed_transcript'] == ('1. Ship it' if answer_type == 'vote' else 'Ship it'), captured
+    conversation('publish', {'conversation_id': 'text', 'request_id': answer_request,
+                             'response_id': 'done-' + original, 'sequence': 1, 'kind': 'answer', 'final': True,
+                             'destination': 'imessage', 'speech_text': 'Proceeding with ' + answer_type})
+    once()
+    assert [row['text'] for row in courier_takes()] == ['Proceeding with ' + answer_type]
+    once()
+    assert (original, 'done') in stages(), stages()
+    print('PASS: a waiting question receipt and %s answer in the same restart preserve the original done reaction'
+          % answer_type)
+
 # A message with no text is told so, and one with a missing attachment is filed with a notice.
 message('m3', '')
 message('m4', 'see this\n[attachment: not saved]', attachments=[{'line': '[attachment: not saved]', 'saved': False}])

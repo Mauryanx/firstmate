@@ -572,6 +572,11 @@ class Pickup:
 
     def tick(self, force_replies=False):
         try:
+            self.send()
+            self.clear('send')
+        except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
+            self.once('send', 'courier outbox unavailable: %s' % exc)
+        try:
             self.pick()
             self.clear('pick')
         except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
