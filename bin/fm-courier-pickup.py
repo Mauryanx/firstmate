@@ -33,10 +33,15 @@ the vc- note and appends its check wake, which the watcher's conversation ring
 surfaces within about a second (docs/watcher-continuity.md). A capture that
 fails is retried after 5 and 20 seconds, then, unless the transport shows it
 landed, the captain is told dispatch FAILURE text. An empty transcript is not
-filed and he is told NOT_TEXT. A message that is not filed is staged failed as
-soon as it is given up, without waiting for its notice's receipt; with every
-transport call bounded at 10 s, that is at most about 75 s after it is read,
-inside the courier's 120 s PICKUP_DEADLINE. other_parts or an unsaved
+filed and he is told NOT_TEXT. With every transport call bounded at 10 s, the
+failure notice is normally queued within about 75 s of reading the message,
+and its failed stage follows the notice's sent receipt. If the notice waits
+behind an earlier unreceipted text, the stage can land after the courier's
+120 s PICKUP_DEADLINE. The courier's late-pickup path (firstmate-voice PR 47)
+tolerates this: while the record is still in the spool, the courier has only
+sent its waiting notice and applies the later stage in order without its own
+failure text; a stage for a record whose contents it already deleted is
+consumed with a metadata-only refusal. other_parts or an unsaved
 attachment adds the direct bridge's PARTLY_FILED or PARTLY_TEXT sentence once
 the message is filed. A vote
 record is filed as his answer only when its request_id names a question poll
@@ -56,9 +61,10 @@ is one outbox ID.json for the policy captain read from /etc/courier/policy.toml
 (root- or self-owned, not group/world-writable), ID derived from the claim or
 the fixed sentence's key, published 0640 by fsync, rename and directory fsync.
 A question whose text lists 2-10 numbered options carries them as
-poll_options. Texts go one at a time in order: the next is published only after
-the courier's result receipt for the previous one (or after 300 s once the
-courier consumed it without one). A sent receipt records playback completed and
+poll_options; their vote-watch lifetime starts at the sent receipt.
+Texts go one at a time in order: the next is published only after
+the courier's terminal result receipt for the previous one.
+A sent receipt records playback completed and
 moves the stage the reply implies (receipt/progress working, question question,
 error failed, final answer done). Stages are published as ID.stage.json in
 order and never backwards: filed < working < question < done, with failed
@@ -95,9 +101,7 @@ LIMIT = 131072
 COMMON = {'kind', 'version', 'seq', 'type', 'published_at'}
 FIELDS = {'message': COMMON | {'message_id', 'chat_id', 'created_at', 'transcript', 'attachments', 'other_parts'},
           'vote': COMMON | {'request_id', 'digest', 'poll_message_id', 'chosen'}}
-SCAN, REPLY_EVERY, RETRY_DELAYS, UNRECEIPTED, POLL_WATCH, KEEP = 0.1, 2.0, (5, 20), 300, 86400, 31 * 86400
-# One transport call. Filing makes at most five (tail, three captures, landed) around
-# the retry delays, so a message is staged within 5 * 10 + 25 = 75 s of being read.
+SCAN, REPLY_EVERY, RETRY_DELAYS, POLL_WATCH, KEEP = 0.1, 2.0, (5, 20), 86400, 31 * 86400
 CALL_TIMEOUT = 10
 # The direct bridge's sentences (firstmate-voice bridge.dispatch / bridge.imessage.poller).
 FAILURE = "I couldn't reach Firstmate."
@@ -362,8 +366,7 @@ class Pickup:
         if kind == 'message':
             identity = record['message_id']
             if not record['transcript'].strip():
-                self.owe(NOT_TEXT, 'imsg-notext-' + identity)
-                self.move(identity, 'failed')  # Staged now; the notice keeps its own receipt.
+                self.owe(NOT_TEXT, 'imsg-notext-' + identity, [identity, 'failed'])
                 self.save()
                 return
             attached = record['attachments']
@@ -418,9 +421,8 @@ class Pickup:
                 self.tail = None
                 log('gave up filing %s: %s' % (entry['message'], exc))
                 self.s['pending'] = None
-                self.owe(FAILURE, 'imsg-failed-' + entry['message'])
-                if 'binding' not in entry:
-                    self.move(entry['target'], 'failed')  # Staged now; the notice keeps its own receipt.
+                self.owe(FAILURE, 'imsg-failed-' + entry['message'],
+                         None if 'binding' in entry else [entry['target'], 'failed'])
                 self.save()
                 return True
         self.s['pending'] = None
@@ -511,9 +513,10 @@ class Pickup:
                     self.move(target, 'working' if state == 'accepted' else 'failed')
         published = seen.get('replies') or []
         closed = {r.get('response_id') for r in published if r.get('kind') == 'question' and r.get('question_open') is False}
-        self.s['polls'] = {k: p for k, p in self.s['polls'].items()
-                           if p['question'] not in closed and self.now() - p['opened'] <= POLL_WATCH}
         owed = {t['response'] for t in self.s['texts']}
+        self.s['polls'] = {k: p for k, p in self.s['polls'].items()
+                           if p['question'] not in closed
+                           and (p['question'] in owed or self.now() - p['opened'] <= POLL_WATCH)}
         for row in published:
             response = row.get('response_id')
             if (row.get('delivery') or {}).get('state') != 'waiting' or response in owed:
@@ -536,7 +539,7 @@ class Pickup:
             if offered:
                 self.s['polls'][self.s['texts'][-1]['id']] = {
                     'question': response, 'asked': request, 'binding': row['question_binding'],
-                    'opened': self.now()}
+                    'opened': None}
             self.save()
 
     def receipt(self, identity):
@@ -568,12 +571,11 @@ class Pickup:
                 self.save()
             result = self.receipt(entry['id'])
             if result is None:
-                if (self.now() - entry['published'] < UNRECEIPTED
-                        or os.path.lexists(self.outbox / (entry['id'] + '.json'))):
-                    return
-                result = 'unreceipted'
+                return
             self.s['texts'].pop(0)
             if result == 'sent':
+                if entry['id'] in self.s['polls']:
+                    self.s['polls'][entry['id']]['opened'] = self.now()
                 if entry['response']:
                     try:
                         self.call('playback', {'response_id': entry['response'], 'generation': entry['generation'],
@@ -583,6 +585,7 @@ class Pickup:
                 if entry['mark']:
                     self.move(*entry['mark'])
             else:
+                self.s['polls'].pop(entry['id'], None)
                 log('courier did not send %s (%s)' % (entry['id'], result))
             self.save()
 
@@ -604,8 +607,6 @@ class Pickup:
             self.clear('pick')
         except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
             self.once('pick', 'inbound spool unavailable: %s' % exc)
-        # A capture waiting to retry means the transport is failing; reading it for
-        # replies then would only delay the retry and the stage owed within 120 s.
         if self.s['pending'] is None and (force_replies or self.now() >= self.next_reply):
             self.next_reply = self.now() + REPLY_EVERY
             try:

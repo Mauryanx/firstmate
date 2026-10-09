@@ -33,8 +33,14 @@ def conversation(command, payload, code=0):
     return json.loads(result.stdout) if code == 0 else result
 
 
-def once(code=0, extra=None):
-    result = subprocess.run([sys.executable, str(pickup), 'once'], text=True, capture_output=True,
+def once(code=0, extra=None, clock_offset=0):
+    command = [sys.executable, str(pickup), 'once']
+    if clock_offset:
+        command = [sys.executable, '-c',
+                   'import runpy,sys,time; clock=time.time; offset=float(sys.argv.pop(1)); '
+                   'time.time=lambda: clock()+offset; sys.argv=sys.argv[1:]; '
+                   'runpy.run_path(sys.argv[0], run_name="__main__")', str(clock_offset), str(pickup), 'once']
+    result = subprocess.run(command, text=True, capture_output=True,
                             env=dict(env, **(extra or {})), timeout=60)
     assert result.returncode == code, result
     return result
@@ -90,9 +96,9 @@ def stages():
     return [(row['message_id'], row['stage']) for row in outgoing('.stage.json').values()]
 
 
-def courier_receipt(row):
+def courier_receipt(row, result='sent'):
     receipt = receipts / ('result-%s.%s.json' % (row['id'], secrets.token_hex(4)))
-    receipt.write_text(json.dumps({'kind': 'courier-result', 'id': row['id'], 'digest': 'd', 'result': 'sent',
+    receipt.write_text(json.dumps({'kind': 'courier-result', 'id': row['id'], 'digest': 'd', 'result': result,
                                    'approval_ref': None, 'idempotency_key': row['id'], 'message_id': 'm'}))
     receipt.chmod(0o640)
 
@@ -174,8 +180,19 @@ once()
 assert asked['to'] == CAPTAIN and asked['text'] == question and asked['poll_options'] == ['1. Ship it', '2. Wait']
 assert asked['channel'] == 'imessage' and asked['attachments'] == []
 assert stages()[-1] == ('m1', 'working')  # the question's stage follows its text, never before it
+once(clock_offset=2 * 86400)
+assert asked['id'] in json.loads(state_path.read_text())['polls']
+state = json.loads(state_path.read_text())
+assert state['polls'][asked['id']]['opened'] is None
+state['polls'][asked['id']]['opened'] = time.time()
+state_path.write_text(json.dumps(state))
+once(clock_offset=2 * 86400)
+assert asked['id'] in json.loads(state_path.read_text())['polls']
+assert list(outgoing('.json').values()) == [asked]
 courier_takes()
+delivered = time.time()
 once()
+assert delivered <= json.loads(state_path.read_text())['polls'][asked['id']]['opened'] <= time.time()
 replies = conversation('poll', binding)['replies']
 assert replies[0]['delivery']['state'] == 'completed', replies
 assert stages()[-1] == ('m1', 'question'), stages()
@@ -205,6 +222,7 @@ assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'
 answer = conversation('accept', {'conversation_id': 'text'})['input']
 assert answer['committed_transcript'] == '2. Wait' and answer['question_binding'] == 'b1'
 print('PASS: a vote on a question it asked is filed once with that question\'s binding; other votes are not filed')
+print('PASS: a question delayed two days keeps its watch across restart and accepts a vote after delivery')
 print('PASS: an empty vote leaves the question watch available for a later nonempty vote across restart')
 
 conversation('publish', {'conversation_id': 'text', 'request_id': answer['request_id'], 'response_id': 'a1-progress',
@@ -311,6 +329,63 @@ assert ('unrelated', 'failed') in stages(), stages()
 assert not json.loads(state_path.read_text())['marks']['unrelated'].get('awaiting_answer')
 print('PASS: a question without poll options awaits an answer at claim and clears the flag on failure')
 
+message('ordered', 'Keep these portions in order.')
+once()
+assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-ordered'
+for number, words in ((1, 'First portion'), (2, question)):
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-ordered',
+                             'response_id': 'ordered-%d' % number, 'sequence': number,
+                             'kind': 'progress' if number == 1 else 'question',
+                             'question_binding': 'ordered-binding' if number == 2 else None,
+                             'final': False, 'destination': 'imessage', 'speech_text': words})
+once()
+[first] = courier_takes(receipted=False)
+assert first['text'] == 'First portion'
+courier_receipt(first, result='unknown')
+message('blocked-notext', '')
+once(clock_offset=301)
+assert not outgoing('.json'), outgoing('.json')
+assert ('blocked-notext', 'failed') not in stages(), stages()
+assert json.loads(state_path.read_text())['texts'][0]['id'] == first['id']
+assert next(row for row in conversation('poll', binding)['replies']
+            if row['response_id'] == 'ordered-1')['delivery']['state'] != 'completed'
+courier_receipt(first)
+once()
+[second_portion] = courier_takes(receipted=False)
+assert second_portion['text'] == question
+assert next(row for row in conversation('poll', binding)['replies']
+            if row['response_id'] == 'ordered-1')['delivery']['state'] == 'completed'
+courier_receipt(second_portion, result='failed')
+once()
+assert second_portion['id'] not in json.loads(state_path.read_text())['polls']
+assert ('blocked-notext', 'failed') not in stages(), stages()
+[blocked_notice] = courier_takes(receipted=False)
+assert blocked_notice['text'] == 'Only text and attachments reach Firstmate from here, so that message was not filed.'
+once()
+assert ('blocked-notext', 'failed') not in stages(), stages()
+courier_receipt(blocked_notice)
+once()
+assert ('blocked-notext', 'failed') in stages(), stages()
+assert not json.loads(state_path.read_text())['texts']
+print('PASS: a consumed text with an unknown result holds later portions past 300 s until a terminal receipt')
+print('PASS: a refused poll has no vote watch; a queued failure reaction waits for its own notice receipt')
+
+message('expired-poll', 'Ask a question with an expiring poll.')
+once()
+assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-expired-poll'
+conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-expired-poll',
+                         'response_id': 'expired-question', 'sequence': 1, 'kind': 'question', 'final': False,
+                         'question_binding': 'expired-binding', 'destination': 'imessage', 'speech_text': question})
+once()
+[expired_poll] = courier_takes()
+once()
+once(clock_offset=86401)
+record('vote', 'expired-vote', {'chosen': ['1. Ship it'], 'request_id': expired_poll['id'],
+                                'digest': 'd', 'poll_message_id': 'expired-message'})
+once()
+assert not any(r['turn_id'] == 'imsg-vote-expired-vote' for r in requests()), requests()
+print('PASS: a delivered poll expires after its delivery-based watch lifetime')
+
 # A message with no text is told so, and one with a missing attachment is filed with a notice.
 message('m3', '')
 message('m4', 'see this\n[attachment: not saved]', attachments=[{'line': '[attachment: not saved]', 'saved': False}])
@@ -318,7 +393,7 @@ once()
 assert not any(r['turn_id'] == 'imsg-m3' for r in requests()) and requests()[-1]['turn_id'] == 'imsg-m4'
 told = [row['text'] for row in outgoing('.json').values()]
 assert told == ['Only text and attachments reach Firstmate from here, so that message was not filed.'], told
-assert ('m3', 'failed') in stages(), stages()  # staged before the courier has sent the notice
+assert ('m3', 'failed') not in stages(), stages()
 courier_takes()
 once()
 assert [row['text'] for row in courier_takes()] == ['Firstmate has that message, but not everything attached to it.']
@@ -335,7 +410,7 @@ for _ in range(3):
         state['pending']['not_before'] = 0  # skip the retry wait, not the retry
         state_path.write_text(json.dumps(state))
 assert json.loads(state_path.read_text())['pending'] is None
-assert ('m5', 'failed') in stages(), stages()  # staged before the courier has sent the notice
+assert ('m5', 'failed') not in stages(), stages()
 assert [row['text'] for row in courier_takes()] == ["I couldn't reach Firstmate."]
 once()
 assert [s for s in stages() if s[0] == 'm5'] == [('m5', 'failed')], stages()
@@ -388,8 +463,8 @@ second = subprocess.run([sys.executable, str(pickup), 'once'], env=env, capture_
 assert second.returncode == 0
 print('PASS: each record reaches the wake queue in under a second while the pickup runs')
 
-# Slow failure: a transport that hangs on every call still gets the message staged
-# failed inside the courier's 120 s PICKUP_DEADLINE, measured from the record's rename.
+# Slow failure: a hung capture queues its notice, whose sent receipt precedes the
+# failed stage, inside the courier's 120 s PICKUP_DEADLINE from the record's rename.
 hang = open(home / 'state/voice-conversation/lock', 'a')
 fcntl.flock(hang, fcntl.LOCK_EX)
 running = subprocess.Popen([sys.executable, str(pickup), 'run'], env=env, stdout=subprocess.DEVNULL,
@@ -397,20 +472,28 @@ running = subprocess.Popen([sys.executable, str(pickup), 'run'], env=env, stdout
 try:
     started = time.monotonic()
     message('mslow', 'is anyone home?')
+    while not outgoing('.json'):
+        assert time.monotonic() - started < 120, 'no failure notice within PICKUP_DEADLINE'
+        assert running.poll() is None, 'pickup exited'
+        time.sleep(0.5)
+    assert ('mslow', 'failed') not in stages(), stages()
+    [notice] = courier_takes(receipted=False)
+    assert notice['text'] == "I couldn't reach Firstmate.", notice
+    courier_receipt(notice)
     while ('mslow', 'failed') not in stages():
         assert time.monotonic() - started < 120, 'no failed stage within PICKUP_DEADLINE'
         assert running.poll() is None, 'pickup exited'
         time.sleep(0.5)
     elapsed = time.monotonic() - started
     print('slow-failure stage after %.1f s' % elapsed)
-    assert "I couldn't reach Firstmate." in [row['text'] for row in outgoing('.json').values()]
+    assert not outgoing('.json'), outgoing('.json')
 finally:
     running.terminate()
     running.wait(timeout=30)
     fcntl.flock(hang, fcntl.LOCK_UN)
     hang.close()
 courier_takes()
-print('PASS: a capture that hangs is staged failed within 120 s of pickup, its notice still sent once')
+print('PASS: a hung capture sends one failure notice before its failed stage, all within 120 s of pickup')
 
 # Firstmate never wrote, renamed or deleted anything in the courier's spool.
 assert all(not name.startswith('.') for name in os.listdir(inbound))
