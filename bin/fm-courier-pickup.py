@@ -35,7 +35,8 @@ down before the first attempt so every retry is byte-identical. capture saves
 the vc- note and appends its check wake, which the watcher's conversation ring
 surfaces within about a second (docs/watcher-continuity.md). A capture that
 fails is retried after 5 and 20 seconds, then, unless the transport shows it
-landed, the captain is told dispatch FAILURE text. An empty transcript is not
+landed, the captain is told dispatch FAILURE text. A restart retries the pending
+capture immediately, retaining its attempt count. An empty transcript is not
 filed and he is told NOT_TEXT. With every transport call bounded at 10 s, the
 failure notice is normally queued within about 75 s of reading the message,
 and its failed stage follows the notice's sent receipt. If the notice waits
@@ -73,7 +74,8 @@ firstmate-voice follow-up), as the direct bridge does today.
 Texts go one at a time in order: the next is published only after
 the courier's terminal result receipt for the previous one.
 If a consumed request has no result receipt, pickup republishes its identical
-saved request at most once per 60 s to recover the receipt using the same ID.
+saved request after 60 s to recover the receipt using the same ID; a last
+publication timestamp ahead of wall time makes recovery due immediately.
 A sent receipt records playback completed and
 moves the stage the reply implies (receipt/progress working, question question,
 error failed, final answer done). Stages are published as ID.stage.json in
@@ -87,7 +89,8 @@ The binding is FM_HOME/state/imessage/binding.json, exactly
 conversation bind returned it. Startup refusals exit 1, usage 2; per-tick
 failures are logged and the loop continues. Reply reads and capture retries are
 paced on the monotonic clock, so a wall-clock step neither stalls nor rushes
-them; wall time only stamps records.
+them. Wall time stamps persistent records and governs their expiry and receipt
+recovery.
 """
 
 import calendar
@@ -234,8 +237,7 @@ def epoch(text):
 
 class Pickup:
     def __init__(self, home, root, courier_user, now=time.time, clock=time.monotonic):
-        # now stamps records; clock alone schedules this process's intervals,
-        # so a wall-clock step never stalls or rushes a reply read or a retry.
+        # clock keeps reply reads and capture retries independent of wall-clock steps.
         self.home, self.now, self.clock = home, now, clock
         self.inbound = root / 'srv/courier/inbound'
         self.outbox = root / 'srv/courier/outbox'
