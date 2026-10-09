@@ -1,0 +1,67 @@
+boundary-trace-1.log
+762659 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+762659 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+762659 openat(4, "000000000001-message-isolated-1.json", O_RDONLY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC) = 5
+762659 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+762659 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+762659 openat(4, ".fm-pickup-a0fa537aea4add2fcf70174a2b9fa8ca.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5
+762659 renameat(4, ".fm-pickup-a0fa537aea4add2fcf70174a2b9fa8ca.tmp", 4, "st-000000000001-a550931a78ef7770.stage.json") = 0
+762659 unlinkat(4, ".fm-pickup-a0fa537aea4add2fcf70174a2b9fa8ca.tmp", 0) = -1 ENOENT (No such file or directory)
+boundary-trace-2.log
+766486 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+766486 newfstatat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/etc/courier/policy.toml", {st_mode=S_IFREG|0600, st_size=53, ...}, AT_SYMLINK_NOFOLLOW) = 0
+766486 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/etc/courier/policy.toml", O_RDONLY|O_CLOEXEC) = 4
+766486 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+766486 openat(4, ".fm-pickup-5e75d1b455a594ad7b9c6ad8d887437d.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5
+766486 renameat(4, ".fm-pickup-5e75d1b455a594ad7b9c6ad8d887437d.tmp", 4, "fm-8b748b68ca4c8440456505e3c8e95ca8fbdbc9868dc85ea9.json") = 0
+766486 unlinkat(4, ".fm-pickup-5e75d1b455a594ad7b9c6ad8d887437d.tmp", 0) = -1 ENOENT (No such file or directory)
+766486 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+766486 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+766486 openat(4, ".fm-pickup-2620a22b4fb3d32b7ee0520e239a3176.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5
+766486 renameat(4, ".fm-pickup-2620a22b4fb3d32b7ee0520e239a3176.tmp", 4, "st-000000000002-2f59caeb0475a5d1.stage.json") = 0
+766486 unlinkat(4, ".fm-pickup-2620a22b4fb3d32b7ee0520e239a3176.tmp", 0) = -1 ENOENT (No such file or directory)
+boundary-trace-3.log
+767354 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+767354 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+767354 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+767354 openat(4, "000000000002-vote-isolated-vote.json", O_RDONLY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC) = 5
+768853 renameat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/home/state/.watcher-down.tmp.7p3Rcn", AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/home/state/.watcher-down") = 0
+767354 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+767354 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+767354 openat(4, ".fm-pickup-f5580a46c4d802948ed2f798a2718814.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5
+767354 renameat(4, ".fm-pickup-f5580a46c4d802948ed2f798a2718814.tmp", 4, "st-000000000003-52a6a681b9528da4.stage.json") = 0
+767354 unlinkat(4, ".fm-pickup-f5580a46c4d802948ed2f798a2718814.tmp", 0) = -1 ENOENT (No such file or directory)
+boundary-trace-4.log
+770076 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+770076 newfstatat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/etc/courier/policy.toml", {st_mode=S_IFREG|0600, st_size=53, ...}, AT_SYMLINK_NOFOLLOW) = 0
+770076 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/etc/courier/policy.toml", O_RDONLY|O_CLOEXEC) = 4
+770076 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+770076 openat(4, ".fm-pickup-011f0196f276878df30fd930e73ac97e.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5
+770076 renameat(4, ".fm-pickup-011f0196f276878df30fd930e73ac97e.tmp", 4, "fm-2c30037f1637716b291c8a2ad632bc2fa53a48956a8fde39.json") = 0
+770076 unlinkat(4, ".fm-pickup-011f0196f276878df30fd930e73ac97e.tmp", 0) = -1 ENOENT (No such file or directory)
+770076 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+boundary-trace-5.log
+770702 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+770702 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+770702 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+770702 openat(4, ".fm-pickup-124cbd7c53578bc8fcc7025a044c8232.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5
+770702 renameat(4, ".fm-pickup-124cbd7c53578bc8fcc7025a044c8232.tmp", 4, "st-000000000004-af5d8b56f06a9e4f.stage.json") = 0
+770702 unlinkat(4, ".fm-pickup-124cbd7c53578bc8fcc7025a044c8232.tmp", 0) = -1 ENOENT (No such file or directory)
+boundary-trace-6.log
+771400 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+771400 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+771400 openat(4, "000000000003-message-wrong-owner.json", O_RDONLY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC) = 5
+771400 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+boundary-trace-7.log
+772615 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+772615 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+772615 openat(4, "000000000004-message-policy-test.json", O_RDONLY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC) = 5
+774122 renameat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/home/state/.watcher-down.tmp.t83Xyz", AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/home/state/.watcher-down") = 0
+772615 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+772615 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/outbox", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+772615 openat(4, ".fm-pickup-1c5bc2e2c16ec89810d443a20e263ac4.tmp", O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0640) = 5
+772615 renameat(4, ".fm-pickup-1c5bc2e2c16ec89810d443a20e263ac4.tmp", 4, "st-000000000005-c87135999004741e.stage.json") = 0
+772615 unlinkat(4, ".fm-pickup-1c5bc2e2c16ec89810d443a20e263ac4.tmp", 0) = -1 ENOENT (No such file or directory)
+boundary-trace-8.log
+776224 openat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/srv/courier/inbound", O_RDONLY|O_NOFOLLOW|O_CLOEXEC|O_DIRECTORY) = 4
+776224 newfstatat(AT_FDCWD, "/home/firstmate/.no-mistakes/worktrees/8352e211db7e/01M4F29HK4JCAKXEQ2F50R6HHX/.test-tmp/boundary/courier/etc/courier/policy.toml", {st_mode=S_IFREG|0666, st_size=53, ...}, AT_SYMLINK_NOFOLLOW) = 0

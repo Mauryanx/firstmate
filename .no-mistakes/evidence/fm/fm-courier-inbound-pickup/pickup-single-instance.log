@@ -1,0 +1,4 @@
+SECOND PICKUP EXIT: 1
+SECOND PICKUP STDERR: fm-courier-pickup: another pickup holds this home
+OBSERVED: a concurrent once process is refused while the real run process holds the home lock.
+RUN PROCESS STDERR: 

@@ -1,0 +1,16 @@
+pickup once #1 stderr: fm-courier-pickup: filed isolated-1 as request imsg-req-isolated-1
+OBSERVED: owner capture succeeds with 0600 session lock and transport policy; courier inbound and receipts are read-only mounts; credential is hidden.
+pickup once #2 stderr: 
+OUTBOX QUESTION: {"attachments": [], "channel": "imessage", "id": "fm-8b748b68ca4c8440456505e3c8e95ca8fbdbc9868dc85ea9", "poll_options": ["1. Yes", "2. No"], "purpose": "reply", "text": "Proceed?\n1. Yes\n2. No", "to": "+12025550101"}
+pickup once #3 stderr: fm-courier-pickup: filed vote-isolated-vote as request imsg-req-vote-isolated-vote
+pickup once #4 stderr: 
+OUTBOX ANSWER: {"attachments": [], "channel": "imessage", "id": "fm-2c30037f1637716b291c8a2ad632bc2fa53a48956a8fde39", "purpose": "reply", "text": "Proceeding.", "to": "+12025550101"}
+pickup once #5 stderr: 
+PUBLISHED REACTIONS: [{"id": "st-000000000001-a550931a78ef7770", "message_id": "isolated-1", "stage": "filed"}, {"id": "st-000000000002-2f59caeb0475a5d1", "message_id": "isolated-1", "stage": "working"}, {"id": "st-000000000003-52a6a681b9528da4", "message_id": "isolated-1", "stage": "question"}, {"id": "st-000000000004-af5d8b56f06a9e4f", "message_id": "isolated-1", "stage": "done"}]
+OBSERVED: bound vote completes its original message; all requests are Firstmate-owned 0640; spool, receipts and credential unchanged through five real pickup processes.
+pickup once #6 stderr: fm-courier-pickup: refused inbound record 000000000003-message-wrong-owner.json: untrusted file metadata
+OBSERVED: a valid record with the wrong owner is refused, with no new conversation request.
+pickup once #7 stderr: fm-courier-pickup: filed policy-test as request imsg-req-policy-test
+pickup once #8 stderr: fm-courier-pickup: courier outbox unavailable: courier policy is not root-owned and protected
+OBSERVED: a peer-writable courier policy prevents outbound publication.
+PASS: sandboxed pickup completes without courier writes or credential reads; wrong-owner inbound and peer-writable policy are refused.

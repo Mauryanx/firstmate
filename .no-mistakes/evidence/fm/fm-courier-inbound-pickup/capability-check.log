@@ -1,0 +1,5 @@
+PATH check: python3, bwrap and strace available; fm-courier and fm-notify absent.
+Repository-local search: pickup CLI and its tests found; no courier producer or firstmate-voice source/entry point supplied.
+unshare --user --map-root-user --pid --fork true: write failed /proc/self/uid_map: Operation not permitted.
+Workaround: bwrap --unshare-user --uid 0 --gid 0 succeeded; real pickup was exercised with a hidden credential directory and read-only courier files.
+Not exercised: real Linq traffic, actual courier owner filtering/media download, or the courier under a separate host UID/private PID namespace. Requires the companion courier source/entry point plus an isolated two-account deployment and an explicitly authorized Linq test account.
