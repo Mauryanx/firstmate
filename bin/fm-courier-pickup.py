@@ -55,20 +55,22 @@ Replies. Every 2 s the transport's poll advances each message's stage
 and claims each waiting reply bound for imessage with deliver. Claiming a question
 durably marks its originating message as awaiting an answer, before delivery or
 its sent receipt. The first successfully captured answer links that message to
-the answer's stages; later captures and original-request replies preserve the
+the answer's stages; ordinary text cannot answer a question still queued and
+unpublished. Later captures and original-request replies preserve the
 link, and done or failed clears the awaiting flag. Each text to him
 is one outbox ID.json for the policy captain read from /etc/courier/policy.toml
 (root- or self-owned, not group/world-writable), ID derived from the claim or
 the fixed sentence's key, published 0640 by fsync, rename and directory fsync.
 A question whose text lists 2-10 numbered options carries them as
-poll_options; their vote-watch lifetime starts when the text settles.
+poll_options: its text and native poll travel as one request, and its vote-watch
+lifetime starts at the sent receipt. Pickup relies on the courier settling a
+refused poll after confirmed text as sent with the poll dropped (a
+firstmate-voice follow-up), as the direct bridge does today.
 Texts go one at a time in order: the next is published only after
-the courier's terminal result receipt for the previous one, except that
-unknown settles a poll-bearing question's text while its best-effort poll
-may still be retried by the courier. Ordinary text waits for a terminal result.
+the courier's terminal result receipt for the previous one.
 If a consumed request has no result receipt, pickup republishes its identical
 saved request at most once per 60 s to recover the receipt using the same ID.
-A sent receipt, or unknown for a poll-bearing question, records playback completed and
+A sent receipt records playback completed and
 moves the stage the reply implies (receipt/progress working, question question,
 error failed, final answer done). Stages are published as ID.stage.json in
 order and never backwards: filed < working < question < done, with failed
@@ -476,9 +478,12 @@ class Pickup:
                     leaders.append(other)
 
     def answered(self, target, asked=None):
+        unpublished = {t['mark'][0] for t in self.s['texts']
+                       if t['published'] is None and t['mark'] and t['mark'][1] == 'question'}
         for other, mark in self.s['marks'].items():
             if (other != target and mark.get('awaiting_answer') and not mark.get('follows')
-                    and asked in (None, mark.get('request'))):
+                    and asked in (None, mark.get('request'))
+                    and (asked is not None or other not in unpublished)):
                 mark['follows'] = target
 
     def target(self, request):
@@ -559,7 +564,7 @@ class Pickup:
                 if isinstance(row, dict) and row.get('kind') == 'courier-result' and row.get('id') == identity:
                     if row.get('result') == 'sent' or row.get('result') in GAVE_UP:
                         return row['result']
-                    if row.get('result') == 'unknown' or pending is None:
+                    if pending is None:
                         pending = row.get('result')
         finally:
             os.close(parent)
@@ -584,11 +589,10 @@ class Pickup:
                 self.save()
                 self.publish(entry['id'] + '.json', row)
                 result = self.receipt(entry['id'])
-            delivered = result == 'sent' or (result == 'unknown' and bool(entry.get('poll_options')))
-            if not delivered and result not in GAVE_UP:
+            if result != 'sent' and result not in GAVE_UP:
                 return
             self.s['texts'].pop(0)
-            if delivered:
+            if result == 'sent':
                 if entry['id'] in self.s['polls']:
                     self.s['polls'][entry['id']]['opened'] = self.now()
                 if entry['response']:

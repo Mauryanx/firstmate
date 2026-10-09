@@ -382,6 +382,15 @@ unknown_receipt = courier_receipt(optional_poll, result='unknown')
 unknown_receipt.rename(receipts / ('result-' + optional_poll['id'] + '.a.json'))
 pending_receipt = courier_receipt(optional_poll, result='pending')
 pending_receipt.rename(receipts / ('result-' + optional_poll['id'] + '.z.json'))
+once(clock_offset=301)
+assert not outgoing('.json'), outgoing('.json')
+state = json.loads(state_path.read_text())
+assert state['texts'][0]['id'] == optional_poll['id']
+assert state['polls'][optional_poll['id']]['opened'] is None
+assert ('best-effort-poll', 'question') not in stages(), stages()
+assert next(row for row in conversation('poll', binding)['replies']
+            if row['response_id'] == 'best-effort-question')['delivery']['state'] != 'completed'
+courier_receipt(optional_poll)
 settled = time.time()
 once()
 assert ('best-effort-poll', 'question') in stages(), stages()
@@ -403,7 +412,62 @@ once()
 assert [row['text'] for row in courier_takes()] == ['Waiting after the optional poll.']
 once()
 assert ('best-effort-poll', 'done') in stages(), stages()
-print('PASS: an unknown poll receipt settles its question text, starts the vote watch and releases the next reply')
+print('PASS: an unknown poll receipt holds the queue, playback, reaction and watch until its sent receipt')
+
+for offered_question, variant in ((question, 'numbered'), ('Can we proceed?', 'unnumbered')):
+    original = 'unpublished-' + variant
+    unrelated = 'early-' + variant
+    response = 'q-' + original
+    message(original, 'Ask after the earlier portion.')
+    once()
+    assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-' + original
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-' + original,
+                             'response_id': 'block-' + original, 'sequence': 1, 'kind': 'progress', 'final': False,
+                             'destination': 'imessage', 'speech_text': 'Earlier portion for ' + variant})
+    once()
+    [blocker] = courier_takes(receipted=False)
+    courier_receipt(blocker, result='unknown')
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-' + original,
+                             'response_id': response, 'sequence': 2, 'kind': 'question', 'final': False,
+                             'question_binding': 'b-' + original, 'destination': 'imessage',
+                             'speech_text': offered_question})
+    once()
+    state = json.loads(state_path.read_text())
+    assert state['marks'][original]['awaiting_answer']
+    assert next(t for t in state['texts'] if t['response'] == response)['published'] is None
+    message(unrelated, 'An unrelated request before the question.')
+    once()
+    assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-' + unrelated
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-' + unrelated,
+                             'response_id': 'done-' + unrelated, 'sequence': 1, 'kind': 'answer', 'final': True,
+                             'destination': 'imessage', 'speech_text': 'Finished the unrelated request.'})
+    once()
+    assert not outgoing('.json'), outgoing('.json')
+    assert not json.loads(state_path.read_text())['marks'][original].get('follows')
+    courier_receipt(blocker)
+    once()
+    [published_question] = courier_takes(receipted=False)
+    assert published_question['text'] == offered_question
+    courier_receipt(published_question)
+    once()
+    assert [row['text'] for row in courier_takes()] == ['Finished the unrelated request.']
+    once()
+    mark = json.loads(state_path.read_text())['marks'][original]
+    assert mark['stage'] == 'question' and mark['awaiting_answer'] and not mark.get('follows'), mark
+    assert (unrelated, 'done') in stages() and (original, 'done') not in stages(), stages()
+    message('answer-' + original, 'My answer after seeing the question.')
+    once()
+    captured = conversation('accept', {'conversation_id': 'text'})['input']
+    assert captured['request_id'] == 'imsg-req-answer-' + original, captured
+    conversation('publish', {'conversation_id': 'text', 'request_id': captured['request_id'],
+                             'response_id': 'done-' + original, 'sequence': 1, 'kind': 'answer', 'final': True,
+                             'destination': 'imessage', 'speech_text': 'Finished after the real answer.'})
+    once()
+    assert [row['text'] for row in courier_takes()] == ['Finished after the real answer.']
+    once()
+    assert (original, 'done') in stages(), stages()
+    assert not json.loads(state_path.read_text())['marks'][original].get('awaiting_answer')
+    print('PASS: an unpublished %s question ignores unrelated text and finishes only after its later answer' % variant)
 
 message('ordered', 'Keep these portions in order.')
 once()
