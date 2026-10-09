@@ -1,0 +1,13 @@
+bind output: {"conversation_id": "text", "credential": "[redacted]", "destination": "imessage"}
+pickup startup exit: 0 stderr: fm-courier-pickup: filed m1 as request imsg-req-m1
+rebind refused: fm-inbox conversation: conversation already bound to destination imessage
+rebind refused: fm-inbox conversation: conversation already bound
+PASS: raw iMessage bind JSON starts pickup and files imsg-req-m1; repeat bind is identical, principal/destination changes refused, default voice shape unchanged
+FAIL: reply-backward AssertionError('clock step stalled reply beyond normal cadence')
+FAIL: reply-forward AssertionError('clock step stalled reply beyond normal cadence')
+wall step=-600s; first retry delay=5.133s
+second retry delay=21.528s; notice={"attachments": [], "channel": "imessage", "id": "fm-0362da7846fbe608b95d23f30e4081075e80d83c4a762b5f", "purpose": "notice", "text": "I couldn't reach Firstmate.", "to": "+12025550101"}
+PASS: capture retries retain 5/20 s backoff through wall step -600s and publish one failure notice
+wall step=+600s; first retry delay=5.115s
+FAIL: retry-forward AssertionError('clock step stalled second 20 s retry')
+PASS: restart retries legacy pending capture immediately (1.815s), ignores stale wall deadline and files exactly imsg-req-m1

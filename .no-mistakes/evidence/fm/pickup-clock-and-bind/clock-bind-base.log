@@ -1,0 +1,9 @@
+bind output: {"conversation_id": "text", "credential": "[redacted]"}
+pickup startup exit: 1 stderr: fm-courier-pickup: state/imessage/binding.json is not an imessage binding
+FAIL: raw-bind AssertionError('raw bind response cannot start pickup')
+FAIL: reply-backward AssertionError('clock step stalled reply beyond normal cadence')
+FAIL: reply-forward AssertionError('clock step stalled reply beyond normal cadence')
+FAIL: retry-backward AssertionError('clock step stalled first 5 s retry')
+wall step=+600s; first retry delay=0.230s
+FAIL: retry-forward AssertionError('wall-clock step rushed or stalled 5 s retry')
+FAIL: legacy-restart AssertionError('legacy deadline blocked retry after restart')
