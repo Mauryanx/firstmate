@@ -101,6 +101,7 @@ def courier_receipt(row, result='sent'):
     receipt.write_text(json.dumps({'kind': 'courier-result', 'id': row['id'], 'digest': 'd', 'result': result,
                                    'approval_ref': None, 'idempotency_key': row['id'], 'message_id': 'm'}))
     receipt.chmod(0o640)
+    return receipt
 
 
 def courier_takes(receipted=True):
@@ -328,6 +329,81 @@ once()
 assert ('unrelated', 'failed') in stages(), stages()
 assert not json.loads(state_path.read_text())['marks']['unrelated'].get('awaiting_answer')
 print('PASS: a question without poll options awaits an answer at claim and clears the flag on failure')
+
+message('receipt-recovery', 'Recover an old delivery receipt.')
+once()
+assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-receipt-recovery'
+for number, words in ((1, 'Original portion: café'), (2, 'Recovery complete.')):
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-receipt-recovery',
+                             'response_id': 'recovery-%d' % number, 'sequence': number,
+                             'kind': 'progress' if number == 1 else 'answer', 'final': number == 2,
+                             'destination': 'imessage', 'speech_text': words})
+once()
+[original] = outgoing('.json').values()
+original_bytes = (outbox / (original['id'] + '.json')).read_bytes()
+assert [row['id'] for row in courier_takes()] == [original['id']]
+for receipt_path in receipts.glob('result-' + original['id'] + '.*.json'):
+    receipt_path.unlink()
+once(clock_offset=2 * 86400)
+assert (outbox / (original['id'] + '.json')).read_bytes() == original_bytes
+assert list(outgoing('.json').values()) == [original]
+assert json.loads(state_path.read_text())['texts'][0]['id'] == original['id']
+courier_takes(receipted=False)
+once(clock_offset=2 * 86400 + 30)
+assert not outgoing('.json'), outgoing('.json')
+inflight_receipt = courier_receipt(original, result='pending')
+once(clock_offset=2 * 86400 + 61)
+assert not outgoing('.json'), outgoing('.json')
+inflight_receipt.unlink()
+once(clock_offset=2 * 86400 + 61)
+assert (outbox / (original['id'] + '.json')).read_bytes() == original_bytes
+assert [row['id'] for row in courier_takes()] == [original['id']]
+once()
+assert [row['text'] for row in courier_takes()] == ['Recovery complete.']
+once()
+assert ('receipt-recovery', 'done') in stages(), stages()
+assert all(row['delivery']['state'] == 'completed'
+           for row in conversation('poll', binding)['replies'] if row['response_id'].startswith('recovery-'))
+print('PASS: a pruned receipt is recovered by byte-identical same-ID republication, limited to once per 60 s')
+
+message('best-effort-poll', 'Ask with an optional native poll.')
+once()
+assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-best-effort-poll'
+conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-best-effort-poll',
+                         'response_id': 'best-effort-question', 'sequence': 1, 'kind': 'question', 'final': False,
+                         'question_binding': 'best-effort-binding', 'destination': 'imessage', 'speech_text': question})
+conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-best-effort-poll',
+                         'response_id': 'best-effort-progress', 'sequence': 2, 'kind': 'progress', 'final': False,
+                         'destination': 'imessage', 'speech_text': 'Continue after the question text.'})
+once()
+[optional_poll] = courier_takes(receipted=False)
+assert optional_poll['text'] == question and optional_poll['poll_options'] == ['1. Ship it', '2. Wait']
+unknown_receipt = courier_receipt(optional_poll, result='unknown')
+unknown_receipt.rename(receipts / ('result-' + optional_poll['id'] + '.a.json'))
+pending_receipt = courier_receipt(optional_poll, result='pending')
+pending_receipt.rename(receipts / ('result-' + optional_poll['id'] + '.z.json'))
+settled = time.time()
+once()
+assert ('best-effort-poll', 'question') in stages(), stages()
+assert settled <= json.loads(state_path.read_text())['polls'][optional_poll['id']]['opened'] <= time.time()
+assert next(row for row in conversation('poll', binding)['replies']
+            if row['response_id'] == 'best-effort-question')['delivery']['state'] == 'completed'
+assert [row['text'] for row in courier_takes()] == ['Continue after the question text.']
+once(clock_offset=301)
+assert not outgoing('.json'), outgoing('.json')
+record('vote', 'best-effort-vote', {'chosen': ['2. Wait'], 'request_id': optional_poll['id'],
+                                    'digest': 'd', 'poll_message_id': 'best-effort-message'})
+once()
+captured = conversation('accept', {'conversation_id': 'text'})['input']
+assert captured['request_id'] == 'imsg-req-vote-best-effort-vote' and captured['question_binding'] == 'best-effort-binding'
+conversation('publish', {'conversation_id': 'text', 'request_id': captured['request_id'],
+                         'response_id': 'best-effort-answer', 'sequence': 1, 'kind': 'answer', 'final': True,
+                         'destination': 'imessage', 'speech_text': 'Waiting after the optional poll.'})
+once()
+assert [row['text'] for row in courier_takes()] == ['Waiting after the optional poll.']
+once()
+assert ('best-effort-poll', 'done') in stages(), stages()
+print('PASS: an unknown poll receipt settles its question text, starts the vote watch and releases the next reply')
 
 message('ordered', 'Keep these portions in order.')
 once()

@@ -61,10 +61,14 @@ is one outbox ID.json for the policy captain read from /etc/courier/policy.toml
 (root- or self-owned, not group/world-writable), ID derived from the claim or
 the fixed sentence's key, published 0640 by fsync, rename and directory fsync.
 A question whose text lists 2-10 numbered options carries them as
-poll_options; their vote-watch lifetime starts at the sent receipt.
+poll_options; their vote-watch lifetime starts when the text settles.
 Texts go one at a time in order: the next is published only after
-the courier's terminal result receipt for the previous one.
-A sent receipt records playback completed and
+the courier's terminal result receipt for the previous one, except that
+unknown settles a poll-bearing question's text while its best-effort poll
+may still be retried by the courier. Ordinary text waits for a terminal result.
+If a consumed request has no result receipt, pickup republishes its identical
+saved request at most once per 60 s to recover the receipt using the same ID.
+A sent receipt, or unknown for a poll-bearing question, records playback completed and
 moves the stage the reply implies (receipt/progress working, question question,
 error failed, final answer done). Stages are published as ID.stage.json in
 order and never backwards: filed < working < question < done, with failed
@@ -103,6 +107,7 @@ FIELDS = {'message': COMMON | {'message_id', 'chat_id', 'created_at', 'transcrip
           'vote': COMMON | {'request_id', 'digest', 'poll_message_id', 'chosen'}}
 SCAN, REPLY_EVERY, RETRY_DELAYS, POLL_WATCH, KEEP = 0.1, 2.0, (5, 20), 86400, 31 * 86400
 CALL_TIMEOUT = 10
+RECEIPT_RETRY = 60
 # The direct bridge's sentences (firstmate-voice bridge.dispatch / bridge.imessage.poller).
 FAILURE = "I couldn't reach Firstmate."
 NOT_TEXT = 'Only text and attachments reach Firstmate from here, so that message was not filed.'
@@ -543,8 +548,9 @@ class Pickup:
             self.save()
 
     def receipt(self, identity):
-        """The courier's settled result for an outbox request, or None while it is pending."""
+        """The courier's result, preferring terminal receipts, or None when none exists."""
         parent = directory(self.receipts)
+        pending = None
         try:
             for name in sorted(os.listdir(parent)):
                 if not (name.startswith('result-' + identity + '.') and name.endswith('.json')):
@@ -553,27 +559,36 @@ class Pickup:
                 if isinstance(row, dict) and row.get('kind') == 'courier-result' and row.get('id') == identity:
                     if row.get('result') == 'sent' or row.get('result') in GAVE_UP:
                         return row['result']
+                    if row.get('result') == 'unknown' or pending is None:
+                        pending = row.get('result')
         finally:
             os.close(parent)
-        return None
+        return pending
 
     def send(self):
         """Publish owed texts one at a time, each after the previous one settled."""
         while self.s['texts']:
             entry = self.s['texts'][0]
-            if entry['published'] is None:
-                row = {'id': entry['id'], 'channel': 'imessage', 'to': self.captain(), 'text': entry['text'],
-                       'purpose': 'reply' if entry['response'] else 'notice', 'attachments': []}
-                if entry.get('poll_options'):
-                    row['poll_options'] = entry['poll_options']
-                self.publish(entry['id'] + '.json', row)
+            result = self.receipt(entry['id'])
+            if result is None and (entry['published'] is None
+                                   or (self.now() - entry['published'] >= RECEIPT_RETRY
+                                       and not os.path.lexists(self.outbox / (entry['id'] + '.json')))):
+                row = entry.get('wire')
+                if row is None:
+                    row = {'id': entry['id'], 'channel': 'imessage', 'to': self.captain(), 'text': entry['text'],
+                           'purpose': 'reply' if entry['response'] else 'notice', 'attachments': []}
+                    if entry.get('poll_options'):
+                        row['poll_options'] = entry['poll_options']
+                    entry['wire'] = row
                 entry['published'] = self.now()
                 self.save()
-            result = self.receipt(entry['id'])
-            if result is None:
+                self.publish(entry['id'] + '.json', row)
+                result = self.receipt(entry['id'])
+            delivered = result == 'sent' or (result == 'unknown' and bool(entry.get('poll_options')))
+            if not delivered and result not in GAVE_UP:
                 return
             self.s['texts'].pop(0)
-            if result == 'sent':
+            if delivered:
                 if entry['id'] in self.s['polls']:
                     self.s['polls'][entry['id']]['opened'] = self.now()
                 if entry['response']:
