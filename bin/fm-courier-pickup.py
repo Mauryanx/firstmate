@@ -33,8 +33,12 @@ the vc- note and appends its check wake, which the watcher's conversation ring
 surfaces within about a second (docs/watcher-continuity.md). A capture that
 fails is retried after 5 and 20 seconds, then, unless the transport shows it
 landed, the captain is told dispatch FAILURE text. An empty transcript is not
-filed and he is told NOT_TEXT; other_parts or an unsaved attachment adds the
-direct bridge's PARTLY_FILED or PARTLY_TEXT sentence once it is filed. A vote
+filed and he is told NOT_TEXT. A message that is not filed is staged failed as
+soon as it is given up, without waiting for its notice's receipt; with every
+transport call bounded at 10 s, that is at most about 75 s after it is read,
+inside the courier's 120 s PICKUP_DEADLINE. other_parts or an unsaved
+attachment adds the direct bridge's PARTLY_FILED or PARTLY_TEXT sentence once
+the message is filed. A vote
 record is filed as his answer only when its request_id names a question poll
 this program published and is still watching, with that question's binding and
 the first chosen label as the transcript, at most once per question. An empty
@@ -92,6 +96,9 @@ COMMON = {'kind', 'version', 'seq', 'type', 'published_at'}
 FIELDS = {'message': COMMON | {'message_id', 'chat_id', 'created_at', 'transcript', 'attachments', 'other_parts'},
           'vote': COMMON | {'request_id', 'digest', 'poll_message_id', 'chosen'}}
 SCAN, REPLY_EVERY, RETRY_DELAYS, UNRECEIPTED, POLL_WATCH, KEEP = 0.1, 2.0, (5, 20), 300, 86400, 31 * 86400
+# One transport call. Filing makes at most five (tail, three captures, landed) around
+# the retry delays, so a message is staged within 5 * 10 + 25 = 75 s of being read.
+CALL_TIMEOUT = 10
 # The direct bridge's sentences (firstmate-voice bridge.dispatch / bridge.imessage.poller).
 FAILURE = "I couldn't reach Firstmate."
 NOT_TEXT = 'Only text and attachments reach Firstmate from here, so that message was not filed.'
@@ -267,7 +274,7 @@ class Pickup:
         env['FM_HOME'] = str(self.home)
         result = subprocess.run([str(self.cli), 'conversation', command], env=env, text=True,
                                 input=canonical(dict(payload or {}, **self.identity)),
-                                capture_output=True, timeout=30, check=False)
+                                capture_output=True, timeout=CALL_TIMEOUT, check=False)
         if result.returncode != 0:
             raise Refused(result.stderr.strip().replace(self.identity['credential'], '[redacted]')
                           or 'transport refused ' + command)
@@ -355,7 +362,8 @@ class Pickup:
         if kind == 'message':
             identity = record['message_id']
             if not record['transcript'].strip():
-                self.owe(NOT_TEXT, 'imsg-notext-' + identity, [identity, 'failed'])
+                self.owe(NOT_TEXT, 'imsg-notext-' + identity)
+                self.move(identity, 'failed')  # Staged now; the notice keeps its own receipt.
                 self.save()
                 return
             attached = record['attachments']
@@ -410,8 +418,9 @@ class Pickup:
                 self.tail = None
                 log('gave up filing %s: %s' % (entry['message'], exc))
                 self.s['pending'] = None
-                self.owe(FAILURE, 'imsg-failed-' + entry['message'],
-                         None if 'binding' in entry else [entry['target'], 'failed'])
+                self.owe(FAILURE, 'imsg-failed-' + entry['message'])
+                if 'binding' not in entry:
+                    self.move(entry['target'], 'failed')  # Staged now; the notice keeps its own receipt.
                 self.save()
                 return True
         self.s['pending'] = None
@@ -595,7 +604,9 @@ class Pickup:
             self.clear('pick')
         except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
             self.once('pick', 'inbound spool unavailable: %s' % exc)
-        if force_replies or self.now() >= self.next_reply:
+        # A capture waiting to retry means the transport is failing; reading it for
+        # replies then would only delay the retry and the stage owed within 120 s.
+        if self.s['pending'] is None and (force_replies or self.now() >= self.next_reply):
             self.next_reply = self.now() + REPLY_EVERY
             try:
                 self.replies()
@@ -606,10 +617,14 @@ class Pickup:
             self.save()
         try:
             self.send()
-            self.signal()
             self.clear('send')
         except (Refused, OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as exc:
             self.once('send', 'courier outbox unavailable: %s' % exc)
+        try:
+            self.signal()  # Never held back by a text that cannot be sent.
+            self.clear('signal')
+        except (Refused, OSError, ValueError, KeyError, TypeError) as exc:
+            self.once('signal', 'courier outbox unavailable for stages: %s' % exc)
 
 
 def main(argv):

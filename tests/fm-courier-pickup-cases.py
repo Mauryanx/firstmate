@@ -5,6 +5,7 @@ receipts the way the courier does, and reads the outbox requests Firstmate
 publishes. Firstmate's side runs through its real CLI against a real pilot
 conversation transport, so a record becomes a real vc- note and check wake.
 """
+import fcntl
 import json
 import os
 from pathlib import Path
@@ -317,6 +318,7 @@ once()
 assert not any(r['turn_id'] == 'imsg-m3' for r in requests()) and requests()[-1]['turn_id'] == 'imsg-m4'
 told = [row['text'] for row in outgoing('.json').values()]
 assert told == ['Only text and attachments reach Firstmate from here, so that message was not filed.'], told
+assert ('m3', 'failed') in stages(), stages()  # staged before the courier has sent the notice
 courier_takes()
 once()
 assert [row['text'] for row in courier_takes()] == ['Firstmate has that message, but not everything attached to it.']
@@ -333,9 +335,10 @@ for _ in range(3):
         state['pending']['not_before'] = 0  # skip the retry wait, not the retry
         state_path.write_text(json.dumps(state))
 assert json.loads(state_path.read_text())['pending'] is None
+assert ('m5', 'failed') in stages(), stages()  # staged before the courier has sent the notice
 assert [row['text'] for row in courier_takes()] == ["I couldn't reach Firstmate."]
 once()
-assert ('m5', 'failed') in stages()
+assert [s for s in stages() if s[0] == 'm5'] == [('m5', 'failed')], stages()
 (home / 'state/.lock').write_text(owner + '\n')
 print('PASS: a message that cannot be filed is retried, then told the failure sentence and marked failed')
 
@@ -384,6 +387,30 @@ finally:
 second = subprocess.run([sys.executable, str(pickup), 'once'], env=env, capture_output=True, text=True, timeout=30)
 assert second.returncode == 0
 print('PASS: each record reaches the wake queue in under a second while the pickup runs')
+
+# Slow failure: a transport that hangs on every call still gets the message staged
+# failed inside the courier's 120 s PICKUP_DEADLINE, measured from the record's rename.
+hang = open(home / 'state/voice-conversation/lock', 'a')
+fcntl.flock(hang, fcntl.LOCK_EX)
+running = subprocess.Popen([sys.executable, str(pickup), 'run'], env=env, stdout=subprocess.DEVNULL,
+                           stderr=subprocess.DEVNULL)
+try:
+    started = time.monotonic()
+    message('mslow', 'is anyone home?')
+    while ('mslow', 'failed') not in stages():
+        assert time.monotonic() - started < 120, 'no failed stage within PICKUP_DEADLINE'
+        assert running.poll() is None, 'pickup exited'
+        time.sleep(0.5)
+    elapsed = time.monotonic() - started
+    print('slow-failure stage after %.1f s' % elapsed)
+    assert "I couldn't reach Firstmate." in [row['text'] for row in outgoing('.json').values()]
+finally:
+    running.terminate()
+    running.wait(timeout=30)
+    fcntl.flock(hang, fcntl.LOCK_UN)
+    hang.close()
+courier_takes()
+print('PASS: a capture that hangs is staged failed within 120 s of pickup, its notice still sent once')
 
 # Firstmate never wrote, renamed or deleted anything in the courier's spool.
 assert all(not name.startswith('.') for name in os.listdir(inbound))
