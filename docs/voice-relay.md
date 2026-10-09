@@ -33,17 +33,17 @@ The same transport can carry a text conversation, such as iMessage, when the own
 ### Running the courier pickup
 
 On a Linux host with systemd, run the pickup as the `fm-courier-pickup.service` user unit that [`bin/fm-courier-pickup-service.sh`](../bin/fm-courier-pickup-service.sh) renders; its header owns what the unit contains.
-The unit starts with the Firstmate account's user manager and restarts five seconds after any failure, so the pickup survives crashes and reboots instead of needing a hand-started transient unit.
-The same regression checks that the rendered unit is valid and runs this checkout's pickup for the home it names.
-Do every step below as the Firstmate account, never root.
+With the unit enabled and the Firstmate account lingering, the pickup starts at boot and recovers from failures.
+The offline regression checks the installed unit's effective settings and startup command, and verifies systemd syntax when `systemd-analyze` is available.
+Run the service commands as the Firstmate account; only the lingering setup below requires root.
 
 1. The user manager starts at boot only for a lingering account, so confirm `loginctl show-user "$USER" -p Linger` prints `Linger=yes`; otherwise root runs `loginctl enable-linger <account>` once.
-2. Install the unit for this home with `FM_HOME=<absolute home> bin/fm-courier-pickup-service.sh install`, then run `systemctl --user daemon-reload`.
+2. Install the unit for this home with `FM_HOME=<absolute home> bin/fm-courier-pickup-service.sh install`, retain the printed unit path for rollback, then run `systemctl --user daemon-reload`.
 3. Enabling the unit turns the pickup on, so do it as part of courier activation: `systemctl --user enable --now fm-courier-pickup.service`.
    Read its state with `systemctl --user status fm-courier-pickup.service` and its log with `journalctl --user -u fm-courier-pickup.service`.
-4. After updating Firstmate or moving the checkout, repeat step 2 and run `systemctl --user restart fm-courier-pickup.service`, because a running pickup keeps the code it started with.
+4. After updating Firstmate, moving the checkout or changing `FM_HOME`, repeat step 2 and run `systemctl --user restart fm-courier-pickup.service`, because a running pickup keeps the code it started with.
 
-To roll back, run `systemctl --user disable --now fm-courier-pickup.service`, delete `~/.config/systemd/user/fm-courier-pickup.service`, and run `systemctl --user daemon-reload`.
+To roll back, run `systemctl --user disable --now fm-courier-pickup.service`, delete the unit at the path printed by `install`, and run `systemctl --user daemon-reload`.
 The pickup's own state under `state/courier-pickup/` stays, so enabling it again resumes from its cursor without refiling anything.
 While it is stopped, spooled messages wait in the courier's spool and the courier's pickup deadline tells the captain.
 
