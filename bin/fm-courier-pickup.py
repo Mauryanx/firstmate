@@ -585,12 +585,15 @@ class Pickup:
                     if entry.get('poll_options'):
                         row['poll_options'] = entry['poll_options']
                     entry['wire'] = row
+                    self.save()
+                self.publish(entry['id'] + '.json', row)
                 entry['published'] = self.now()
                 self.save()
-                self.publish(entry['id'] + '.json', row)
                 result = self.receipt(entry['id'])
             if result != 'sent' and result not in GAVE_UP:
                 return
+            if result in GAVE_UP and entry['mark'] and entry['mark'][1] == 'question':
+                self.s['marks'].get(entry['mark'][0], {}).pop('awaiting_answer', None)
             self.s['texts'].pop(0)
             if result == 'sent':
                 if entry['id'] in self.s['polls']:

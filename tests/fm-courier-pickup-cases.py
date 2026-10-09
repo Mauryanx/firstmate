@@ -266,7 +266,8 @@ assert not json.loads(state_path.read_text())['marks']['m1'].get('awaiting_answe
 print('PASS: a final answer marks done; stages are published in order and never backwards')
 print('PASS: an unrelated text preserves the established vote follower and its original done reaction')
 
-for answer_type, timing in (('vote', 'together'), ('text', 'together'), ('vote', 'delayed'), ('text', 'delayed')):
+for answer_type, timing in (('vote', 'together'), ('text', 'together'), ('vote', 'delayed'),
+                           ('text', 'delayed'), ('text', 'refused')):
     original = 'receipt-' + answer_type + '-' + timing
     message(original, 'Ask before proceeding.')
     once()
@@ -274,7 +275,7 @@ for answer_type, timing in (('vote', 'together'), ('text', 'together'), ('vote',
     conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-' + original,
                              'response_id': 'q-' + original, 'sequence': 1, 'kind': 'question', 'final': False,
                              'question_binding': 'b-' + original, 'destination': 'imessage',
-                             'speech_text': question})
+                             'speech_text': 'Can we proceed?' if timing == 'refused' else question})
     once()
     [waiting_question] = courier_takes(receipted=timing == 'together')
     assert (original, 'question') not in stages(), stages()
@@ -291,13 +292,17 @@ for answer_type, timing in (('vote', 'together'), ('text', 'together'), ('vote',
     captured = conversation('accept', {'conversation_id': 'text'})['input']
     assert captured['request_id'] == answer_request, captured
     assert captured['committed_transcript'] == ('1. Ship it' if answer_type == 'vote' else 'Ship it'), captured
-    if timing == 'delayed':
+    if timing in ('delayed', 'refused'):
         mark = json.loads(state_path.read_text())['marks'][original]
         assert mark['stage'] == 'working' and mark['follows'], mark
-        courier_receipt(waiting_question)
+        courier_receipt(waiting_question, result='denied-limit' if timing == 'refused' else 'sent')
         once()
         assert (original, 'question') not in stages(), stages()
-    if answer_type == 'text':
+        after = json.loads(state_path.read_text())['marks'][original]
+        assert after['stage'] == mark['stage'] and after['follows'] == mark['follows'], after
+        if timing == 'refused':
+            assert not after.get('awaiting_answer'), after
+    if answer_type == 'text' and timing != 'refused':
         record('vote', 'later-' + original, {'chosen': ['2. Wait'], 'request_id': waiting_question['id'],
                                             'digest': 'd', 'poll_message_id': 'p-' + original})
         once()
@@ -445,6 +450,24 @@ for offered_question, variant in ((question, 'numbered'), ('Can we proceed?', 'u
     assert not outgoing('.json'), outgoing('.json')
     assert not json.loads(state_path.read_text())['marks'][original].get('follows')
     courier_receipt(blocker)
+    queued_question = next(t for t in json.loads(state_path.read_text())['texts'] if t['response'] == response)
+    obstruction = outbox / (queued_question['id'] + '.json')
+    obstruction.mkdir()
+    refused = once()
+    assert 'courier outbox unavailable' in refused.stderr, refused.stderr
+    state = json.loads(state_path.read_text())
+    assert next(t for t in state['texts'] if t['response'] == response)['published'] is None
+    assert state['marks'][original]['awaiting_answer']
+    after_failure = 'after-failure-' + variant
+    message(after_failure, 'Another unrelated request after publication failed.')
+    once()
+    assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-' + after_failure
+    assert not json.loads(state_path.read_text())['marks'][original].get('follows')
+    conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-' + after_failure,
+                             'response_id': 'done-' + after_failure, 'sequence': 1, 'kind': 'answer', 'final': True,
+                             'destination': 'imessage', 'speech_text': 'Finished the request after publication failed.'})
+    once()
+    obstruction.rmdir()
     once()
     [published_question] = courier_takes(receipted=False)
     assert published_question['text'] == offered_question
@@ -452,9 +475,12 @@ for offered_question, variant in ((question, 'numbered'), ('Can we proceed?', 'u
     once()
     assert [row['text'] for row in courier_takes()] == ['Finished the unrelated request.']
     once()
+    assert [row['text'] for row in courier_takes()] == ['Finished the request after publication failed.']
+    once()
     mark = json.loads(state_path.read_text())['marks'][original]
     assert mark['stage'] == 'question' and mark['awaiting_answer'] and not mark.get('follows'), mark
     assert (unrelated, 'done') in stages() and (original, 'done') not in stages(), stages()
+    assert (after_failure, 'done') in stages(), stages()
     message('answer-' + original, 'My answer after seeing the question.')
     once()
     captured = conversation('accept', {'conversation_id': 'text'})['input']
@@ -468,6 +494,7 @@ for offered_question, variant in ((question, 'numbered'), ('Can we proceed?', 'u
     assert (original, 'done') in stages(), stages()
     assert not json.loads(state_path.read_text())['marks'][original].get('awaiting_answer')
     print('PASS: an unpublished %s question ignores unrelated text and finishes only after its later answer' % variant)
+    print('PASS: a %s question whose outbox publication fails stays ineligible until publication succeeds' % variant)
 
 message('ordered', 'Keep these portions in order.')
 once()
@@ -495,9 +522,17 @@ once()
 assert second_portion['text'] == question
 assert next(row for row in conversation('poll', binding)['replies']
             if row['response_id'] == 'ordered-1')['delivery']['state'] == 'completed'
-courier_receipt(second_portion, result='failed')
+courier_receipt(second_portion, result='denied-limit')
 once()
 assert second_portion['id'] not in json.loads(state_path.read_text())['polls']
+assert not json.loads(state_path.read_text())['marks']['ordered'].get('awaiting_answer')
+message('after-refusal', 'A new request after the question was refused.')
+once()
+assert conversation('accept', {'conversation_id': 'text'})['input']['request_id'] == 'imsg-req-after-refusal'
+conversation('publish', {'conversation_id': 'text', 'request_id': 'imsg-req-after-refusal',
+                         'response_id': 'done-after-refusal', 'sequence': 1, 'kind': 'answer', 'final': True,
+                         'destination': 'imessage', 'speech_text': 'Finished the request after refusal.'})
+once()
 assert ('blocked-notext', 'failed') not in stages(), stages()
 [blocked_notice] = courier_takes(receipted=False)
 assert blocked_notice['text'] == 'Only text and attachments reach Firstmate from here, so that message was not filed.'
@@ -506,9 +541,15 @@ assert ('blocked-notext', 'failed') not in stages(), stages()
 courier_receipt(blocked_notice)
 once()
 assert ('blocked-notext', 'failed') in stages(), stages()
+assert [row['text'] for row in courier_takes()] == ['Finished the request after refusal.']
+once()
+mark = json.loads(state_path.read_text())['marks']['ordered']
+assert mark['stage'] == 'working' and not mark.get('follows') and not mark.get('awaiting_answer'), mark
+assert ('after-refusal', 'done') in stages() and ('ordered', 'done') not in stages(), stages()
 assert not json.loads(state_path.read_text())['texts']
 print('PASS: a consumed text with an unknown result holds later portions past 300 s until a terminal receipt')
 print('PASS: a refused poll has no vote watch; a queued failure reaction waits for its own notice receipt')
+print('PASS: a refused question retires answer eligibility and does not follow a later unrelated request')
 
 message('expired-poll', 'Ask a question with an expiring poll.')
 once()
