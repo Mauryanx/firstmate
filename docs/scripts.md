@@ -9,6 +9,7 @@ The shared no-mistakes gate refusal for fleet lifecycle entrypoints is summarize
 | ------------------------ | ------------------------------------------------------------------------------------ |
 | [`fm-brain-desk.py`](../bin/fm-brain-desk.py) | Ask the opt-in brain desk, run the morning-brief brainctl verbs, and export journal input |
 | [`fm-courier-pickup.py`](../bin/fm-courier-pickup.py) | File the captain's courier-spooled iMessages into the conversation and answer through the courier outbox |
+| [`fm-courier-pickup-service.sh`](../bin/fm-courier-pickup-service.sh) | Render and install the courier pickup's systemd user unit ([activation runbook](voice-relay.md#running-the-courier-pickup)) |
 | `fm-session-start.sh`    | Compose lock, bootstrap, and wake drain into the single ordered session-start digest |
 | `fm-sessionstart-nudge.sh` | Print the native session-start hook nudge when the primary has not already run the digest |
 | `fm-sessionstart-run.sh` | Route a native session-open hook to the full digest, a context re-emit, or the nudge |

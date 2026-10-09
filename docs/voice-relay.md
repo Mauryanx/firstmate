@@ -30,6 +30,23 @@ Each published portion records its exact content digest, author identity, destin
 That is accountability for deliberate speech, not an automated claim that any scan makes arbitrary private content safe to say out loud.
 The same transport can carry a text conversation, such as iMessage, when the owner's policy authorizes that destination; each conversation is bound to one destination, so a call's reply is never sent as a text and a text's reply is never spoken, and `bin/fm-inbox.sh conversation --help` owns that policy and binding.
 
+### Running the courier pickup
+
+On a Linux host with systemd, run the pickup as the `fm-courier-pickup.service` user unit that [`bin/fm-courier-pickup-service.sh`](../bin/fm-courier-pickup-service.sh) renders; its header owns what the unit contains.
+With the unit enabled and the Firstmate account lingering, the pickup starts at boot and recovers from failures.
+The offline regression checks the installed unit's effective settings and startup command, and verifies systemd syntax when `systemd-analyze` is available.
+Run the service commands as the Firstmate account; only the lingering setup below requires root.
+
+1. The user manager starts at boot only for a lingering account, so confirm `loginctl show-user "$USER" -p Linger` prints `Linger=yes`; otherwise root runs `loginctl enable-linger <account>` once.
+2. Install the unit for this home with `FM_HOME=<absolute home> bin/fm-courier-pickup-service.sh install`, retain the printed unit path for rollback, then run `systemctl --user daemon-reload`.
+3. Enabling the unit turns the pickup on, so do it as part of courier activation: `systemctl --user enable --now fm-courier-pickup.service`.
+   Read its state with `systemctl --user status fm-courier-pickup.service` and its log with `journalctl --user -u fm-courier-pickup.service`.
+4. After updating Firstmate, moving the checkout or changing `FM_HOME`, repeat step 2 and run `systemctl --user restart fm-courier-pickup.service`, because a running pickup keeps the code it started with.
+
+To roll back, run `systemctl --user disable --now fm-courier-pickup.service`, delete the unit at the path printed by `install`, and run `systemctl --user daemon-reload`.
+The pickup's own state under `state/courier-pickup/` stays, so enabling it again resumes from its cursor without refiling anything.
+While it is stopped, spooled messages wait in the courier's spool and the courier's pickup deadline tells the captain.
+
 ## Existing audio prototype
 
 Talk to a voice agent that sits in front of the first mate. It answers questions

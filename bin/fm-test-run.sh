@@ -1516,7 +1516,7 @@ families_for_changed_path() {
     bin/fm-brain-desk.py|tests/fm-brain-desk-cases.py)
       printf '%s\n' __script__:fm-brain-desk.test.sh
       ;;
-    bin/fm-courier-pickup.py|tests/fm-courier-pickup-cases.py)
+    bin/fm-courier-pickup.py|bin/fm-courier-pickup-service.sh|tests/fm-courier-pickup-cases.py)
       printf '%s\n' __script__:fm-courier-pickup.test.sh
       ;;
     bin/fm-inbox.sh|bin/fm_inbox_conversation.py|tests/fm-inbox-conversation-cases.py)
