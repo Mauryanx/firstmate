@@ -4,8 +4,9 @@
 Usage: fm-courier-pickup.py run | once
 Opt in with FM_NOTIFY_COURIER=1, the same switch that routes fm-notify through
 the courier; absent/off exits 3 without I/O, so the direct iMessage bridge stays
-the only path until the courier is activated. Run one instance at a time with
-an explicit FM_HOME; a second instance exits 1 on the state lock.
+the only path until the courier is activated. Requires Python 3.11+ (tomllib).
+Launch run as Firstmate with an explicit FM_HOME; the opt-in does not start it.
+Run one instance at a time; a second instance exits 1 on the state lock.
 
 The wire is firstmate-voice's docs/courier-inbound-interface.txt, its single
 owner. This program reads the courier's spool and receipts and writes only its
@@ -36,11 +37,17 @@ filed and he is told NOT_TEXT; other_parts or an unsaved attachment adds the
 direct bridge's PARTLY_FILED or PARTLY_TEXT sentence once it is filed. A vote
 record is filed as his answer only when its request_id names a question poll
 this program published and is still watching, with that question's binding and
-the first chosen label as the transcript, at most once per question.
+the first chosen label as the transcript, at most once per question. An empty
+selection leaves the question watch open; votes never produce message reactions,
+including when capture fails and the failure notice is sent.
 
 Replies. Every 2 s the transport's poll advances each message's stage
 (accepted -> working, rejected -> failed), stops watching answered questions,
-and claims each waiting reply bound for imessage with deliver. Each text to him
+and claims each waiting reply bound for imessage with deliver. Claiming a question
+durably marks its originating message as awaiting an answer, before delivery or
+its sent receipt. The first successfully captured answer links that message to
+the answer's stages; later captures and original-request replies preserve the
+link, and done or failed clears the awaiting flag. Each text to him
 is one outbox ID.json for the policy captain read from /etc/courier/policy.toml
 (root- or self-owned, not group/world-writable), ID derived from the claim or
 the fixed sentence's key, published 0640 by fsync, rename and directory fsync.
