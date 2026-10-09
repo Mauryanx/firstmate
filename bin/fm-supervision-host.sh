@@ -834,8 +834,8 @@ health_record() {  # <engine-error 0|1> <reports>
 }
 
 # Handle one close on the engine, in the posture the record gives when the
-# turn starts (TURN_POSTURE). Returns 0 when the wake is handled,
-# 2 with ATTENDED_WHY set when the turn starts
+# turn starts (TURN_POSTURE). Returns 0 when the wake is handled or the away
+# queue is empty, 2 with ATTENDED_WHY set when the turn starts
 # attended and the supervision session may not take the close
 # (attended_acceptor, whose offer scan is the turn's scope), else sets HANDLE_WHY and returns 1; sets ENGINE_ERROR
 # when the turn failed on the engine itself. Runs in the host's own shell,
@@ -858,6 +858,11 @@ handle_wake() {  # <reason-lines>
       return 1
     fi
     if [ "$(printf '%s\n' "$scope" | sed -n 's/^eligible=//p')" != 1 ]; then
+      if [ "$(printf '%s\n' "$scope" | sed -n 's/^status=//p')" = empty ] \
+        && [ "$(printf '%s\n' "$scope" | sed -n 's/^corrupted=//p')" = 0 ]; then
+        log_line "no-op	nothing for the branch to claim	$first"
+        return 0
+      fi
       HANDLE_WHY="main-only"
       return 1
     fi
@@ -1112,7 +1117,9 @@ while :; do
     if ! AWAY_OFFER=$(printf '%s\n' "$REASON" | node "$SCRIPT_DIR/fm-branch-dispatch.mjs" offer --afk 2>/dev/null); then
       exit_to_main "branch eligibility could not be computed; this wake is yours"
     fi
-    if [ "$(printf '%s\n' "$AWAY_OFFER" | sed -n 's/^eligible=//p')" != 1 ]; then
+    if [ "$(printf '%s\n' "$AWAY_OFFER" | sed -n 's/^eligible=//p')" != 1 ] \
+      && { [ "$(printf '%s\n' "$AWAY_OFFER" | sed -n 's/^status=//p')" != empty ] \
+        || [ "$(printf '%s\n' "$AWAY_OFFER" | sed -n 's/^corrupted=//p')" != 0 ]; }; then
       exit_to_main "main-only; this wake is yours"
     fi
   fi

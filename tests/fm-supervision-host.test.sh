@@ -2051,7 +2051,7 @@ test_attended_latch_keeps_closes_on_main_and_records_recovery_off_main() {
 }
 
 test_away_voice_turns_reach_main_before_engine_handling() {
-  local home scenario real_node credential key
+  local home scenario real_node credential key boundary queue_state
   command -v python3 >/dev/null 2>&1 || fail "away voice routing requires python3"
   real_node=$(command -v node)
   for scenario in voice-only mixed arriving; do
@@ -2120,6 +2120,55 @@ SH
     stop_home_processes "$home"
   done
   pass "host: away voice-only, mixed, and newly arriving conversation turns reach main without an engine turn"
+  for boundary in 1 2; do
+    for queue_state in empty corrupt; do
+      home=$(make_home "away-$queue_state-offer-$boundary" away)
+      cat > "$home/fakebin/node" <<SH
+#!/usr/bin/env bash
+case "\$*" in
+  *fm-branch-dispatch.mjs\ offer*)
+    count=\$(cat "\$FM_HOME/offer-count" 2>/dev/null || echo 0)
+    count=\$((count + 1))
+    printf '%s\n' "\$count" > "\$FM_HOME/offer-count"
+    if [ "\$count" -eq "$boundary" ]; then
+      "\$FM_REPO/bin/fm-wake-drain.sh" > "\$FM_HOME/early-drain" 2>&1 || exit 1
+      ack=\$(sed -n 's/^WAKE_ACK_REQUIRED: after handling completes run bin\/fm-wake-drain.sh //p' "\$FM_HOME/early-drain" | tail -1)
+      [ -n "\$ack" ] || exit 1
+      "\$FM_REPO/bin/fm-wake-drain.sh" \$ack > "\$FM_HOME/early-ack" 2>&1 || exit 1
+      [ ! -s "\$FM_HOME/state/.wake-queue" ] || exit 1
+      [ "$queue_state" != corrupt ] || printf 'invalid wake row\n' > "\$FM_HOME/state/.wake-queue"
+      : > "\$FM_HOME/queue-transition"
+    fi ;;
+esac
+exec "$real_node" "\$@"
+SH
+      chmod +x "$home/fakebin/node"
+      start_host "$home"
+      wait_until 150 watcher_live "$home" || fail "$queue_state offer $boundary: the host never started its watcher"
+      append_status "$home" 'already handled'
+      wait_until 250 test -f "$home/queue-transition" \
+        || fail "$queue_state offer $boundary: the wake was not drained before the offer"
+      if [ "$queue_state" = empty ]; then
+        wait_until 250 grep -q $'\tno-op\t' "$home/state/.supervision-host.log" \
+          || fail "empty offer $boundary: the drained wake did not become a no-op: $(cat "$home/host.out")"
+        ! wait_until 20 host_exited "$home" || fail "empty offer $boundary: an already-drained wake reached main"
+        assert_no_re '^(signal:|stale:|check:|heartbeat|supervision-host:)' "$home/host.out" \
+          "empty offer $boundary: the host must keep main parked"
+        [ ! -s "$home/state/.wake-queue" ] || fail "empty offer $boundary: the acknowledged wake reappeared"
+        watcher_live "$home" || fail "empty offer $boundary: the no-op left no successor watcher"
+      else
+        wait_until 250 host_exited "$home" || fail "corrupt offer $boundary: the unsafe queue left main parked"
+        expect_code 0 "$(cat "$home/host.rc")" "corrupt offer $boundary: the hand-back must exit cleanly"
+        assert_re '^signal: .*demo.status' "$home/host.out" "corrupt offer $boundary: the original close must reach main"
+        assert_re '^supervision-host: .*main-only.*this wake is yours$' "$home/host.out" \
+          "corrupt offer $boundary: the host must hand the unsafe queue to main"
+        assert_no_re '\tno-op\t' "$home/state/.supervision-host.log" "corrupt offer $boundary: an unsafe scan must never be a no-op"
+      fi
+      [ "$(engine_calls "$home")" -eq 0 ] || fail "$queue_state offer $boundary: the engine ran without a safe claim"
+      stop_home_processes "$home"
+    done
+  done
+  pass "host: already-drained away wakes stay quiet at both offer boundaries, while corrupted queues reach main"
 }
 
 test_away_wake_is_handled_on_the_engine_and_never_reaches_main() {
