@@ -20,8 +20,8 @@ single-link 0640 file owned by the courier user, at most 128 KiB, parses as
 strict UTF-8 JSON (no duplicate keys or nonstandard numbers) with exactly the
 v1 fields, and its seq, type and key match its name. Records are handled one at
 a time in sequence order. state/courier-pickup/state.json holds the highest
-sequence handled (the cursor) and every handled type-key, so a record is filed
-once across restarts; a malformed or duplicate record is refused, logged by
+sequence handled (the cursor) and every handled Linq message id and vote key,
+so a message is filed once across restarts; a malformed or duplicate record is refused, logged by
 name only and passed, and the courier's own pickup deadline tells the captain.
 
 A message record is filed exactly as the direct bridge files it: capture with
@@ -50,8 +50,8 @@ the courier's result receipt for the previous one (or after 300 s once the
 courier consumed it without one). A sent receipt records playback completed and
 moves the stage the reply implies (receipt/progress working, question question,
 error failed, final answer done). Stages are published as ID.stage.json in
-order and never backwards: filed < working < question < done, with done and
-failed terminal.
+order and never backwards: filed < working < question < done, with failed
+ranked alongside done and both terminal, as the courier applies them.
 
 FM_COURIER_ROOT (default /) relocates srv/courier and etc/courier for offline
 tests; FM_COURIER_USER (default courier) names the record and receipt owner.
@@ -331,14 +331,16 @@ class Pickup:
             moved = True
             try:
                 record = self.read(name)
-                if kind + '-' + key in self.s['handled']:
-                    raise Refused('duplicate ' + kind + ' ' + key)
+                # A message is deduplicated on its Linq message id, as the courier's own ledger is.
+                handled = 'message-' + record['message_id'] if kind == 'message' else 'vote-' + key
+                if handled in self.s['handled']:
+                    raise Refused('duplicate ' + handled)
             except (Refused, OSError) as exc:
                 log('refused inbound record %s: %s' % (name, exc))
                 self.s['cursor'] = int(seq)
                 self.save()
                 continue
-            self.s['handled'][kind + '-' + key] = epoch(record['published_at'])
+            self.s['handled'][handled] = epoch(record['published_at'])
             self.take(int(seq), kind, key, record)
 
     def take(self, seq, kind, key, record):
