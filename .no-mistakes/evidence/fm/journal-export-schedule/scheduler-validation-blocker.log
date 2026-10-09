@@ -1,0 +1,17 @@
+Isolated scheduler validation attempts
+1. unshare --user --map-root-user --pid --fork true
+Result: unshare: write failed /proc/self/uid_map: Operation not permitted
+2. Downloaded systemd with apt-get download systemd and extracted it with dpkg-deb -x inside .test-journal-export/tools (no system installation).
+3. Ran that systemd --user --unit=basic.target --log-target=console --log-level=debug through bwrap --unshare-all.
+Host filesystem was read-only, and writable /run, /tmp, HOME and XDG directories were bound to disposable worktree directories.
+Result: isolated manager exit=1.
+4. Repeated through strace -e trace=file,write to locate the startup blocker:
+statfs("/sys/fs/cgroup/", {f_type=CGROUP2_SUPER_MAGIC, f_bsize=4096, f_blocks=0, f_bfree=0, f_bavail=0, f_files=0, f_ffree=0, f_fsid={val=[0x6ef8a532, 0xedac724f]}, f_namelen=255, f_frsize=4096, f_flags=ST_VALID|ST_RDONLY|ST_NOSUID|ST_NODEV|ST_NOEXEC|ST_RELATIME}) = 0
+openat(AT_FDCWD, "/sys/fs/cgroup/memory.max", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/sys/fs/cgroup", O_RDONLY|O_CLOEXEC|O_PATH|O_DIRECTORY) = 5
+newfstatat(AT_FDCWD, "/sys/fs/cgroup", {st_mode=S_IFDIR|0555, st_size=0, ...}, 0) = 0
+mkdir("/sys/fs/cgroup/init.scope", 0755) = -1 EEXIST (File exists)
+openat(AT_FDCWD, "/sys/fs/cgroup/init.scope/cgroup.procs", O_WRONLY|O_NOCTTY|O_CLOEXEC) = -1 EACCES (Permission denied)
++++ exited with 1 +++
+No timer was activated in this run. Starting it in the operator user manager would modify state outside the authorized worktree.
+To validate activation, calendar-triggered export, Persistent catch-up and failed-unit visibility, supply a disposable Linux systemd host/container with its own writable delegated cgroup subtree, and authorize its systemd state writes.
