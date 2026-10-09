@@ -114,8 +114,6 @@ An unresolved work outcome or playback receipt stays visible rather than replayi
 FM_VOICE_FAULT is a lab-only process-exit injection after note, mapping, accept,
 publication, delivery or playback commit, used by tests/fm-inbox-conversation.test.sh.
 This module owns the lab schema/state machine; docs/voice-relay.md routes to it.
-For an explicitly staged dedicated two-peer filesystem interface, the metadata
-and minimum directory contract is owned by fm_shared_interface.py (--help).
 """
 
 import fcntl
@@ -127,8 +125,6 @@ import secrets
 import subprocess
 import sys
 import time
-
-from fm_shared_interface import SharedInterface
 
 MAX_SPEECH_CHARS = 1200
 
@@ -180,14 +176,12 @@ def sync_dir(path):
         os.close(fd)
 
 
-def write(path, value, access=None, artifact=None):
+def write(path, value):
     tmp = path.with_name('.' + path.name + '.' + secrets.token_hex(8))
     try:
         with tmp.open('x', encoding='utf-8') as handle:
             handle.write(value)
             handle.flush()
-            if access is not None:
-                access.apply(handle.fileno(), artifact)
             os.fsync(handle.fileno())
         os.replace(tmp, path)
         sync_dir(path.parent)
@@ -266,11 +260,9 @@ class Conversation:
             self.policy = policy['publication_policy']
             self.destinations = policy_destinations({k: v for k, v in policy.items() if k != 'enabled_by'})
         self.path = self.root / 'journal.json'
-        self.access = SharedInterface(home)
         lock_fd = os.open(self.root / 'lock', os.O_WRONLY | os.O_CREAT | os.O_NOFOLLOW, 0o600)
         self.lock = os.fdopen(lock_fd, 'a')
         fcntl.flock(self.lock, fcntl.LOCK_EX)
-        self.access.apply(self.lock.fileno(), 'conversation')
         self.j = json.loads(self.path.read_text()) if self.path.exists() else {
             'version': 1, 'conversations': {}, 'requests': {}, 'replies': {}}
         require(self.j.get('version') == 1, 'unsupported journal version')
@@ -287,7 +279,7 @@ class Conversation:
         self.recover()
 
     def save(self):
-        write(self.path, canonical(self.j), self.access, 'conversation')
+        write(self.path, canonical(self.j))
 
     def own(self):
         """The session holding this home's lock owns every conversation in it."""
@@ -373,8 +365,6 @@ class Conversation:
         return {'conversation_id': self.cid, 'credential': self.c['credential']}
 
     def wake(self, key):
-        require(os.access(self.state, os.W_OK | os.X_OK),
-                'input saved; wake requires write and traverse on the dedicated state parent')
         env = dict(os.environ, FM_HOME=str(self.home))
         lib = Path(__file__).with_name('fm-wake-lib.sh')
         result = subprocess.run(['bash', '-c',
@@ -417,7 +407,7 @@ class Conversation:
                 previous = predecessors[previous]
                 require(previous != event['turn_id'], 'input order cycle')
             note = 'id={}\nsource=voice-conversation\n--\n{}\n'.format(key, canonical(event))
-            write(self.inbox / (key + '.note'), note, self.access, 'note')
+            write(self.inbox / (key + '.note'), note)
             fault('note')
             self.recover()
             fault('mapping')
